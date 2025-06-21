@@ -3,6 +3,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from markitdown import MarkItDown
+from urllib.parse import urlparse
 
 # --- Importaciones de nuestro núcleo RAG ---
 from rag_core import (
@@ -213,6 +214,111 @@ def learn_document(file_path: str) -> str:
             error_msg += "\n\n💡 Consejo: Este formato de archivo no es compatible. Formatos soportados: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML"
         elif "permission" in str(e).lower():
             error_msg += "\n\n💡 Consejo: Verifica si tienes permisos para acceder a este archivo."
+        
+        return error_msg
+
+@mcp.tool()
+def learn_from_url(url: str) -> str:
+    """
+    Procesa contenido de una URL (página web o video de YouTube) y lo añade a la base de conocimientos.
+    Use this when you want to teach the AI from web content without downloading files.
+    
+    Supported URL types:
+    - Web pages (HTML content)
+    - YouTube videos (transcripts)
+    - Any URL that MarkItDown can process
+    
+    Examples of when to use:
+    - Adding content from news articles or blog posts
+    - Processing YouTube video transcripts
+    - Importing information from web pages
+    - Converting web content to searchable knowledge
+    
+    The content will be automatically converted to Markdown format and stored with source tracking.
+    A copy of the converted content is saved for verification.
+
+    Args:
+        url: The URL of the web page or video to process.
+    """
+    log(f"MCP Server: Iniciando procesamiento de URL: {url}")
+    initialize_rag()
+    
+    try:
+        log(f"MCP Server: Convirtiendo contenido de URL a Markdown...")
+        
+        # Usar MarkItDown para procesar la URL directamente
+        result = md_converter.convert_url(url)
+        markdown_content = result.text_content
+
+        if not markdown_content or markdown_content.isspace():
+            log(f"MCP Server: Advertencia: URL procesada pero no se pudo extraer contenido: {url}")
+            return f"Advertencia: La URL '{url}' fue procesada, pero no se pudo extraer contenido de texto."
+
+        log(f"MCP Server: Contenido de URL convertido exitosamente ({len(markdown_content)} caracteres)")
+        
+        # Guardar copia en Markdown
+        log(f"MCP Server: Guardando copia Markdown...")
+        
+        # Crear nombre de archivo basado en la URL
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc.replace('.', '_')
+        path = parsed_url.path.replace('/', '_').replace('.', '_')
+        if not path or path == '_':
+            path = 'homepage'
+        
+        # Crear nombre de archivo único
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{domain}_{path}_{timestamp}.md"
+        md_filepath = os.path.join(CONVERTED_DOCS_DIR, filename)
+        
+        # Guardar el contenido
+        try:
+            ensure_converted_docs_directory()
+            with open(md_filepath, 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
+            log(f"MCP Server: Copia Markdown guardada en: {md_filepath}")
+        except Exception as e:
+            log(f"MCP Server Advertencia: No se pudo guardar copia Markdown: {e}")
+            md_filepath = ""
+        
+        # Añadir contenido a la base de conocimientos
+        log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
+        
+        # Crear metadatos específicos de la URL
+        url_metadata = {
+            "source": url,
+            "domain": parsed_url.netloc,
+            "input_type": "url",
+            "processed_date": datetime.now().isoformat(),
+            "converted_to_md": md_filepath if md_filepath else "No"
+        }
+        
+        # Añadir directamente con metadatos
+        add_text_to_knowledge_base(markdown_content, rag_state["vector_store"], url_metadata)
+        
+        # Información sobre el proceso completado
+        if md_filepath:
+            log(f"MCP Server: Proceso completado - Copia Markdown guardada")
+            return f"Contenido de URL añadido exitosamente a la base de conocimientos.\n\nURL: {url}\nDominio: {parsed_url.netloc}\n\nCopia Markdown guardada en: {md_filepath}"
+        else:
+            log(f"MCP Server: Proceso completado - No se guardó copia Markdown")
+            return f"Contenido de URL añadido exitosamente a la base de conocimientos.\n\nURL: {url}\nDominio: {parsed_url.netloc}"
+
+    except Exception as e:
+        log(f"MCP Server: Error procesando URL '{url}': {e}")
+        error_msg = f"Error procesando URL '{url}': {e}"
+        
+        # Proporcionar información más útil para el agente
+        if "404" in str(e) or "Not Found" in str(e):
+            error_msg += "\n\n💡 Consejo: La URL no existe o no es accesible. Verifica que la URL sea correcta."
+        elif "timeout" in str(e).lower():
+            error_msg += "\n\n💡 Consejo: La página tardó demasiado en cargar. Intenta más tarde o verifica tu conexión a internet."
+        elif "permission" in str(e).lower() or "403" in str(e):
+            error_msg += "\n\n💡 Consejo: No tienes permisos para acceder a esta página. Algunas páginas bloquean el acceso automático."
+        elif "youtube" in url.lower() and "transcript" in str(e).lower():
+            error_msg += "\n\n💡 Consejo: Este video de YouTube no tiene transcripción disponible o está deshabilitada."
+        elif "ssl" in str(e).lower() or "certificate" in str(e).lower():
+            error_msg += "\n\n💡 Consejo: Problema con el certificado SSL de la página. Intenta con una URL diferente."
         
         return error_msg
 
