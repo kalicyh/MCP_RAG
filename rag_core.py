@@ -54,7 +54,7 @@ COLLECTION_NAME = "mcp_rag_collection"
 # Modelos más rápidos:
 # "all-MiniLM-L6-v2"       # Tu modelo actual
 # "paraphrase-MiniLM-L3-v2" # Aún más rápido
-EMBEDDING_MODEL_NAME = "paraphrase-MiniLM-L3-v2"
+EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
 
 def get_embedding_function():
     """
