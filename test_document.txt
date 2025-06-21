@@ -1,0 +1,16 @@
+Este es un documento de prueba para el sistema RAG.
+
+Información importante:
+- El sistema RAG permite almacenar conocimiento localmente
+- Los documentos se convierten a Markdown automáticamente
+- Se pueden hacer preguntas sobre el contenido almacenado
+- Todo funciona de forma local y privada
+
+Características del sistema:
+1. Procesamiento de múltiples formatos (PDF, DOCX, TXT, etc.)
+2. Conversión automática a Markdown
+3. Almacenamiento en base de datos vectorial
+4. Búsqueda semántica de información
+5. Respuestas generadas por IA local
+
+Este documento servirá para probar que el sistema funciona correctamente. 

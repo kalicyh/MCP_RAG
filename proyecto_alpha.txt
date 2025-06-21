@@ -1,0 +1,13 @@
+Nombre del Proyecto: Alpha
+
+Responsable: Dra. Elena Ríos
+
+Resumen:
+El Proyecto Alpha es una iniciativa de investigación y desarrollo enfocada en la creación de un nuevo material polimérico biodegradable. Este material está diseñado para reemplazar los plásticos de un solo uso en aplicaciones de embalaje.
+
+Objetivos Clave:
+1.  Finalizar la fórmula química del polímero para finales del Q3.
+2.  Establecer un método de producción a escala piloto antes de fin de año.
+3.  Asegurar que el coste de producción sea competitivo con los plásticos actuales.
+
+Estado Actual: En progreso. La fórmula preliminar ha mostrado resultados prometedores en las pruebas de laboratorio. 
