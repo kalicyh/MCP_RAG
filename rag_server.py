@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from markitdown import MarkItDown
@@ -32,14 +33,14 @@ def warm_up_rag_system():
     if "warmed_up" in rag_state:
         return
     
-    log("MCP Server: Warming up RAG system...")
-    log("MCP Server: Pre-loading embedding model into memory...")
+    log("MCP Server: Calentando sistema RAG...")
+    log("MCP Server: Precargando modelo de embedding en memoria...")
     
     # Esta llamada fuerza la carga del modelo de embedding
     get_vector_store()
     
     rag_state["warmed_up"] = True
-    log("MCP Server: RAG system is warm and ready.")
+    log("MCP Server: Sistema RAG caliente y listo.")
 
 def ensure_converted_docs_directory():
     """Asegura que existe la carpeta para los documentos convertidos."""
@@ -75,7 +76,7 @@ def save_markdown_copy(file_path: str, markdown_content: str) -> str:
         log(f"MCP Server: Copia Markdown guardada en: {md_filepath}")
         return md_filepath
     except Exception as e:
-        log(f"MCP Server Warning: No se pudo guardar copia Markdown: {e}")
+        log(f"MCP Server Advertencia: No se pudo guardar copia Markdown: {e}")
         return ""
 
 def initialize_rag():
@@ -85,7 +86,7 @@ def initialize_rag():
     if "initialized" in rag_state:
         return
 
-    log("MCP Server: Initializing RAG system via core...")
+    log("MCP Server: Inicializando sistema RAG vía núcleo...")
     
     # Obtenemos la base de datos y la cadena QA desde nuestro núcleo
     vector_store = get_vector_store()
@@ -94,7 +95,7 @@ def initialize_rag():
     rag_state["vector_store"] = vector_store
     rag_state["qa_chain"] = qa_chain
     rag_state["initialized"] = True
-    log("MCP Server: RAG system initialized successfully.")
+    log("MCP Server: Sistema RAG inicializado exitosamente.")
 
 # --- Implementación de las Herramientas ---
 
@@ -114,7 +115,7 @@ def learn_text(text: str, source_name: str = "manual_input") -> str:
         text: The text content to be learned and stored in the knowledge base.
         source_name: A descriptive name for the source (e.g., "user_notes", "research_paper", "conversation_summary").
     """
-    log(f"MCP Server: Processing text of {len(text)} characters from source: {source_name}")
+    log(f"MCP Server: Procesando texto de {len(text)} caracteres de la fuente: {source_name}")
     initialize_rag()
     
     try:
@@ -122,16 +123,16 @@ def learn_text(text: str, source_name: str = "manual_input") -> str:
         source_metadata = {
             "source": source_name,
             "input_type": "manual_text",
-            "processed_date": "2025-06-21"
+            "processed_date": datetime.now().isoformat()
         }
         
         # Usamos la función del núcleo para añadir el texto con metadatos
         add_text_to_knowledge_base(text, rag_state["vector_store"], source_metadata)
-        log(f"MCP Server: Text added successfully to the knowledge base")
-        return f"Text successfully added to knowledge base. Fragment: '{text[:70]}...' (Source: {source_name})"
+        log(f"MCP Server: Texto añadido exitosamente a la base de conocimientos")
+        return f"Texto añadido exitosamente a la base de conocimientos. Fragmento: '{text[:70]}...' (Fuente: {source_name})"
     except Exception as e:
-        log(f"MCP Server: Error adding text: {e}")
-        return f"Error adding text: {e}"
+        log(f"MCP Server: Error al añadir texto: {e}")
+        return f"Error al añadir texto: {e}"
 
 @mcp.tool()
 def learn_document(file_path: str) -> str:
@@ -153,32 +154,32 @@ def learn_document(file_path: str) -> str:
     Args:
         file_path: The absolute or relative path to the document file to process.
     """
-    log(f"MCP Server: Starting document processing: {file_path}")
-    log(f"MCP Server: DEBUG - Raw path received: {repr(file_path)}")
-    log(f"MCP Server: DEBUG - Checking existence for absolute path: {os.path.abspath(file_path)}")
+    log(f"MCP Server: Iniciando procesamiento de documento: {file_path}")
+    log(f"MCP Server: DEBUG - Ruta recibida: {repr(file_path)}")
+    log(f"MCP Server: DEBUG - Verificando existencia de ruta absoluta: {os.path.abspath(file_path)}")
     initialize_rag()  # Asegura que el sistema RAG esté listo
     
     try:
         if not os.path.exists(file_path):
-            log(f"MCP Server: File not found at path: {file_path}")
-            return f"Error: File not found at '{file_path}'"
+            log(f"MCP Server: Archivo no encontrado en la ruta: {file_path}")
+            return f"Error: Archivo no encontrado en '{file_path}'"
 
-        log(f"MCP Server: Converting document to Markdown...")
+        log(f"MCP Server: Convirtiendo documento a Markdown...")
         result = md_converter.convert(file_path)
         markdown_content = result.text_content
 
         if not markdown_content or markdown_content.isspace():
-            log(f"MCP Server: Warning: Document processed but no text could be extracted: {file_path}")
-            return f"Warning: Document '{file_path}' was processed, but no text content could be extracted."
+            log(f"MCP Server: Advertencia: Documento procesado pero no se pudo extraer texto: {file_path}")
+            return f"Advertencia: El documento '{file_path}' fue procesado, pero no se pudo extraer contenido de texto."
 
-        log(f"MCP Server: Document converted successfully ({len(markdown_content)} characters)")
+        log(f"MCP Server: Documento convertido exitosamente ({len(markdown_content)} caracteres)")
         
         # Guardar copia en Markdown
-        log(f"MCP Server: Saving Markdown copy...")
+        log(f"MCP Server: Guardando copia Markdown...")
         md_copy_path = save_markdown_copy(file_path, markdown_content)
         
         # Reutilizamos la herramienta learn_text que ahora usa el núcleo
-        log(f"MCP Server: Adding content to the knowledge base...")
+        log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
         
         # Crear metadatos específicos del documento
         doc_metadata = {
@@ -186,7 +187,7 @@ def learn_document(file_path: str) -> str:
             "file_path": file_path,
             "file_type": os.path.splitext(file_path)[1].lower(),
             "input_type": "document",
-            "processed_date": "2025-06-21",
+            "processed_date": datetime.now().isoformat(),
             "converted_to_md": md_copy_path if md_copy_path else "No"
         }
         
@@ -195,23 +196,23 @@ def learn_document(file_path: str) -> str:
         
         # Añadir información sobre la copia guardada
         if md_copy_path:
-            log(f"MCP Server: Process completed - Markdown copy saved")
-            return f"Document successfully added to knowledge base. Source: {os.path.basename(file_path)}\n\nMarkdown copy saved at: {md_copy_path}"
+            log(f"MCP Server: Proceso completado - Copia Markdown guardada")
+            return f"Documento añadido exitosamente a la base de conocimientos. Fuente: {os.path.basename(file_path)}\n\nCopia Markdown guardada en: {md_copy_path}"
         else:
-            log(f"MCP Server: Process completed - No Markdown copy saved")
-            return f"Document successfully added to knowledge base. Source: {os.path.basename(file_path)}"
+            log(f"MCP Server: Proceso completado - No se guardó copia Markdown")
+            return f"Documento añadido exitosamente a la base de conocimientos. Fuente: {os.path.basename(file_path)}"
 
     except Exception as e:
-        log(f"MCP Server: Error processing document '{file_path}': {e}")
-        error_msg = f"Error processing document '{file_path}': {e}"
+        log(f"MCP Server: Error procesando documento '{file_path}': {e}")
+        error_msg = f"Error procesando documento '{file_path}': {e}"
         
         # Proporcionar información más útil para el agente
         if "File not found" in str(e):
-            error_msg += "\n\n💡 Tip: Make sure the file path is correct and the file exists."
+            error_msg += "\n\n💡 Consejo: Asegúrate de que la ruta del archivo sea correcta y que el archivo exista."
         elif "UnsupportedFormatException" in str(e):
-            error_msg += "\n\n💡 Tip: This file format is not supported. Supported formats: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML"
+            error_msg += "\n\n💡 Consejo: Este formato de archivo no es compatible. Formatos soportados: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML"
         elif "permission" in str(e).lower():
-            error_msg += "\n\n💡 Tip: Check if you have permission to access this file."
+            error_msg += "\n\n💡 Consejo: Verifica si tienes permisos para acceder a este archivo."
         
         return error_msg
 
@@ -233,33 +234,66 @@ def ask_rag(query: str) -> str:
     Args:
         query: The specific question or information request to search for in the knowledge base.
     """
-    log(f"MCP Server: Processing question: '{query[:50]}{'...' if len(query) > 50 else ''}'")
+    log(f"MCP Server: Procesando pregunta: '{query[:50]}{'...' if len(query) > 50 else ''}'")
     initialize_rag()
 
     try:
-        log(f"MCP Server: Searching for relevant information in the knowledge base...")
+        log(f"MCP Server: Buscando información relevante en la base de conocimientos...")
         qa_chain = rag_state["qa_chain"]
         response = qa_chain.invoke({"query": query})
         
         # Obtener la respuesta principal
-        answer = response.get("result", "Could not get an answer.")
+        answer = response.get("result", "No se pudo obtener una respuesta.")
         
-        # Añadir información de fuentes si está disponible
-        sources_info = ""
-        if "source_documents" in response and response["source_documents"]:
-            sources_info = "\n\n📚 Fuentes de información:\n"
-            for i, doc in enumerate(response["source_documents"], 1):
-                source_name = doc.metadata.get("source", "Unknown") if hasattr(doc, 'metadata') and doc.metadata else "Unknown"
-                sources_info += f"   {i}. {source_name}\n"
+        # Verificar si se encontró información relevante
+        source_documents = response.get("source_documents", [])
         
-        log(f"MCP Server: Answer generated successfully")
-        return answer + sources_info
+        if not source_documents:
+            return "❌ **No se encontró información relevante** en la base de conocimientos para responder a tu pregunta.\n\n💡 **Sugerencias:**\n- Verifica que hayas añadido documentos o texto relacionado con este tema\n- Intenta reformular tu pregunta con palabras diferentes\n- Usa la herramienta `learn_text` o `learn_document` para añadir información sobre este tema"
+        
+        # Construir respuesta mejorada con información de fuentes
+        enhanced_answer = f"🤖 **Respuesta:**\n{answer}\n\n"
+        
+        # Añadir información de fuentes con más detalles
+        if source_documents:
+            enhanced_answer += "📚 **Fuentes de información utilizadas:**\n"
+            for i, doc in enumerate(source_documents, 1):
+                source_name = doc.metadata.get("source", "Fuente desconocida") if hasattr(doc, 'metadata') and doc.metadata else "Fuente desconocida"
+                file_type = doc.metadata.get("file_type", "") if hasattr(doc, 'metadata') and doc.metadata else ""
+                processed_date = doc.metadata.get("processed_date", "") if hasattr(doc, 'metadata') and doc.metadata else ""
+                
+                source_info = f"   {i}. **{source_name}**"
+                if file_type:
+                    source_info += f" ({file_type})"
+                if processed_date:
+                    # Convertir fecha ISO a formato legible
+                    try:
+                        from datetime import datetime
+                        date_obj = datetime.fromisoformat(processed_date.replace('Z', '+00:00'))
+                        readable_date = date_obj.strftime("%d/%m/%Y %H:%M")
+                        source_info += f" - Procesado: {readable_date}"
+                    except:
+                        pass
+                enhanced_answer += source_info + "\n"
+        
+        # Añadir información sobre la calidad de la respuesta
+        num_sources = len(source_documents)
+        if num_sources >= 3:
+            enhanced_answer += "\n✅ **Alta confianza:** Respuesta basada en múltiples fuentes"
+        elif num_sources == 2:
+            enhanced_answer += "\n⚠️ **Confianza media:** Respuesta basada en 2 fuentes"
+        else:
+            enhanced_answer += "\n⚠️ **Confianza limitada:** Respuesta basada en 1 fuente"
+        
+        log(f"MCP Server: Respuesta generada exitosamente con {len(source_documents)} fuentes")
+        return enhanced_answer
+        
     except Exception as e:
-        log(f"MCP Server: Error processing question: {e}")
-        return f"Error processing the question: {e}"
+        log(f"MCP Server: Error procesando pregunta: {e}")
+        return f"❌ **Error al procesar la pregunta:** {e}\n\n💡 **Sugerencias:**\n- Verifica que el sistema RAG esté correctamente inicializado\n- Intenta reformular tu pregunta\n- Si el problema persiste, reinicia el servidor"
 
 # --- Punto de Entrada para Correr el Servidor ---
 if __name__ == "__main__":
-    log("Starting RAG MCP server...")
+    log("Iniciando servidor MCP RAG...")
     warm_up_rag_system()  # Calentamos el sistema al arrancar
     mcp.run(transport='stdio') 

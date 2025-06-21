@@ -436,6 +436,937 @@ El sistema está optimizado para ser utilizado por agentes de IA. Consulta `AGEN
 
 ---
 
+## 🔧 Optimizaciones Implementadas
+
+Esta sección explica cómo funciona el sistema RAG optimizado actualmente, con todas las mejoras técnicas implementadas para obtener las mejores búsquedas y respuestas.
+
+### **A. División Inteligente de Texto**
+
+#### **¿Cómo funciona la división de texto?**
+
+El sistema utiliza `RecursiveCharacterTextSplitter` que divide el texto de manera inteligente, respetando la estructura natural del contenido:
+
+```python
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,        # Tamaño máximo de cada fragmento
+    chunk_overlap=200,      # Caracteres que se comparten entre fragmentos
+    length_function=len,    # Función para medir longitud
+    separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]  # Separadores inteligentes
+)
+```
+
+#### **Separadores Inteligentes:**
+
+El sistema busca los mejores puntos de división en este orden:
+1. **`\n\n`** - Párrafos (mejor opción)
+2. **`\n`** - Saltos de línea
+3. **`. `** - Final de oraciones
+4. **`! `** - Final de exclamaciones
+5. **`? `** - Final de preguntas
+6. **` `** - Espacios (último recurso)
+
+#### **¿Por qué es importante?**
+
+- **Preserva Contexto**: No corta en medio de una idea
+- **Mantiene Coherencia**: Cada fragmento es una unidad lógica
+- **Mejora Búsquedas**: Los fragmentos son más relevantes y completos
+
+#### **Ejemplo de División Inteligente:**
+```python
+# Texto original:
+"""
+La inteligencia artificial (IA) es una rama de la informática. 
+Se enfoca en crear sistemas inteligentes. Estos sistemas pueden 
+aprender y tomar decisiones. La IA tiene muchas aplicaciones 
+en la vida moderna.
+"""
+
+# Fragmentos resultantes:
+# Fragmento 1: "La inteligencia artificial (IA) es una rama de la informática. Se enfoca en crear sistemas inteligentes."
+# Fragmento 2: "Estos sistemas pueden aprender y tomar decisiones. La IA tiene muchas aplicaciones en la vida moderna."
+```
+
+### **B. Motor de Búsqueda Optimizado**
+
+#### **Configuración Actual:**
+
+```python
+retriever = vector_store.as_retriever(
+    search_type="similarity",  # Búsqueda por similitud semántica
+    search_kwargs={
+        "k": 5,                # Recupera 5 fragmentos más relevantes
+        "score_threshold": 0.7, # Solo documentos con similitud > 70%
+        "fetch_k": 10          # Busca 10 documentos y filtra los mejores 5
+    }
+)
+```
+
+#### **¿Cómo funciona la búsqueda?**
+
+1. **Búsqueda Inicial**: Busca 10 documentos candidatos
+2. **Cálculo de Similitud**: Calcula qué tan similares son a tu pregunta
+3. **Filtrado por Calidad**: Solo mantiene documentos con similitud > 70%
+4. **Selección Final**: Toma los 5 mejores fragmentos
+
+#### **Parámetros Explicados:**
+
+- **`k=5`**: Obtienes información de 5 fuentes diferentes para respuestas más completas
+- **`score_threshold=0.7`**: Garantiza que solo se use información muy relevante
+- **`fetch_k=10`**: Busca más opciones para seleccionar las mejores
+
+### **C. Limpieza Automática de Texto**
+
+#### **¿Qué hace la limpieza?**
+
+Antes de procesar cualquier texto, el sistema lo limpia automáticamente:
+
+```python
+def clean_text_for_rag(text: str) -> str:
+    # Eliminar espacios múltiples
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Mantener solo caracteres importantes
+    text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\{\}\"\']', '', text)
+    
+    # Normalizar puntuación
+    text = re.sub(r'\s+([\.\,\!\?\;\:])', r'\1', text)
+    
+    return text.strip()
+```
+
+#### **Problemas que resuelve automáticamente:**
+
+1. **Espacios Múltiples**: `"Hola    mundo"` → `"Hola mundo"`
+2. **Caracteres Especiales**: `"Texto@#$%^"` → `"Texto"`
+3. **Puntuación Inconsistente**: `"Hola . Mundo"` → `"Hola. Mundo"`
+4. **Saltos de Línea Excesivos**: Normaliza el formato
+
+#### **Ejemplo de Limpieza:**
+```python
+# Texto con ruido:
+"""
+La IA    es muy importante!!!
+Tiene muchas aplicaciones@@@
+"""
+
+# Después de limpieza automática:
+"La IA es muy importante! Tiene muchas aplicaciones"
+```
+
+### **D. Respuestas Enriquecidas con Información de Calidad**
+
+#### **¿Qué información incluye cada respuesta?**
+
+El sistema proporciona respuestas completas con:
+
+```
+🤖 Respuesta:
+[Respuesta generada por IA]
+
+📚 Fuentes de información utilizadas:
+   1. documento1.pdf (.pdf) - Procesado: 15/12/2024 14:30
+   2. manual_ia.txt (.txt) - Procesado: 15/12/2024 14:25
+
+✅ Alta confianza: Respuesta basada en múltiples fuentes
+```
+
+#### **Información Incluida:**
+
+1. **Respuesta Principal**: Generada por el modelo de IA
+2. **Fuentes Utilizadas**: Lista de documentos consultados
+3. **Tipo de Archivo**: Formato de cada fuente
+4. **Fecha de Procesamiento**: Cuándo se añadió a la base de datos
+5. **Nivel de Confianza**: Basado en el número de fuentes
+
+#### **Niveles de Confianza:**
+
+- **✅ Alta confianza**: 3 o más fuentes
+- **⚠️ Confianza media**: 2 fuentes
+- **⚠️ Confianza limitada**: 1 fuente
+
+### **E. Sistema de Logs en Español**
+
+#### **¿Qué información muestran los logs?**
+
+Los logs te permiten seguir todo el proceso en español:
+
+```
+MCP Server: Iniciando servidor MCP RAG...
+MCP Server: Calentando sistema RAG...
+MCP Server: Precargando modelo de embedding en memoria...
+Core: Cargando modelo de embedding local: all-MiniLM-L6-v2
+Core: Este paso puede tomar unos minutos en la primera ejecución para descargar el modelo.
+Core: Usando dispositivo 'cpu' para embeddings.
+Core: ¡Modelo cargado exitosamente!
+Core: Inicializando base de datos vectorial...
+Core: Base de datos vectorial inicializada en './rag_mcp_db'
+MCP Server: Sistema RAG caliente y listo.
+```
+
+#### **Información que puedes monitorear:**
+
+- **Progreso de Carga**: Cuándo se cargan los modelos
+- **Procesamiento de Texto**: Cuántos fragmentos se crean
+- **Búsquedas**: Cuántas fuentes se encuentran
+- **Errores**: Mensajes claros con sugerencias
+
+### **F. Manejo Inteligente de Errores**
+
+#### **¿Cómo responde el sistema a los errores?**
+
+Cuando algo no funciona correctamente, el sistema proporciona:
+
+```
+❌ Error al procesar la pregunta: [Descripción del error]
+
+💡 Sugerencias:
+- Verifica que el sistema RAG esté correctamente inicializado
+- Intenta reformular tu pregunta
+- Si el problema persiste, reinicia el servidor
+```
+
+#### **Tipos de errores que maneja:**
+
+- **Archivos no encontrados**: Sugiere verificar rutas
+- **Formatos no soportados**: Lista formatos compatibles
+- **Problemas de permisos**: Guía para verificar acceso
+- **Sistema no inicializado**: Instrucciones de reinicio
+
+## **¿Cómo Funciona el Sistema Optimizado?**
+
+### **1. Proceso de Búsqueda Completo:**
+
+1. **Recepción de Pregunta**: El sistema recibe tu consulta
+2. **Limpieza Automática**: Limpia la pregunta si es necesario
+3. **Búsqueda Semántica**: Encuentra documentos relevantes
+4. **Filtrado por Calidad**: Solo usa información muy similar
+5. **Generación de Respuesta**: Crea respuesta basada en múltiples fuentes
+6. **Información de Fuentes**: Proporciona lista completa de referencias
+
+### **2. Características de Calidad:**
+
+- **Alta Precisión**: Solo documentos con >70% de similitud
+- **Contexto Completo**: 5 fragmentos de información
+- **Trazabilidad**: Sabes exactamente de dónde viene cada información
+- **Confianza Medible**: Nivel de confianza basado en fuentes
+
+### **3. Experiencia de Usuario:**
+
+- **Respuestas Completas**: Información detallada y bien estructurada
+- **Fuentes Claras**: Sabes qué documentos se consultaron
+- **Errores Útiles**: Mensajes claros con sugerencias
+- **Monitoreo Fácil**: Logs en español para seguir el proceso
+
+## **Ejemplo de Funcionamiento Completo**
+
+**Pregunta**: "¿Cuáles son las aplicaciones de machine learning en medicina?"
+
+**Proceso Interno:**
+1. Sistema busca documentos sobre "machine learning" y "medicina"
+2. Encuentra 3 documentos relevantes con similitud >70%
+3. Genera respuesta combinando información de las 3 fuentes
+4. Proporciona lista completa de fuentes utilizadas
+
+**Respuesta Final:**
+```
+🤖 Respuesta:
+Machine learning tiene múltiples aplicaciones en medicina, incluyendo diagnóstico por imágenes, análisis de datos médicos, descubrimiento de fármacos y medicina personalizada. Los algoritmos pueden analizar radiografías, resonancias magnéticas y otros estudios médicos para detectar enfermedades con alta precisión.
+
+📚 Fuentes de información utilizadas:
+   1. aplicaciones_ml.pdf (.pdf) - Procesado: 15/12/2024 14:30
+   2. medicina_digital.txt (.txt) - Procesado: 15/12/2024 14:25
+   3. ia_salud.docx (.docx) - Procesado: 15/12/2024 14:20
+
+✅ Alta confianza: Respuesta basada en múltiples fuentes
+```
+
+## **Consejos para Obtener Mejores Resultados**
+
+### **1. Añade Información Variada:**
+```python
+# Ejemplo de uso
+learn_text("La inteligencia artificial es una rama de la informática que busca crear sistemas capaces de realizar tareas que requieren inteligencia humana.", "definicion_ia")
+```
+
+### **2. Usa Preguntas Específicas:**
+- ❌ "¿Qué es la IA?"
+- ✅ "¿Cuáles son las principales aplicaciones de la inteligencia artificial en la medicina?"
+
+### **3. Verifica las Fuentes:**
+- Siempre revisa la información de fuentes en las respuestas
+- Usa múltiples documentos sobre el mismo tema para mayor confianza
+
+### **4. Monitoreo del Sistema:**
+- Los logs te mostrarán cuántos fragmentos se procesan
+- Verás información sobre la calidad de las búsquedas
+- Podrás identificar si necesitas ajustar parámetros
+
+---
+
+## 🧠 Entendiendo los Embeddings
+
+Esta sección explica qué son los embeddings y por qué son fundamentales para el funcionamiento del sistema RAG.
+
+### **🤖 ¿Qué son los Embeddings?**
+
+#### **Definición Simple:**
+Los **embeddings** son como "traductores" que convierten texto en números que las computadoras pueden entender y comparar. Es como crear un "código postal" para cada palabra o frase.
+
+#### **Analogía Práctica:**
+Imagina que tienes una biblioteca con miles de libros. Para encontrar libros similares, podrías:
+- **Sin embeddings**: Leer cada libro completo (muy lento)
+- **Con embeddings**: Usar un código que describe el contenido (muy rápido)
+
+### **🔢 ¿Cómo Funcionan los Embeddings?**
+
+#### **Proceso de Conversión:**
+```python
+# Texto original (humano entiende)
+"La inteligencia artificial es fascinante"
+
+# Embedding (computadora entiende)
+[0.234, -0.567, 0.891, 0.123, -0.456, ...]  # Vector de 384 números
+```
+
+#### **¿Por qué Números?**
+- **Comparación rápida**: Las computadoras pueden comparar números muy rápido
+- **Similitud matemática**: Textos similares tienen números similares
+- **Búsqueda eficiente**: Encuentra información relevante en milisegundos
+
+### **🎯 ¿Cómo Se Usan en tu Sistema RAG?**
+
+#### **1. Proceso de Almacenamiento:**
+```python
+# Cuando añades texto al sistema:
+texto = "Machine learning es un tipo de IA"
+embedding = modelo_embedding.convertir_a_vector(texto)
+# Resultado: [0.1, 0.5, -0.3, 0.8, ...]
+
+# Se guarda en la base de datos vectorial
+base_datos.guardar(texto, embedding)
+```
+
+#### **2. Proceso de Búsqueda:**
+```python
+# Cuando haces una pregunta:
+pregunta = "¿Qué es machine learning?"
+embedding_pregunta = modelo_embedding.convertir_a_vector(pregunta)
+# Resultado: [0.12, 0.48, -0.25, 0.82, ...]
+
+# El sistema busca textos con embeddings similares
+resultados = base_datos.buscar_similares(embedding_pregunta)
+```
+
+### **🧮 ¿Cómo Se Calcula la Similitud?**
+
+#### **Cálculo de Distancia:**
+```python
+# Ejemplo simplificado:
+embedding_1 = [0.1, 0.5, -0.3, 0.8]
+embedding_2 = [0.12, 0.48, -0.25, 0.82]
+
+# Distancia = qué tan diferentes son
+distancia = calcular_distancia(embedding_1, embedding_2)
+# Resultado: 0.05 (muy similar)
+
+# Similitud = 1 - distancia
+similitud = 1 - 0.05 = 0.95 (95% similar)
+```
+
+#### **Interpretación de Similitud:**
+- **0.9 - 1.0**: Muy similar (excelente coincidencia)
+- **0.7 - 0.9**: Similar (buena coincidencia) ← **Tu sistema usa 0.7 como mínimo**
+- **0.5 - 0.7**: Moderadamente similar
+- **0.0 - 0.5**: Poco similar
+
+### **🔧 ¿Qué Modelo de Embedding Usa tu Sistema?**
+
+#### **Modelo Actual:**
+```python
+EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+```
+
+#### **Características del Modelo:**
+- **Tamaño**: ~90MB (pequeño y eficiente)
+- **Dimensiones**: 384 números por texto
+- **Idiomas**: Multilingüe (español e inglés)
+- **Velocidad**: Muy rápido
+- **Calidad**: Excelente para búsquedas
+
+#### **¿Por qué Este Modelo?**
+- **Eficiente**: No necesita mucha memoria
+- **Rápido**: Procesa texto en milisegundos
+- **Preciso**: Encuentra información muy relevante
+- **Local**: Funciona sin internet
+
+### **📊 Ejemplo Práctico en tu Sistema**
+
+#### **Escenario: Buscar información sobre "machine learning"**
+
+**Paso 1: Procesar Documentos**
+```python
+# Documento 1
+texto_1 = "Machine learning es una rama de la IA"
+embedding_1 = [0.1, 0.5, -0.3, 0.8, ...]  # 384 números
+
+# Documento 2  
+texto_2 = "Los algoritmos de ML pueden aprender"
+embedding_2 = [0.12, 0.48, -0.25, 0.82, ...]  # 384 números
+
+# Documento 3
+texto_3 = "El clima hoy está soleado"
+embedding_3 = [-0.8, 0.2, 0.9, -0.1, ...]  # 384 números
+```
+
+**Paso 2: Hacer Pregunta**
+```python
+pregunta = "¿Qué es machine learning?"
+embedding_pregunta = [0.11, 0.49, -0.28, 0.81, ...]
+```
+
+**Paso 3: Calcular Similitudes**
+```python
+similitud_1 = calcular_similitud(embedding_pregunta, embedding_1)  # 0.95
+similitud_2 = calcular_similitud(embedding_pregunta, embedding_2)  # 0.92
+similitud_3 = calcular_similitud(embedding_pregunta, embedding_3)  # 0.15
+```
+
+**Paso 4: Seleccionar Resultados**
+```python
+# Solo documentos con similitud > 0.7 (70%)
+resultados = [
+    (texto_1, 0.95),  # Muy relevante
+    (texto_2, 0.92)   # Muy relevante
+    # texto_3 se descarta (0.15 < 0.7)
+]
+```
+
+### **⚡ Ventajas de los Embeddings**
+
+#### **1. Búsqueda Semántica:**
+```python
+# Encuentra información incluso con palabras diferentes
+pregunta = "¿Qué es ML?"
+# Encuentra: "Machine learning es una rama de la IA"
+# Aunque "ML" y "Machine learning" son diferentes
+```
+
+#### **2. Velocidad:**
+- **Sin embeddings**: Leer todos los documentos (muy lento)
+- **Con embeddings**: Comparar números (muy rápido)
+
+#### **3. Precisión:**
+- **Búsqueda por palabras**: "IA" no encuentra "inteligencia artificial"
+- **Búsqueda semántica**: "IA" encuentra "inteligencia artificial"
+
+#### **4. Escalabilidad:**
+- **Miles de documentos**: Procesamiento en segundos
+- **Millones de documentos**: Procesamiento en minutos
+
+### **🔍 ¿Cómo Se Configuran en tu Sistema?**
+
+#### **En `rag_core.py`:**
+```python
+def get_embedding_function():
+    embeddings = HuggingFaceEmbeddings(
+        model_name="all-MiniLM-L6-v2",
+        model_kwargs={'device': 'cpu'}  # o 'cuda' si tienes GPU
+    )
+    return embeddings
+```
+
+#### **Parámetros Importantes:**
+- **`model_name`**: Qué modelo usar
+- **`device`**: CPU o GPU
+- **`chunk_size`**: Tamaño de fragmentos (1000 caracteres)
+- **`chunk_overlap`**: Superposición entre fragmentos (200 caracteres)
+
+### **📈 ¿Cómo Mejorar los Embeddings?**
+
+#### **1. Calidad del Texto:**
+```python
+# ✅ Texto limpio y bien estructurado
+"Machine learning es una rama de la inteligencia artificial que permite a las computadoras aprender sin ser programadas explícitamente."
+
+# ❌ Texto con ruido
+"ML is AI stuff that makes computers learn stuff without programming them explicitly."
+```
+
+#### **2. Tamaño de Fragmentos:**
+- **Muy pequeños**: Pierden contexto
+- **Muy grandes**: Menos precisos
+- **Óptimo**: 1000 caracteres con 200 de overlap
+
+#### **3. Modelo de Embedding:**
+- **Modelos más grandes**: Mejor calidad, más lento
+- **Modelos más pequeños**: Más rápido, calidad aceptable
+- **Tu modelo**: Balance perfecto
+
+### **🎯 Resumen: ¿Por qué son Importantes?**
+
+#### **Sin Embeddings:**
+- Búsquedas lentas
+- Resultados imprecisos
+- No entiende sinónimos
+- Escalabilidad limitada
+
+#### **Con Embeddings:**
+- Búsquedas instantáneas
+- Resultados muy precisos
+- Entiende significado
+- Escalable a millones de documentos
+
+**Los embeddings son el "cerebro" que hace que tu sistema RAG sea inteligente y rápido. Convierten el texto en un lenguaje que las computadoras pueden entender y comparar eficientemente, permitiendo búsquedas semánticas precisas en milisegundos.**
+
+---
+
+## ⚠️ Limitaciones del Modelo de Embedding
+
+Esta sección detalla las limitaciones y desventajas del modelo `all-MiniLM-L6-v2` que usa tu sistema, para que puedas tomar decisiones informadas y optimizar su uso.
+
+### **🔍 Limitaciones de Tamaño y Complejidad**
+
+#### **Modelo Pequeño:**
+- **Tamaño**: Solo 90MB (muy pequeño)
+- **Dimensiones**: 384 números (limitado)
+- **¿Problema?** Menos capacidad para capturar matices complejos
+
+#### **Comparación con Modelos Más Grandes:**
+```python
+# Tu modelo actual:
+all-MiniLM-L6-v2: 90MB, 384 dimensiones
+
+# Modelos más potentes:
+sentence-transformers/all-mpnet-base-v2: 420MB, 768 dimensiones
+text-embedding-ada-002: 1.5GB, 1536 dimensiones
+```
+
+### **🧠 Limitaciones en Comprensión Semántica**
+
+#### **Contexto Limitado:**
+- **Longitud máxima**: ~512 tokens por fragmento
+- **¿Problema?** Puede perder contexto en textos largos o complejos
+
+#### **Ejemplo de Limitación:**
+```python
+# Texto complejo que puede ser problemático:
+texto_complejo = """
+La inteligencia artificial, específicamente el machine learning supervisado, 
+utiliza algoritmos como redes neuronales convolucionales para procesar 
+imágenes médicas y detectar anomalías en radiografías de tórax, 
+permitiendo diagnósticos más precisos y tempranos.
+"""
+
+# El modelo puede no capturar completamente la relación entre:
+# - "redes neuronales convolucionales" 
+# - "procesar imágenes médicas"
+# - "detectar anomalías"
+```
+
+### **🌍 Limitaciones en Idiomas**
+
+#### **Soporte Multilingüe Básico:**
+- **Idiomas principales**: Inglés y español
+- **¿Problema?** Rendimiento desigual en otros idiomas
+- **Calidad variable**: Mejor en inglés que en español
+
+#### **Ejemplo de Problema:**
+```python
+# En inglés (excelente):
+"machine learning" → [0.1, 0.5, -0.3, ...]
+
+# En español (bueno, pero no óptimo):
+"aprendizaje automático" → [0.08, 0.48, -0.25, ...]
+
+# En otros idiomas (limitado):
+"apprentissage automatique" → [0.05, 0.45, -0.2, ...]
+```
+
+### **🔬 Limitaciones en Dominios Específicos**
+
+#### **Conocimiento General vs Especializado:**
+- **Entrenado en**: Texto general de internet
+- **¿Problema?** Puede no entender bien terminología técnica específica
+
+#### **Ejemplos de Dominios Problemáticos:**
+```python
+# Terminología médica especializada:
+"adenocarcinoma pulmonar de células pequeñas" 
+# Puede no capturar bien la relación con "cáncer de pulmón"
+
+# Terminología legal:
+"res judicata" 
+# Puede no entender que es "cosa juzgada"
+
+# Terminología técnica muy específica:
+"microservicios con arquitectura hexagonal"
+# Puede perder matices técnicos específicos
+```
+
+### **🔗 Limitaciones en Comprensión de Relaciones**
+
+#### **Relaciones Complejas:**
+- **Relaciones simples**: Excelente (sinónimos, antónimos)
+- **Relaciones complejas**: Limitado (causalidad, implicación)
+
+#### **Ejemplo de Limitación:**
+```python
+# Relación simple (funciona bien):
+"coche" ↔ "automóvil"  # Sinónimos
+
+# Relación compleja (puede fallar):
+"Si llueve, el suelo se moja" 
+# Puede no capturar bien la relación causal
+```
+
+### **📝 Sensibilidad al Formato del Texto**
+
+#### **Dependencia del Formato:**
+- **Texto limpio**: Excelente rendimiento
+- **Texto con ruido**: Rendimiento degradado
+
+#### **Ejemplos Problemáticos:**
+```python
+# ✅ Texto limpio (funciona bien):
+"La inteligencia artificial es una rama de la informática."
+
+# ❌ Texto con ruido (puede fallar):
+"La IA es una rama de la info... muy importante!!!"
+"La inteligencia artificial (IA) es una rama de la informática."
+```
+
+### **🎯 Limitaciones en Tareas Específicas**
+
+#### **Búsqueda de Información vs Otras Tareas:**
+- **Búsqueda semántica**: Excelente
+- **Clasificación de texto**: Limitado
+- **Análisis de sentimientos**: No optimizado
+- **Extracción de entidades**: Básico
+
+### **📈 Limitaciones de Escalabilidad**
+
+#### **Rendimiento con Grandes Volúmenes:**
+- **Miles de documentos**: Excelente
+- **Millones de documentos**: Puede ser lento
+- **¿Por qué?** Comparación secuencial de vectores
+
+## **🔄 Estrategias para Mitigar Limitaciones**
+
+### **1. Optimizar el Texto de Entrada:**
+```python
+# ✅ Mejorar calidad del texto:
+texto_limpio = clean_text_for_rag(texto_original)
+
+# ✅ Usar fragmentos apropiados:
+chunk_size = 1000  # Tamaño óptimo para este modelo
+chunk_overlap = 200  # Mantener contexto
+```
+
+### **2. Ajustar Parámetros de Búsqueda:**
+```python
+# Para compensar limitaciones:
+search_kwargs = {
+    "k": 5,                # Más fragmentos para mejor cobertura
+    "score_threshold": 0.7, # Umbral alto para precisión
+    "fetch_k": 10          # Buscar más candidatos
+}
+```
+
+### **3. Mejorar la Estructura de Datos:**
+```python
+# ✅ Documentos bien estructurados:
+"Machine learning es una rama de la inteligencia artificial que permite a las computadoras aprender sin ser programadas explícitamente."
+
+# ✅ Metadatos descriptivos:
+metadata = {
+    "domain": "tecnología",
+    "language": "español",
+    "complexity": "intermedio"
+}
+```
+
+### **4. Considerar Modelos Alternativos (Futuro):**
+
+#### **Para Mejor Calidad:**
+```python
+# Modelos más potentes (requieren más recursos):
+"all-mpnet-base-v2"      # 420MB, mejor calidad
+"text-embedding-ada-002" # 1.5GB, máxima calidad
+```
+
+#### **Para Mejor Velocidad:**
+```python
+# Modelos más rápidos:
+"all-MiniLM-L6-v2"       # Tu modelo actual
+"paraphrase-MiniLM-L3-v2" # Aún más rápido
+```
+
+## **⚖️ Resumen: Ventajas vs Desventajas**
+
+### **Desventajas:**
+- ❌ Comprensión semántica limitada
+- ❌ Contexto limitado en textos largos
+- ❌ Rendimiento variable en idiomas
+- ❌ Limitado en dominios especializados
+- ❌ Sensible al formato del texto
+- ❌ Relaciones complejas limitadas
+
+### **Ventajas (que compensan):**
+- ✅ Muy rápido y eficiente
+- ✅ Poco uso de memoria
+- ✅ Funciona sin internet
+- ✅ Excelente para búsquedas básicas
+- ✅ Balance calidad/velocidad
+- ✅ Fácil de implementar
+
+## **🎯 Recomendaciones para tu Caso de Uso**
+
+### **Para tu Sistema Actual:**
+1. **Mantén el modelo actual** - Es un buen balance
+2. **Optimiza el texto de entrada** - Limpia y estructura bien
+3. **Ajusta parámetros** - Usa más fragmentos si es necesario
+4. **Monitorea resultados** - Verifica calidad de respuestas
+
+### **Para Considerar en el Futuro:**
+1. **Si necesitas mejor calidad**: Cambiar a modelo más grande
+2. **Si necesitas más velocidad**: Usar modelo más pequeño
+3. **Si tienes GPU**: Habilitar aceleración por hardware
+4. **Si tienes muchos documentos**: Considerar indexación avanzada
+
+### **Señales de que Necesitas un Modelo Mejor:**
+- Respuestas inconsistentes en tu dominio
+- No encuentra información que sabes que existe
+- Problemas con terminología técnica específica
+- Necesitas mayor precisión en relaciones complejas
+
+---
+
+## ⚡ Consideraciones para Funcionamiento Óptimo
+
+Esta sección detalla las consideraciones técnicas y mejores prácticas para obtener el máximo rendimiento de tu sistema RAG.
+
+### **🔧 Requisitos del Sistema**
+
+#### **Memoria RAM:**
+- **Mínimo recomendado**: 8GB RAM
+- **Óptimo**: 16GB RAM o más
+- **¿Por qué es importante?** Los modelos de embedding y el LLM necesitan memoria para funcionar eficientemente
+
+#### **Almacenamiento:**
+- **Espacio libre**: Al menos 10GB disponibles
+- **Velocidad**: SSD preferiblemente (más rápido que HDD)
+- **¿Para qué?** Modelos, base de datos vectorial y documentos procesados
+
+#### **CPU/GPU:**
+- **CPU**: Mínimo 4 núcleos, recomendado 8+ núcleos
+- **GPU**: Opcional pero mejora significativamente el rendimiento
+- **¿Por qué?** Los embeddings y el procesamiento de texto son intensivos
+
+### **🤖 Configuración de Ollama**
+
+#### **Modelos Recomendados:**
+```bash
+# Modelos por rendimiento:
+ollama pull llama3        # Equilibrio velocidad/calidad
+ollama pull phi3          # Más rápido, menos recursos
+ollama pull mistral       # Buena calidad, moderado uso de recursos
+```
+
+#### **Configuración de Memoria:**
+```bash
+# En Windows, ajustar memoria virtual:
+# Panel de Control > Sistema > Configuración avanzada > Rendimiento > Configuración
+# Memoria virtual: Al menos 16GB
+```
+
+#### **Verificar Funcionamiento:**
+```bash
+# Probar que Ollama funciona correctamente
+ollama list
+ollama run llama3 "Test de funcionamiento"
+```
+
+### **📄 Calidad de los Datos de Entrada**
+
+#### **Documentos Bien Estructurados:**
+- **Formato consistente**: Usa el mismo formato en todos los documentos
+- **Contenido relevante**: Solo añade información útil para tus consultas
+- **Tamaño apropiado**: Documentos entre 1-50 páginas funcionan mejor
+
+#### **Ejemplos de Buena Práctica:**
+```python
+# ✅ Documentos bien estructurados
+learn_text("La inteligencia artificial es una rama de la informática que busca crear sistemas capaces de realizar tareas que requieren inteligencia humana. Se divide en machine learning, procesamiento de lenguaje natural y visión por computadora.", "definicion_ia_completa")
+
+# ❌ Información fragmentada
+learn_text("IA", "definicion_corta")
+learn_text("es", "definicion_fragmentada")
+```
+
+### **✂️ Estrategia de División de Texto**
+
+#### **Tamaño de Fragmentos Actual:**
+- **Fragmentos**: 1000 caracteres con 200 de overlap
+- **Para documentos técnicos**: Puedes aumentar a 1500 caracteres
+- **Para conversaciones**: Puedes reducir a 800 caracteres
+
+#### **Separadores Inteligentes:**
+El sistema ya usa separadores óptimos, pero puedes ajustar según tu contenido:
+```python
+# Para documentos técnicos con muchas listas:
+separators=["\n\n", "\n", ". ", "• ", "- ", " ", ""]
+
+# Para documentos narrativos:
+separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
+```
+
+### **🔍 Configuración de Búsqueda**
+
+#### **Parámetros Actuales (Optimizados):**
+```python
+search_kwargs={
+    "k": 5,                # 5 fragmentos - buen balance
+    "score_threshold": 0.7, # 70% similitud - alta precisión
+    "fetch_k": 10          # 10 candidatos - buena selección
+}
+```
+
+#### **Ajustes según Necesidades:**
+- **Para respuestas más completas**: Aumentar `k` a 7-8
+- **Para mayor precisión**: Aumentar `score_threshold` a 0.8
+- **Para búsquedas más amplias**: Reducir `score_threshold` a 0.6
+
+### **🗄️ Gestión de la Base de Datos**
+
+#### **Mantenimiento Regular:**
+```bash
+# Verificar tamaño de la base de datos
+ls -la rag_mcp_db/
+
+# Limpiar archivos temporales si es necesario
+rm -rf rag_mcp_db/*.tmp
+```
+
+#### **Backup de Datos:**
+```bash
+# Crear copia de seguridad
+cp -r rag_mcp_db/ rag_mcp_db_backup_$(date +%Y%m%d)
+```
+
+### **💡 Optimización de Consultas**
+
+#### **Preguntas Efectivas:**
+```python
+# ✅ Preguntas específicas y claras
+ask_rag("¿Cuáles son las principales aplicaciones de machine learning en el diagnóstico médico?")
+
+# ❌ Preguntas muy generales
+ask_rag("¿Qué es la IA?")
+```
+
+#### **Uso de Palabras Clave:**
+- **Incluye términos técnicos** específicos de tu dominio
+- **Usa sinónimos** para conceptos importantes
+- **Sé específico** en lo que buscas
+
+### **📊 Monitoreo del Rendimiento**
+
+#### **Logs Importantes a Revisar:**
+```
+Core: Texto dividido en X fragmentos
+Core: X fragmentos añadidos y guardados en la base de conocimientos
+MCP Server: Respuesta generada exitosamente con X fuentes
+```
+
+#### **Indicadores de Rendimiento:**
+- **Tiempo de respuesta**: Debería ser < 5 segundos
+- **Número de fuentes**: 3+ fuentes = alta confianza
+- **Calidad de respuestas**: Información relevante y completa
+
+### **🔒 Consideraciones de Seguridad**
+
+#### **Datos Sensibles:**
+- **No incluyas información personal** en la base de conocimientos
+- **Revisa documentos** antes de procesarlos
+- **Usa fuentes confiables** para la información
+
+#### **Acceso al Sistema:**
+- **Mantén actualizado** el entorno virtual
+- **Revisa logs** regularmente
+- **Monitorea uso de recursos**
+
+### **⚙️ Optimización de Flujo de Trabajo**
+
+#### **Proceso Recomendado:**
+1. **Preparar documentos**: Limpiar y estructurar contenido
+2. **Procesar en lotes**: Usar `bulk_ingest.py` para muchos documentos
+3. **Verificar calidad**: Revisar respuestas de prueba
+4. **Ajustar parámetros**: Si es necesario, modificar configuración
+5. **Monitorear uso**: Revisar logs y rendimiento
+
+#### **Herramientas de Verificación:**
+```bash
+# Probar el sistema completo
+python test_rag.py
+
+# Verificar que Ollama funciona
+ollama run llama3 "Test"
+
+# Verificar dependencias
+python -c "import mcp, langchain, chromadb; print('✅ Todo OK')"
+```
+
+## **🚀 Checklist para Funcionamiento Óptimo**
+
+### **Antes de Usar:**
+- [ ] Ollama instalado y funcionando
+- [ ] Modelo de lenguaje descargado
+- [ ] Suficiente memoria RAM disponible
+- [ ] Espacio en disco suficiente
+- [ ] Entorno virtual activado
+
+### **Durante el Uso:**
+- [ ] Documentos bien estructurados
+- [ ] Preguntas específicas y claras
+- [ ] Monitoreo de logs
+- [ ] Verificación de fuentes en respuestas
+- [ ] Backup regular de datos
+
+### **Mantenimiento:**
+- [ ] Revisar logs semanalmente
+- [ ] Verificar rendimiento
+- [ ] Limpiar archivos temporales
+- [ ] Actualizar dependencias si es necesario
+- [ ] Backup de base de datos
+
+## **⚠️ Problemas Comunes y Soluciones**
+
+### **Respuestas Lentas:**
+- **Causa**: Modelo muy grande o poca RAM
+- **Solución**: Usar modelo más pequeño (phi3) o aumentar RAM
+
+### **Respuestas Pobres:**
+- **Causa**: Poca información en la base de datos
+- **Solución**: Añadir más documentos relevantes
+
+### **Errores de Memoria:**
+- **Causa**: Documentos muy grandes o muchos fragmentos
+- **Solución**: Reducir tamaño de fragmentos o procesar en lotes
+
+### **Búsquedas Sin Resultados:**
+- **Causa**: Umbral de similitud muy alto
+- **Solución**: Reducir `score_threshold` a 0.6
+
+### **Modelo No Encontrado:**
+- **Causa**: Modelo no descargado o nombre incorrecto
+- **Solución**: Verificar con `ollama list` y descargar si es necesario
+
+### **Errores de Conexión:**
+- **Causa**: Ollama no está ejecutándose
+- **Solución**: Iniciar Ollama con `ollama serve`
+
+---
+
 ## 📂 Estructura del Proyecto
 
 ```

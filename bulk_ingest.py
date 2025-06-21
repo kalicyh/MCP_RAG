@@ -1,5 +1,6 @@
 import os
 import argparse
+from datetime import datetime
 from markitdown import MarkItDown
 from rag_core import get_vector_store, add_text_to_knowledge_base, log
 
@@ -109,7 +110,7 @@ def process_directory(directory_path: str):
                         "source": file,
                         "file_path": file_path,
                         "file_type": os.path.splitext(file)[1].lower(),
-                        "processed_date": "2025-06-21",  # Podrías usar datetime.now().isoformat()
+                        "processed_date": datetime.now().isoformat(),
                         "converted_to_md": md_copy_path if md_copy_path else "No"
                     }
                     
