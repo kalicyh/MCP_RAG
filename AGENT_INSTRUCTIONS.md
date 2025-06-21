@@ -73,9 +73,31 @@ respuesta = ask_rag("¿Cuál es la información importante?")
 ```
 
 ### Paso 3: Verificar Fuentes
-- Las respuestas incluyen las fuentes utilizadas
-- Siempre verificar la credibilidad de las fuentes
-- Usar múltiples fuentes cuando sea posible
+- Las respuestas incluyen las fuentes utilizadas con información detallada.
+
+#### Ejemplo de Salida de `ask_rag`
+
+Al realizar una consulta, la respuesta no solo incluirá el resultado, sino también un desglose detallado de cada fuente, como se muestra a continuación:
+
+```
+🤖 **Respuesta:**
+El punto de fusión del titanio es 1,668 °C.
+
+📚 **Fuentes de información utilizadas:**
+
+   1. **material_properties**
+      - **Procesado:** 21/06/2025 17:30
+      - **Fragmento Relevante:**
+        > _La temperatura de fusión del titanio es 1,668°C._
+
+   2. **datasheet_titanium.pdf**
+      - **Ruta:** `D:\Docs\datasheet_titanium.pdf`
+      - **Procesado:** 21/06/2025 17:32
+      - **Fragmento Relevante:**
+        > _...el titanio puro tiene un punto de fusión de 1,668 grados Celsius, lo que lo hace ideal para aplicaciones aeroespaciales..._
+
+✅ **Alta confianza:** Respuesta basada en múltiples fuentes
+```
 
 ## ⚠️ Consideraciones Importantes
 

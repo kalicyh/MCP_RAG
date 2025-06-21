@@ -183,11 +183,10 @@ def get_qa_chain(vector_store: Chroma) -> RetrievalQA:
     
     # Configurar el retriever con parámetros optimizados para mejor recuperación
     retriever = vector_store.as_retriever(
-        search_type="similarity",  # Tipo de búsqueda por similitud
+        search_type="similarity_score_threshold",  # Cambiado para soportar filtrado por score
         search_kwargs={
             "k": 5,  # Aumentar a 5 fragmentos para más contexto
-            "score_threshold": 0.6,  # Solo documentos con similitud > 70%
-            "fetch_k": 10  # Buscar 10 documentos y luego filtrar los mejores 5
+            "score_threshold": 0.3,  # Umbral de distancia. Similitud > 0.7 = Distancia < 0.3
         }
     )
     

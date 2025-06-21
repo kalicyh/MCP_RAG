@@ -362,25 +362,34 @@ def ask_rag(query: str) -> str:
         
         # Añadir información de fuentes con más detalles
         if source_documents:
-            enhanced_answer += "📚 **Fuentes de información utilizadas:**\n"
+            enhanced_answer += "📚 **Fuentes de información utilizadas:**\n\n"
             for i, doc in enumerate(source_documents, 1):
-                source_name = doc.metadata.get("source", "Fuente desconocida") if hasattr(doc, 'metadata') and doc.metadata else "Fuente desconocida"
-                file_type = doc.metadata.get("file_type", "") if hasattr(doc, 'metadata') and doc.metadata else ""
-                processed_date = doc.metadata.get("processed_date", "") if hasattr(doc, 'metadata') and doc.metadata else ""
+                metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+                source_name = metadata.get("source", "Fuente desconocida")
                 
+                # --- Mejoramos la información de la fuente ---
                 source_info = f"   {i}. **{source_name}**"
-                if file_type:
-                    source_info += f" ({file_type})"
+                
+                # Añadir ruta completa si es un documento
+                file_path = metadata.get("file_path")
+                if file_path:
+                    source_info += f"\n      - **Ruta:** `{file_path}`"
+                
+                # Añadir fecha de procesamiento
+                processed_date = metadata.get("processed_date")
                 if processed_date:
-                    # Convertir fecha ISO a formato legible
                     try:
-                        from datetime import datetime
                         date_obj = datetime.fromisoformat(processed_date.replace('Z', '+00:00'))
                         readable_date = date_obj.strftime("%d/%m/%Y %H:%M")
-                        source_info += f" - Procesado: {readable_date}"
+                        source_info += f"\n      - **Procesado:** {readable_date}"
                     except:
                         pass
-                enhanced_answer += source_info + "\n"
+                
+                # Añadir un fragmento del contenido relevante
+                content_snippet = doc.page_content.strip().replace('\n', ' ')
+                source_info += f"\n      - **Fragmento Relevante:**\n        > _{content_snippet[:150]}{'...' if len(content_snippet) > 150 else ''}_"
+                
+                enhanced_answer += source_info + "\n\n"
         
         # Añadir información sobre la calidad de la respuesta
         num_sources = len(source_documents)

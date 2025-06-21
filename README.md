@@ -5,7 +5,8 @@ Este proyecto implementa un servidor compatible con el Protocolo de Contexto de 
 ## ✨ Características
 
 - **Memoria Persistente para tu IA:** "Enseña" a tu IA nueva información que recordará entre sesiones.
-- **Procesamiento de Documentos:** Alimenta la base de conocimiento con archivos `.pdf`, `.docx`, `.pptx`, `.txt`, y más, gracias a la integración con [Microsoft MarkItDown](https://github.com/microsoft/markitdown).
+- **🆕 Interfaz Gráfica de Usuario (GUI):** Una aplicación de escritorio intuitiva (`run_gui.bat`) para procesar documentos, previsualizarlos y seleccionarlos antes de añadirlos a la base de conocimiento.
+- **Procesamiento de Documentos:** Alimenta la base de conocimiento con archivos `.pdf`, `.docx`, `.pptx`, `.txt`, y más.
 - **LLM Local y Privado:** Utiliza modelos de lenguaje locales a través de [Ollama](https://ollama.com/) (ej. Llama 3, Mistral), asegurando que tus datos y preguntas nunca salgan de tu máquina.
 - **100% Local y Offline:** Tanto el modelo de lenguaje como los embeddings se ejecutan en tu máquina. Ningún dato sale a internet. Una vez descargados los modelos, funciona sin conexión.
 - **Ingesta Masiva:** Un script dedicado para procesar directorios enteros de documentos y construir la base de conocimiento de manera eficiente.
@@ -39,7 +40,22 @@ Sigue estos pasos para poner en marcha el sistema.
 - **Python 3.10+**
 - **Ollama:** Asegúrate de que [Ollama esté instalado](https://ollama.com/) y en ejecución en tu sistema.
 
-### 0. Configuración de Ollama (Paso Crítico)
+### 1. Instalación (¡Automática!)
+
+Gracias a los nuevos scripts de arranque, la instalación es increíblemente sencilla.
+
+1.  **Para el Servidor RAG:** Simplemente ejecuta `run_server.bat`.
+2.  **Para la Ingesta de Documentos:** Simplemente ejecuta `run_gui.bat`.
+
+La primera vez que ejecutes cualquiera de estos archivos, el script hará todo por ti:
+- ✅ Creará un entorno virtual de Python en una carpeta `.venv`.
+- ✅ Activará el entorno.
+- ✅ Instalará todas las dependencias necesarias desde `requirements.txt`.
+- ✅ Lanzará la aplicación.
+
+En ejecuciones posteriores, el script simplemente activará el entorno y lanzará la aplicación directamente.
+
+### 2. Configuración de Ollama (Paso Crítico)
 
 Ollama es necesario para que el sistema RAG funcione, ya que proporciona el modelo de lenguaje local que genera las respuestas.
 
@@ -123,43 +139,6 @@ ollama pull llama3
 - Cierra otras aplicaciones que consuman mucha RAM
 - Considera aumentar la memoria virtual en Windows
 
-### 1. Configuración del Entorno
-
-```bash
-# 1. Clona este repositorio (si estuviera en GitHub) o usa los archivos existentes.
-# cd RAG_MCP_Project
-
-# 2. Crea un entorno virtual de Python
-python -m venv .venv
-
-# 3. Activa el entorno virtual
-# En Windows:
-.venv\\Scripts\\activate
-# En macOS/Linux:
-# source .venv/bin/activate
-```
-
-### 2. Instalación de Dependencias
-
-Una vez que el entorno virtual esté activado, instala todas las librerías necesarias.
-
-#### Opción A: Instalación Completa (Recomendada)
-```bash
-pip install -r requirements.txt
-```
-
-#### Opción B: Instalación Mínima (Para pruebas rápidas)
-```bash
-pip install -r requirements-minimal.txt
-```
-
-#### Opción C: Instalación de Desarrollo (Para contribuir al proyecto)
-```bash
-pip install -r requirements-dev.txt
-```
-
-**Nota:** La instalación completa incluye todas las dependencias necesarias. La instalación mínima omite algunas utilidades opcionales pero mantiene la funcionalidad core. La instalación de desarrollo incluye herramientas de testing y desarrollo.
-
 ### 2. Verificación Completa del Sistema
 
 Antes de continuar, vamos a verificar que todo esté funcionando correctamente:
@@ -192,126 +171,35 @@ Si todo funciona correctamente, verás:
 - ✅ Todas las dependencias importándose sin errores
 - ✅ El sistema RAG procesando preguntas y mostrando fuentes
 
-### 3. Descarga del Modelo Local
-
-**Nota:** Si ya descargaste el modelo en el paso 0, puedes saltar esta sección.
-
-Abre una terminal y descarga el modelo de lenguaje que usará Ollama para generar las respuestas.
-
-```bash
-# Modelo recomendado para el sistema RAG
-ollama pull llama3
-```
-
-**Alternativas de modelos:**
-
-| Modelo | Tamaño | Velocidad | Calidad | Uso Recomendado |
-|--------|--------|-----------|---------|-----------------|
-| `llama3` | ~4GB | Media | Alta | ✅ **Recomendado** |
-| `phi3` | ~2GB | Rápida | Buena | Para recursos limitados |
-| `mistral` | ~4GB | Media | Alta | Alternativa a llama3 |
-| `llama3.1:8b` | ~5GB | Lenta | Muy alta | Para máxima calidad |
-
-**Nota:** La primera vez que ejecutes el servidor o el script de ingesta, el modelo de *embedding* (`all-MiniLM-L6-v2`, unos 90MB) se descargará automáticamente. Esto solo ocurre una vez.
-
-**Verificar descarga:**
-```bash
-# Verificar que el modelo está disponible
-ollama list
-
-# Probar el modelo
-ollama run llama3 "Hola, ¿puedes ayudarme con el sistema RAG?"
-```
-
-### 4. Configurar el Modelo en el Código
-
-Si descargaste un modelo diferente a `llama3`, necesitas actualizar la configuración:
-
-#### Opción 1: Descargar el Modelo de Embedding (Recomendado la primera vez)
-Para evitar esperas la primera vez que se usa el servidor, puedes pre-descargar el modelo de embedding con este comando. Verás una barra de progreso:
-```bash
-python pre_download_model.py
-```
-
-#### Opción 2: Cambiar en rag_core.py
-```python
-# Abrir rag_core.py y buscar la línea ~100
-# Cambiar esta línea:
-llm = ChatOllama(model="llama3", temperature=0)
-
-# Por tu modelo, por ejemplo:
-llm = ChatOllama(model="phi3", temperature=0)
-```
-
-#### Opción 3: Usar Variable de Entorno (Recomendado)
-Crea un archivo `.env` en la raíz del proyecto:
-
-```bash
-# Crear archivo .env
-echo "OLLAMA_MODEL=llama3" > .env
-```
-
-Y modifica `rag_core.py` para usar la variable de entorno:
-
-```python
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-model_name = os.getenv("OLLAMA_MODEL", "llama3")  # Por defecto llama3
-llm = ChatOllama(model=model_name, temperature=0)
-```
-
-**Ventajas de usar variable de entorno:**
-- Fácil cambio de modelo sin modificar código
-- Configuración específica por entorno
-- No se modifica el código fuente
-
----
-
-## ✅ Resumen de Configuración
-
-Para verificar que todo está listo, ejecuta esta secuencia de comandos:
-
-```bash
-# 1. Verificar Ollama
-ollama list
-ollama run llama3 "Test"
-
-# 2. Verificar dependencias
-python -c "import mcp, langchain, chromadb; print('✅ Todas las dependencias OK')"
-
-# 3. Probar el sistema completo
-python test_rag.py
-```
-
-**Si todo funciona correctamente, verás:**
-- ✅ Lista de modelos de Ollama
-- ✅ Respuesta del modelo de prueba
-- ✅ Todas las dependencias importándose
-- ✅ Sistema RAG procesando preguntas con fuentes
-
 **¡Tu sistema RAG está listo para usar!** 🚀
 
 ---
 
 ## 🛠️ Guía de Uso
 
-### Uso 1: Poblar la Base de Conocimiento (Ingesta Masiva)
+### Uso 1: Poblar la Base de Conocimiento con la GUI (Recomendado)
 
-Para añadir una gran cantidad de documentos de una sola vez, usa el script `bulk_ingest.py`.
+La forma más fácil e intuitiva de añadir documentos es usando la interfaz gráfica.
 
-1.  Crea una carpeta en tu ordenador (ej. `C:\MisDocumentos`).
-2.  Copia todos los documentos que quieres que la IA aprenda en esa carpeta.
-3.  Ejecuta el siguiente comando en la terminal (con el entorno virtual activado):
+1.  Haz doble clic en `run_gui.bat`.
+2.  La aplicación se iniciará (la primera vez puede tardar mientras instala las dependencias).
+3.  Usa el botón "Explorar..." para seleccionar la carpeta con tus documentos.
+4.  Haz clic en "Iniciar Procesamiento". Los archivos se convertirán a Markdown en memoria.
+5.  Ve a la pestaña "Revisión", selecciona los archivos que quieres guardar y previsualiza su contenido.
+6.  Ve a la pestaña "Almacenamiento" y haz clic en "Iniciar Almacenamiento" para guardar los documentos seleccionados en la base de datos.
 
-```bash
-python bulk_ingest.py --directory "C:\MisDocumentos"
-```
+### Uso 2: Poblar la Base de Conocimiento desde la Línea de Comandos
 
-El script recorrerá todos los archivos soportados, los convertirá y los añadirá a la base de datos vectorial en la carpeta `./rag_mcp_db`.
+Si prefieres usar la línea de comandos o necesitas automatizar la ingesta.
 
-### Uso 2: Configuración del Cliente MCP (Ej. Cursor)
+1.  Abre una terminal.
+2.  Activa el entorno virtual: `.\.venv\Scripts\activate`.
+3.  Ejecuta el script `bulk_ingest.py` apuntando a tu carpeta de documentos:
+    ```bash
+    python bulk_ingest.py --directory "C:\Ruta\A\Tus\Documentos"
+    ```
+
+### Uso 3: Configuración del Cliente MCP (Ej. Cursor)
 
 Para que tu editor de IA pueda usar el servidor, debes configurarlo.
 
@@ -337,7 +225,7 @@ Para que tu editor de IA pueda usar el servidor, debes configurarlo.
 
 3.  **Reinicia tu editor.** Al arrancar, debería detectar y lanzar tu `run_server.bat`, que a su vez ejecutará `rag_server.py` en segundo plano con el entorno correcto.
 
-### Uso 3: Interactuando con las Herramientas
+### Uso 4: Interactuando con las Herramientas
 
 Una vez configurado, puedes usar las herramientas directamente en el chat de tu editor.
 
@@ -920,6 +808,36 @@ def get_embedding_function():
 
 ---
 
+## ⚠️ Limitaciones y Elección del Modelo de Embedding
+
+Esta sección detalla por qué se eligió el modelo `all-mpnet-base-v2`, sus ventajas y sus limitaciones en comparación con otras alternativas.
+
+### **🎯 ¿Por qué `all-mpnet-base-v2`? Un excelente punto medio**
+
+Este modelo fue seleccionado por ofrecer el mejor **equilibrio entre rendimiento y calidad** para una ejecución local.
+
+- **Ventajas:**
+    - **Alta Calidad:** Ofrece una comprensión semántica significativamente mejor que modelos más pequeños (como `all-MiniLM-L6-v2`). Es muy bueno capturando matices y relaciones complejas en el texto.
+    - **Buen Rendimiento:** Aunque es más grande que los modelos "mini", sigue siendo lo suficientemente rápido para ejecutarse en CPUs modernas sin tiempos de espera frustrantes.
+    - **Muy Popular:** Es uno de los modelos de `sentence-transformers` más usados y mejor valorados, lo que garantiza un buen soporte y rendimiento probado.
+
+- **Desventajas:**
+    - **Uso de Recursos:** Requiere más RAM y espacio en disco (420MB) que los modelos pequeños.
+    - **No es el mejor:** Modelos comerciales de vanguardia (como los de OpenAI o Cohere) o modelos locales mucho más grandes (de varios Gigabytes) pueden ofrecer una precisión aún mayor, pero a costa de no poder ejecutarse localmente o requerir hardware muy potente.
+
+### **⚖️ Comparativa de Modelos**
+
+| Modelo | Tamaño | Dimensiones | Calidad Semántica | Requisitos | Ideal para... |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`all-mpnet-base-v2` (Tu modelo)** | **~420MB** | **768** | **Alta** | **Moderados (CPU/GPU)** | **El mejor balance para uso local y de alta calidad.** |
+| `all-MiniLM-L6-v2` | ~90MB | 384 | Media | Bajos (CPU) | Sistemas con muy pocos recursos o donde la velocidad es más importante que la precisión. |
+| `text-embedding-3-large` (OpenAI) | N/A (API) | 3072 | Muy Alta | Conexión a Internet, API Key | Proyectos comerciales que necesitan la máxima precisión y no tienen problemas de privacidad/coste. |
+
+
+En resumen, `all-mpnet-base-v2` es la elección perfecta para este proyecto: un sistema RAG local, privado y de alto rendimiento que no requiere hardware de servidor.
+
+---
+
 ## ⚠️ Limitaciones del Modelo de Embedding
 
 Esta sección detalla las limitaciones y desventajas del modelo `all-MiniLM-L6-v2` que usa tu sistema, para que puedas tomar decisiones informadas y optimizar su uso.
@@ -1371,19 +1289,18 @@ python -c "import mcp, langchain, chromadb; print('✅ Todo OK')"
 
 ```
 /
-├── .venv/                  # Entorno virtual de Python
+├── .venv/                  # Entorno virtual de Python (creado automáticamente)
 ├── rag_mcp_db/             # Base de datos vectorial (se crea al usarla)
-├── converted_docs/          # Copias en Markdown de documentos procesados
-├── bulk_ingest.py          # Script para la ingesta masiva de documentos
+├── converted_docs/         # Copias en Markdown de documentos procesados
+├── bulk_ingest.py          # Script para la ingesta masiva desde línea de comandos
+├── bulk_ingest_gui.py      # Script de la Interfaz Gráfica de Usuario
 ├── rag_core.py             # Lógica central y reutilizable del sistema RAG
 ├── rag_server.py           # El servidor MCP (lanzado por run_server.bat)
+├── run_gui.bat             # Script de arranque para la interfaz gráfica
 ├── run_server.bat          # Script de arranque para el servidor en Windows
-├── requirements.txt        # Dependencias completas (recomendado)
-├── requirements-minimal.txt # Dependencias mínimas para pruebas rápidas
-├── requirements-dev.txt    # Dependencias de desarrollo
+├── requirements.txt        # Todas las dependencias del proyecto
 ├── pre_download_model.py   # Script para pre-descargar el modelo de embedding
 ├── test_rag.py             # Script de prueba del sistema RAG
 ├── AGENT_INSTRUCTIONS.md   # Guía para agentes de IA
-├── proyecto_alpha.txt      # Archivo de ejemplo
 └── README.md               # Este archivo
 ```
