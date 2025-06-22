@@ -26,7 +26,7 @@ El proyecto está dividido en tres componentes principales:
 3.  `bulk_ingest.py`: Un script de línea de comandos para procesar una carpeta llena de documentos y añadirlos a la base de conocimiento de forma masiva. **Incluye metadatos de fuente automáticos.**
 
 ### Archivos de Documentación:
-- `AGENT_INSTRUCTIONS.md`: Guía completa para agentes de IA sobre cómo usar el sistema
+- [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md): Guía completa para agentes de IA sobre cómo usar el sistema
 - `test_rag.py`: Script de prueba para verificar el funcionamiento del sistema
 
 ---
@@ -188,15 +188,15 @@ La forma más fácil e intuitiva de añadir documentos es usando la interfaz gr�
 5.  Ve a la pestaña "Revisión", selecciona los archivos que quieres guardar y previsualiza su contenido.
 6.  Ve a la pestaña "Almacenamiento" y haz clic en "Iniciar Almacenamiento" para guardar los documentos seleccionados en la base de datos.
 
-#### ✨ **Nueva GUI Avanzada con Previsualización y Selección**
+#### ✨ **Nueva GUI con Previsualización y Selección**
 
-Para un control total sobre el proceso de ingesta, hemos añadido una **GUI avanzada**. Esta versión te permite **previsualizar** el contenido de cada documento convertido a Markdown y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
+Para un control total sobre el proceso de ingesta, hemos añadido una **GUI**. Esta versión te permite **previsualizar** el contenido de cada documento convertido a Markdown y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
 
 Es ideal para asegurar la calidad de los datos, excluir documentos irrelevantes y tener una visión clara de lo que estás almacenando.
 
 ![Pestaña de Procesamiento de la GUI Avanzada](src/images/gui_procesamiento.png)
 
-➡️ **Para una guía completa sobre cómo usarla, consulta el [README de la GUI Avanzada](./GUI_ADVANCED_README.md).**
+➡️ **Para una guía completa sobre cómo usarla, consulta el [Guia de Carga Masiva](./GUI_ADVANCED_README.md).**
 
 ### Uso 2: Poblar la Base de Conocimiento desde la Línea de Comandos
 
@@ -316,7 +316,7 @@ Los documentos procesados se almacenan en:
 
 ## 🤖 Uso por Agentes de IA
 
-El sistema está optimizado para ser utilizado por agentes de IA. Consulta `AGENT_INSTRUCTIONS.md` para:
+El sistema está optimizado para ser utilizado por agentes de IA. Consulta [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md) para:
 
 - Guías detalladas de uso
 - Ejemplos de casos de uso
