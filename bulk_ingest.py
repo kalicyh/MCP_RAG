@@ -1,13 +1,24 @@
 import os
 import argparse
 from datetime import datetime
-from markitdown import MarkItDown
-from rag_core import get_vector_store, add_text_to_knowledge_base, log
+from rag_core import get_vector_store, add_text_to_knowledge_base, log, load_document_with_fallbacks
 
 # Lista de extensiones de archivo que queremos procesar
 SUPPORTED_EXTENSIONS = [
-    ".pdf", ".docx", ".pptx", ".xlsx", ".txt", 
-    ".html", ".csv", ".json", ".xml"
+    # Documentos de Office
+    ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", ".rtf",
+    # Documentos OpenDocument
+    ".odt", ".odp", ".ods",
+    # Formatos web y markup
+    ".html", ".htm", ".xml", ".md",
+    # Formatos de texto plano
+    ".txt", ".csv", ".tsv",
+    # Formatos de datos
+    ".json", ".yaml", ".yml",
+    # Imágenes (requieren OCR)
+    ".png", ".jpg", ".jpeg", ".tiff", ".bmp",
+    # Correos electrónicos
+    ".eml", ".msg"
 ]
 
 # Carpeta donde se guardarán las copias en Markdown
@@ -59,10 +70,9 @@ def process_directory(directory_path: str):
     
     # Obtenemos acceso a nuestra base de datos vectorial
     vector_store = get_vector_store()
-    md_converter = MarkItDown()
     
     log(f"Vector database configured.")
-    log(f"Initializing document converter...")
+    log(f"Initializing enhanced document processor...")
     
     # Contador para estadísticas
     processed_count = 0
@@ -78,7 +88,7 @@ def process_directory(directory_path: str):
                 total_files += 1
     
     log(f"Found {total_files} supported files to process.")
-    log(f"Starting processing...\n")
+    log(f"Starting enhanced processing with Unstructured...\n")
     
     # os.walk nos permite recorrer el directorio y todos sus subdirectorios
     for root, _, files in os.walk(directory_path):
@@ -89,11 +99,22 @@ def process_directory(directory_path: str):
                 log(f"[{processed_count + 1}/{total_files}] Processing: {file}")
                 
                 try:
-                    # Convertimos el documento a markdown
-                    log(f"   - Converting to Markdown...")
-                    result = md_converter.convert(file_path)
-                    markdown_content = result.text_content
+                    # Usar el sistema mejorado de carga de documentos
+                    log(f"   - Loading with enhanced Unstructured system...")
+                    markdown_content, metadata = load_document_with_fallbacks(file_path)
+                    
+                    if not markdown_content or markdown_content.isspace():
+                        log(f"   - Warning: Document resulted in empty content. Skipping.")
+                        skipped_count += 1
+                        continue
+                        
                     log(f"   - Converted ({len(markdown_content)} characters)")
+                    log(f"   - Processing method: {metadata.get('processing_method', 'unknown')}")
+                    
+                    # Mostrar información estructural si está disponible
+                    if 'structural_info' in metadata:
+                        struct_info = metadata['structural_info']
+                        log(f"   - Structure: {struct_info['titles_count']} titles, {struct_info['tables_count']} tables, {struct_info['lists_count']} lists")
                     
                     # Guardar copia en Markdown
                     log(f"   - Saving Markdown copy...")
@@ -102,19 +123,12 @@ def process_directory(directory_path: str):
                         saved_copies_count += 1
                         log(f"   - Copy saved: {md_copy_path}")
                     
+                    # Actualizar metadatos con información de la copia
+                    metadata['converted_to_md'] = md_copy_path if md_copy_path else "No"
+                    
                     # Añadimos el contenido a la base de datos usando nuestra función del núcleo
                     log(f"   - Adding to knowledge base...")
-                    
-                    # Crear metadatos de fuente
-                    source_metadata = {
-                        "source": file,
-                        "file_path": file_path,
-                        "file_type": os.path.splitext(file)[1].lower(),
-                        "processed_date": datetime.now().isoformat(),
-                        "converted_to_md": md_copy_path if md_copy_path else "No"
-                    }
-                    
-                    add_text_to_knowledge_base(markdown_content, vector_store, source_metadata)
+                    add_text_to_knowledge_base(markdown_content, vector_store, metadata)
                     processed_count += 1
                     
                     log(f"   - File '{file}' processed successfully.")

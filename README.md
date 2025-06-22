@@ -6,10 +6,13 @@ Este proyecto implementa un servidor compatible con el Protocolo de Contexto de 
 
 - **Memoria Persistente para tu IA:** "Enseña" a tu IA nueva información que recordará entre sesiones.
 - **🆕 Interfaz Gráfica de Usuario (GUI):** Una aplicación de escritorio intuitiva (`run_gui.bat`) para procesar documentos, previsualizarlos y seleccionarlos antes de añadirlos a la base de conocimiento.
-- **Procesamiento de Documentos:** Alimenta la base de conocimiento con archivos `.pdf`, `.docx`, `.pptx`, `.txt`, y más.
+- **🚀 Procesamiento Avanzado de Documentos:** Alimenta la base de conocimiento con **más de 25 formatos de archivo** incluyendo PDF, DOCX, PPTX, XLSX, imágenes (con OCR), correos electrónicos, y más.
+- **🧠 Procesamiento Inteligente con Unstructured:** Sistema de procesamiento de documentos de nivel empresarial que preserva la estructura semántica, elimina ruido automáticamente y maneja formatos complejos.
+- **🔄 Sistema de Fallbacks Robusto:** Múltiples estrategias de procesamiento garantizan que cualquier documento sea procesado exitosamente.
+- **📊 Metadatos Estructurales:** Información detallada sobre la estructura del documento (títulos, tablas, listas) para mejor rastreabilidad.
 - **LLM Local y Privado:** Utiliza modelos de lenguaje locales a través de [Ollama](https://ollama.com/) (ej. Llama 3, Mistral), asegurando que tus datos y preguntas nunca salgan de tu máquina.
 - **100% Local y Offline:** Tanto el modelo de lenguaje como los embeddings se ejecutan en tu máquina. Ningún dato sale a internet. Una vez descargados los modelos, funciona sin conexión.
-- **Ingesta Masiva:** Un script dedicado para procesar directorios enteros de documentos y construir la base de conocimiento de manera eficiente.
+- **Ingesta Masiva:** Scripts dedicados para procesar directorios enteros de documentos y construir la base de conocimiento de manera eficiente.
 - **Arquitectura Modular:** La lógica del RAG está separada de los scripts de servidor y de ingesta, facilitando el mantenimiento y la expansión.
 - **Copias en Markdown:** Cada documento procesado se guarda automáticamente en formato Markdown para verificación y reutilización.
 - **🆕 Metadatos de Fuente:** Rastreabilidad completa de información con atribución de fuentes en cada respuesta.
@@ -21,13 +24,14 @@ Este proyecto implementa un servidor compatible con el Protocolo de Contexto de 
 
 El proyecto está dividido en tres componentes principales:
 
-1.  `rag_core.py`: El corazón del sistema. Contiene toda la lógica reutilizable para manejar la base de datos vectorial (ChromaDB), procesar texto y crear la cadena de preguntas y respuestas con LangChain. **Incluye soporte para metadatos de fuente.**
+1.  `rag_core.py`: El corazón del sistema. Contiene toda la lógica reutilizable para manejar la base de datos vectorial (ChromaDB), procesar texto y crear la cadena de preguntas y respuestas con LangChain. **Incluye procesamiento avanzado con Unstructured, metadatos estructurales y sistema de fallbacks robusto.**
 2.  `rag_server.py`: El servidor MCP. Expone las herramientas (`learn_text`, `learn_document`, `ask_rag`) que el cliente de IA puede invocar. Se comunica a través de `stdio`. **Optimizado con descripciones detalladas para agentes de IA.**
-3.  `bulk_ingest.py`: Un script de línea de comandos para procesar una carpeta llena de documentos y añadirlos a la base de conocimiento de forma masiva. **Incluye metadatos de fuente automáticos.**
+3.  `bulk_ingest.py`: Un script de línea de comandos para procesar una carpeta llena de documentos y añadirlos a la base de conocimiento de forma masiva. **Incluye procesamiento mejorado con Unstructured y metadatos estructurales automáticos.**
 
 ### Archivos de Documentación:
 - [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md): Guía completa para agentes de IA sobre cómo usar el sistema
-- `test_rag.py`: Script de prueba para verificar el funcionamiento del sistema
+- [`GUI_ADVANCED_README.md`](./GUI_ADVANCED_README.md): Guía detallada para la interfaz gráfica avanzada
+- `test_enhanced_rag.py`: Script de prueba para verificar el funcionamiento del sistema
 
 ---
 
@@ -39,10 +43,11 @@ Sigue estos pasos para poner en marcha el sistema.
 
 - **Python 3.10+**
 - **Ollama:** Asegúrate de que [Ollama esté instalado](https://ollama.com/) y en ejecución en tu sistema.
+- **Tesseract OCR (Opcional):** Para procesar imágenes con texto. Descarga desde [GitHub](https://github.com/UB-Mannheim/tesseract/wiki) o usa `choco install tesseract`.
 
 ### 1. Instalación (¡Automática!)
 
-Gracias a los nuevos scripts de arranque, la instalación es increíblemente sencilla.
+Gracias a los scripts de arranque, la instalación es increíblemente sencilla.
 
 1.  **Para el Servidor RAG:** Simplemente ejecuta `run_server.bat`.
 2.  **Para la Ingesta de Documentos:** Simplemente ejecuta `run_gui.bat`.
@@ -51,11 +56,27 @@ La primera vez que ejecutes cualquiera de estos archivos, el script hará todo p
 - ✅ Creará un entorno virtual de Python en una carpeta `.venv`.
 - ✅ Activará el entorno.
 - ✅ Instalará todas las dependencias necesarias desde `requirements.txt`.
+- ✅ Instalará Unstructured con capacidades avanzadas.
 - ✅ Lanzará la aplicación.
 
 En ejecuciones posteriores, el script simplemente activará el entorno y lanzará la aplicación directamente.
 
-### 2. Configuración de Ollama (Paso Crítico)
+### 2. Instalación Manual de Dependencias (Opcional)
+
+Si prefieres instalar las dependencias manualmente o necesitas capacidades específicas:
+
+```bash
+# Activar entorno virtual
+.\.venv\Scripts\activate
+
+# Instalación completa de Unstructured con todas las capacidades
+pip install "unstructured[local-inference,all-docs]"
+
+# Dependencias adicionales para mejor rendimiento
+pip install python-docx openpyxl beautifulsoup4 pytesseract
+```
+
+### 3. Configuración de Ollama (Paso Crítico)
 
 Ollama es necesario para que el sistema RAG funcione, ya que proporciona el modelo de lenguaje local que genera las respuestas.
 
@@ -139,7 +160,7 @@ ollama pull llama3
 - Cierra otras aplicaciones que consuman mucha RAM
 - Considera aumentar la memoria virtual en Windows
 
-### 2. Verificación Completa del Sistema
+### 4. Verificación Completa del Sistema
 
 Antes de continuar, vamos a verificar que todo esté funcionando correctamente:
 
@@ -158,12 +179,13 @@ ollama run llama3 "Test de funcionamiento"
 python -c "import mcp; print('✅ MCP instalado correctamente')"
 python -c "import langchain; print('✅ LangChain instalado correctamente')"
 python -c "import chromadb; print('✅ ChromaDB instalado correctamente')"
+python -c "import unstructured; print('✅ Unstructured instalado correctamente')"
 ```
 
 #### Paso 3: Probar el Sistema RAG
 ```bash
-# Ejecutar el script de prueba
-python test_rag.py
+# Ejecutar el script de prueba mejorado
+python test_enhanced_rag.py
 ```
 
 Si todo funciona correctamente, verás:
@@ -172,6 +194,48 @@ Si todo funciona correctamente, verás:
 - ✅ El sistema RAG procesando preguntas y mostrando fuentes
 
 **¡Tu sistema RAG está listo para usar!** 🚀
+
+---
+
+## 📋 Formatos de Archivo Soportados
+
+El sistema soporta **más de 25 formatos de archivo** con procesamiento optimizado:
+
+### 📄 **Documentos de Office:**
+- **PDF** (.pdf) - Con procesamiento de alta resolución
+- **Word** (.docx, .doc) - Documentos de Microsoft Word
+- **PowerPoint** (.pptx, .ppt) - Presentaciones
+- **Excel** (.xlsx, .xls) - Hojas de cálculo
+- **RTF** (.rtf) - Formato de texto enriquecido
+
+### 📁 **Documentos OpenDocument:**
+- **ODT** (.odt) - Documentos de texto (LibreOffice/OpenOffice)
+- **ODP** (.odp) - Presentaciones (LibreOffice/OpenOffice)
+- **ODS** (.ods) - Hojas de cálculo (LibreOffice/OpenOffice)
+
+### 🌐 **Formatos Web y Markup:**
+- **HTML** (.html, .htm) - Páginas web
+- **XML** (.xml) - Datos estructurados
+- **Markdown** (.md) - Documentación técnica
+
+### 📝 **Formatos de Texto Plano:**
+- **TXT** (.txt) - Texto simple
+- **CSV** (.csv) - Datos tabulares
+- **TSV** (.tsv) - Datos tabulares separados por tabulaciones
+
+### 📊 **Formatos de Datos:**
+- **JSON** (.json) - Datos estructurados
+- **YAML** (.yaml, .yml) - Configuraciones y datos
+
+### 🖼️ **Imágenes (con OCR):**
+- **PNG** (.png) - Imágenes con texto
+- **JPG/JPEG** (.jpg, .jpeg) - Fotografías con texto
+- **TIFF** (.tiff) - Imágenes de alta calidad
+- **BMP** (.bmp) - Imágenes de mapa de bits
+
+### 📧 **Correos Electrónicos:**
+- **EML** (.eml) - Archivos de correo
+- **MSG** (.msg) - Mensajes de Outlook
 
 ---
 
@@ -184,15 +248,21 @@ La forma más fácil e intuitiva de añadir documentos es usando la interfaz gr�
 1.  Haz doble clic en `run_gui.bat`.
 2.  La aplicación se iniciará (la primera vez puede tardar mientras instala las dependencias).
 3.  Usa el botón "Explorar..." para seleccionar la carpeta con tus documentos.
-4.  Haz clic en "Iniciar Procesamiento". Los archivos se convertirán a Markdown en memoria.
+4.  Haz clic en "Iniciar Procesamiento". Los archivos se procesarán con el sistema avanzado de Unstructured.
 5.  Ve a la pestaña "Revisión", selecciona los archivos que quieres guardar y previsualiza su contenido.
 6.  Ve a la pestaña "Almacenamiento" y haz clic en "Iniciar Almacenamiento" para guardar los documentos seleccionados en la base de datos.
 
-#### ✨ **Nueva GUI con Previsualización y Selección**
+#### ✨ **GUI Avanzada con Previsualización y Selección**
 
-Para un control total sobre el proceso de ingesta, hemos añadido una **GUI**. Esta versión te permite **previsualizar** el contenido de cada documento convertido a Markdown y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
+Para un control total sobre el proceso de ingesta, hemos añadido una **GUI avanzada**. Esta versión te permite **previsualizar** el contenido de cada documento procesado y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
 
-Es ideal para asegurar la calidad de los datos, excluir documentos irrelevantes y tener una visión clara de lo que estás almacenando.
+**Características de la GUI Avanzada:**
+- **Procesamiento Inteligente:** Usa Unstructured para limpiar ruido y preservar estructura
+- **Previsualización en Tiempo Real:** Ve el contenido procesado antes de almacenar
+- **Selección Granular:** Marca/desmarca documentos individualmente
+- **Metadatos Estructurales:** Información sobre títulos, tablas, listas en cada documento
+- **Sistema de Fallbacks:** Múltiples estrategias garantizan que todo documento se procese
+- **Sistema de Progreso:** Seguimiento detallado del proceso de almacenamiento
 
 ![Pestaña de Procesamiento de la GUI Avanzada](src/images/gui_procesamiento.png)
 
@@ -208,6 +278,13 @@ Si prefieres usar la línea de comandos o necesitas automatizar la ingesta.
     ```bash
     python bulk_ingest.py --directory "C:\Ruta\A\Tus\Documentos"
     ```
+
+**Características del Procesamiento Mejorado:**
+- **Detección Automática de Formato:** El sistema identifica y optimiza el procesamiento según el tipo de archivo
+- **Limpieza Inteligente:** Elimina automáticamente cabeceras, pies de página y contenido irrelevante
+- **Preservación de Estructura:** Mantiene títulos, listas y tablas organizadas
+- **Metadatos Enriquecidos:** Información detallada sobre la estructura de cada documento
+- **Logs Detallados:** Información completa sobre el proceso de cada archivo
 
 ### Uso 3: Configuración del Cliente MCP (Ej. Cursor)
 
@@ -254,11 +331,13 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 ```
 @rag_server_knowledge learn_document("C:\\Reportes\\informe_q3.pdf")
 ```
-- **Cuándo usar**: Para procesar archivos PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML
-- **Características**: 
-  - Conversión automática a Markdown
-  - Copia guardada en `./converted_docs/`
-  - Metadatos de fuente automáticos
+- **Cuándo usar**: Para procesar archivos PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, imágenes, correos electrónicos y más de 25 formatos
+- **Características Mejoradas**: 
+  - **Procesamiento Inteligente**: Usa Unstructured para limpiar ruido y preservar estructura
+  - **Sistema de Fallbacks**: Múltiples estrategias garantizan procesamiento exitoso
+  - **Metadatos Estructurales**: Información detallada sobre títulos, tablas, listas
+  - **Conversión Automática**: Procesamiento optimizado según el tipo de archivo
+  - **Copias Guardadas**: Documentos procesados guardados en `./converted_docs/`
 
 **3. `ask_rag(query)` - Consultar información**
 ```
@@ -266,8 +345,9 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 ```
 - **Cuándo usar**: Para buscar información previamente almacenada
 - **Respuesta incluye**: 
-  - Respuesta generada por IA
-  - 📚 Lista de fuentes utilizadas
+  - Respuesta generada por IA con contexto mejorado
+  - 📚 Lista de fuentes utilizadas con metadatos estructurales
+  - Información sobre la relevancia de cada fuente
 
 #### Ejemplo de Flujo Completo:
 
@@ -275,10 +355,10 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 # 1. Añadir información
 @rag_server_knowledge learn_text("La temperatura de fusión del titanio es 1,668°C.", "material_properties")
 
-# 2. Procesar un documento
+# 2. Procesar un documento complejo (ahora con procesamiento mejorado)
 @rag_server_knowledge learn_document("C:\\Documents\\manual_titanio.pdf")
 
-# 3. Hacer preguntas
+# 3. Hacer preguntas (con respuestas mejoradas)
 @rag_server_knowledge ask_rag("¿Cuál es la temperatura de fusión del titanio?")
 ```
 
@@ -287,8 +367,8 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 La temperatura de fusión del titanio es 1,668°C.
 
 📚 Fuentes de información:
-   1. material_properties
-   2. manual_titanio.pdf
+   1. material_properties (manual_input)
+   2. manual_titanio.pdf (página 3, sección "Propiedades Físicas")
 ```
 
 ---
@@ -300,17 +380,32 @@ La temperatura de fusión del titanio es 1,668°C.
 Para verificar que todo funciona correctamente:
 
 ```bash
-# Probar el sistema RAG con metadatos de fuente
-python test_rag.py
+# Probar el sistema RAG mejorado con todas las características
+python test_enhanced_rag.py
 ```
 
-Este script realizará pruebas automáticas y mostrará las fuentes de información utilizadas.
+#### **Script de Pruebas Mejorado (`test_enhanced_rag.py`)**
+
+El script de pruebas verifica todas las mejoras implementadas:
+
+**🧪 Pruebas Incluidas:**
+- **Procesamiento Mejorado de Documentos**: Verifica el sistema Unstructured con metadatos estructurales
+- **Base de Conocimientos Mejorada**: Prueba el chunking mejorado y metadatos enriquecidos
+- **Integración del Servidor MCP**: Verifica las herramientas mejoradas del servidor
+- **Soporte de Formatos**: Confirma la configuración para más de 25 formatos
+
+**📊 Información de Salida:**
+- Estado de cada prueba (✅ PASÓ / ❌ FALLÓ)
+- Metadatos estructurales extraídos
+- Método de procesamiento utilizado
+- Información de fuentes y chunks
+- Resumen completo del sistema
 
 ### Verificar la Base de Datos
 
 Los documentos procesados se almacenan en:
 - **Base de datos vectorial**: `./rag_mcp_db/`
-- **Copias Markdown**: `./converted_docs/`
+- **Copias procesadas**: `./converted_docs/` (con información del método de procesamiento)
 
 ---
 
@@ -334,15 +429,152 @@ El sistema está optimizado para ser utilizado por agentes de IA. Consulta [`AGE
 
 ---
 
-## 🔧 Optimizaciones Implementadas
+## 🔧 Mejoras Técnicas Implementadas
 
-Esta sección explica cómo funciona el sistema RAG optimizado actualmente, con todas las mejoras técnicas implementadas para obtener las mejores búsquedas y respuestas.
+Esta sección explica las mejoras técnicas avanzadas que han transformado el sistema en una solución de nivel empresarial.
 
-### **A. División Inteligente de Texto**
+### **A. Procesamiento Inteligente con Unstructured**
 
-#### **¿Cómo funciona la división de texto?**
+#### **¿Qué es Unstructured?**
 
-El sistema utiliza `RecursiveCharacterTextSplitter` que divide el texto de manera inteligente, respetando la estructura natural del contenido:
+Unstructured es una librería de procesamiento de documentos que va más allá de la simple extracción de texto. Analiza la **estructura semántica** de los documentos para:
+
+- **Identificar elementos**: Títulos, párrafos, listas, tablas
+- **Limpiar ruido**: Eliminar cabeceras, pies de página, elementos irrelevantes
+- **Preservar contexto**: Mantener la jerarquía y estructura del documento
+- **Manejar formatos complejos**: PDFs escaneados, documentos con tablas, etc.
+
+#### **Configuración Optimizada por Tipo de Archivo:**
+
+```python
+UNSTRUCTURED_CONFIGS = {
+    '.pdf': {
+        'strategy': 'hi_res',        # Alta resolución para PDFs complejos
+        'include_metadata': True,    # Incluir metadatos estructurales
+        'include_page_breaks': True, # Preservar saltos de página
+        'max_partition': 2000,       # Tamaño máximo de partición
+        'new_after_n_chars': 1500    # Nuevo elemento después de N caracteres
+    },
+    '.docx': {
+        'strategy': 'fast',          # Procesamiento rápido para documentos de Office
+        'include_metadata': True,
+        'max_partition': 2000,
+        'new_after_n_chars': 1500
+    },
+    # ... configuraciones para más de 25 formatos
+}
+```
+
+#### **Procesamiento Inteligente de Elementos:**
+
+```python
+def process_unstructured_elements(elements: List[Any]) -> str:
+    """Procesa elementos de Unstructured preservando estructura semántica."""
+    for element in elements:
+        element_type = type(element).__name__
+        
+        if element_type == 'Title':
+            # Los títulos van con formato especial
+            processed_parts.append(f"\n## {element.text.strip()}\n")
+        elif element_type == 'ListItem':
+            # Las listas mantienen su estructura
+            processed_parts.append(f"• {element.text.strip()}")
+        elif element_type == 'Table':
+            # Las tablas se convierten a texto legible
+            table_text = convert_table_to_text(element)
+            processed_parts.append(f"\n{table_text}\n")
+        elif element_type == 'NarrativeText':
+            # El texto narrativo va tal como está
+            processed_parts.append(element.text.strip())
+```
+
+### **B. Sistema de Fallbacks Robusto**
+
+#### **Estrategia de Fallbacks en Cascada:**
+
+El sistema intenta múltiples estrategias en orden de preferencia:
+
+1. **Unstructured con Configuración Óptima**
+   - Usa la configuración específica para el tipo de archivo
+   - Máxima calidad de procesamiento
+
+2. **Unstructured con Configuración Básica**
+   - Estrategia "fast" para compatibilidad
+   - Procesamiento más simple pero funcional
+
+3. **Cargadores Específicos de LangChain**
+   - Cargadores especializados por tipo de archivo
+   - Último recurso para formatos problemáticos
+
+#### **Ejemplo de Fallback en Acción:**
+
+```python
+def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
+    file_extension = os.path.splitext(file_path)[1].lower()
+    
+    # Estrategia 1: Unstructured óptimo
+    try:
+        config = UNSTRUCTURED_CONFIGS.get(file_extension, DEFAULT_CONFIG)
+        elements = partition(filename=file_path, **config)
+        processed_text = process_unstructured_elements(elements)
+        metadata = extract_structural_metadata(elements, file_path)
+        return processed_text, metadata
+    except Exception as e:
+        log(f"Core Warning: Unstructured óptimo falló: {e}")
+    
+    # Estrategia 2: Unstructured básico
+    try:
+        elements = partition(filename=file_path, strategy="fast")
+        # ... procesamiento
+    except Exception as e:
+        log(f"Core Warning: Unstructured básico falló: {e}")
+    
+    # Estrategia 3: LangChain fallbacks
+    try:
+        fallback_text = load_with_langchain_fallbacks(file_path)
+        # ... procesamiento
+    except Exception as e:
+        log(f"Core Warning: LangChain fallbacks fallaron: {e}")
+    
+    return "", {}  # Solo si todas las estrategias fallan
+```
+
+### **C. Metadatos Estructurales Enriquecidos**
+
+#### **Información Estructural Capturada:**
+
+```python
+def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str, Any]:
+    structural_info = {
+        "total_elements": len(elements),
+        "titles_count": sum(1 for e in elements if type(e).__name__ == 'Title'),
+        "tables_count": sum(1 for e in elements if type(e).__name__ == 'Table'),
+        "lists_count": sum(1 for e in elements if type(e).__name__ == 'ListItem'),
+        "narrative_blocks": sum(1 for e in elements if type(e).__name__ == 'NarrativeText'),
+        "total_text_length": total_text_length,
+        "avg_element_length": total_text_length / len(elements) if elements else 0
+    }
+    
+metadata = {
+        "source": os.path.basename(file_path),
+        "file_path": file_path,
+        "file_type": os.path.splitext(file_path)[1].lower(),
+        "processed_date": datetime.now().isoformat(),
+        "processing_method": "unstructured_enhanced",
+        "structural_info": structural_info
+    }
+```
+
+#### **Beneficios de los Metadatos Estructurales:**
+
+- **Rastreabilidad**: Sabes exactamente qué parte del documento se usó
+- **Calidad**: Información sobre la estructura del contenido
+- **Optimización**: Datos para mejorar el procesamiento futuro
+- **Debugging**: Información detallada para resolver problemas
+
+### **D. División Inteligente de Texto Mejorada**
+
+#### **Configuración Optimizada:**
 
 ```python
 text_splitter = RecursiveCharacterTextSplitter(
@@ -363,954 +595,105 @@ El sistema busca los mejores puntos de división en este orden:
 5. **`? `** - Final de preguntas
 6. **` `** - Espacios (último recurso)
 
-#### **¿Por qué es importante?**
-
-- **Preserva Contexto**: No corta en medio de una idea
-- **Mantiene Coherencia**: Cada fragmento es una unidad lógica
-- **Mejora Búsquedas**: Los fragmentos son más relevantes y completos
-
-#### **Ejemplo de División Inteligente:**
-```python
-# Texto original:
-"""
-La inteligencia artificial (IA) es una rama de la informática. 
-Se enfoca en crear sistemas inteligentes. Estos sistemas pueden 
-aprender y tomar decisiones. La IA tiene muchas aplicaciones 
-en la vida moderna.
-"""
-
-# Fragmentos resultantes:
-# Fragmento 1: "La inteligencia artificial (IA) es una rama de la informática. Se enfoca en crear sistemas inteligentes."
-# Fragmento 2: "Estos sistemas pueden aprender y tomar decisiones. La IA tiene muchas aplicaciones en la vida moderna."
-```
-
-### **B. Motor de Búsqueda Optimizado**
+### **E. Motor de Búsqueda Optimizado**
 
 #### **Configuración Actual:**
 
 ```python
 retriever = vector_store.as_retriever(
-    search_type="similarity",  # Búsqueda por similitud semántica
-    search_kwargs={
+    search_type="similarity_score_threshold",  # Búsqueda con umbral de similitud
+search_kwargs={
         "k": 5,                # Recupera 5 fragmentos más relevantes
-        "score_threshold": 0.7, # Solo documentos con similitud > 70%
-        "fetch_k": 10          # Busca 10 documentos y filtra los mejores 5
+        "score_threshold": 0.3, # Umbral de distancia (similitud > 0.7)
     }
 )
 ```
 
-#### **¿Cómo funciona la búsqueda?**
-
-1. **Búsqueda Inicial**: Busca 10 documentos candidatos
-2. **Cálculo de Similitud**: Calcula qué tan similares son a tu pregunta
-3. **Filtrado por Calidad**: Solo mantiene documentos con similitud > 70%
-4. **Selección Final**: Toma los 5 mejores fragmentos
-
-#### **Parámetros Explicados:**
+#### **Parámetros Optimizados:**
 
 - **`k=5`**: Obtienes información de 5 fuentes diferentes para respuestas más completas
-- **`score_threshold=0.7`**: Garantiza que solo se use información muy relevante
-- **`fetch_k=10`**: Busca más opciones para seleccionar las mejores
+- **`score_threshold=0.3`**: Garantiza que solo se use información muy relevante (similitud > 70%)
+- **Búsqueda por similitud**: Encuentra el contenido más semánticamente similar
 
-### **C. Limpieza Automática de Texto**
+### **F. Limpieza Automática de Texto**
 
-#### **¿Qué hace la limpieza?**
-
-Antes de procesar cualquier texto, el sistema lo limpia automáticamente:
+#### **Proceso de Limpieza:**
 
 ```python
 def clean_text_for_rag(text: str) -> str:
-    # Eliminar espacios múltiples
+    """Limpia y prepara el texto para mejorar la calidad de las búsquedas RAG."""
+    if not text:
+        return ""
+    
+    # Eliminar espacios múltiples y saltos de línea excesivos
     text = re.sub(r'\s+', ' ', text)
     
-    # Mantener solo caracteres importantes
+    # Eliminar caracteres especiales problemáticos pero mantener puntuación importante
     text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\{\}\"\']', '', text)
     
-    # Normalizar puntuación
+    # Normalizar espacios alrededor de puntuación
     text = re.sub(r'\s+([\.\,\!\?\;\:])', r'\1', text)
     
-    return text.strip()
+    # Eliminar líneas vacías múltiples
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    
+    # Limpiar espacios al inicio y final
+    text = text.strip()
+    
+    return text
 ```
-
-#### **Problemas que resuelve automáticamente:**
-
-1. **Espacios Múltiples**: `"Hola    mundo"` → `"Hola mundo"`
-2. **Caracteres Especiales**: `"Texto@#$%^"` → `"Texto"`
-3. **Puntuación Inconsistente**: `"Hola . Mundo"` → `"Hola. Mundo"`
-4. **Saltos de Línea Excesivos**: Normaliza el formato
-
-#### **Ejemplo de Limpieza:**
-```python
-# Texto con ruido:
-"""
-La IA    es muy importante!!!
-Tiene muchas aplicaciones@@@
-"""
-
-# Después de limpieza automática:
-"La IA es muy importante! Tiene muchas aplicaciones"
-```
-
-### **D. Respuestas Enriquecidas con Información de Calidad**
-
-#### **¿Qué información incluye cada respuesta?**
-
-El sistema proporciona respuestas completas con:
-
-```
-🤖 Respuesta:
-[Respuesta generada por IA]
-
-📚 Fuentes de información utilizadas:
-   1. documento1.pdf (.pdf) - Procesado: 15/12/2024 14:30
-   2. manual_ia.txt (.txt) - Procesado: 15/12/2024 14:25
-
-✅ Alta confianza: Respuesta basada en múltiples fuentes
-```
-
-#### **Información Incluida:**
-
-1. **Respuesta Principal**: Generada por el modelo de IA
-2. **Fuentes Utilizadas**: Lista de documentos consultados
-3. **Tipo de Archivo**: Formato de cada fuente
-4. **Fecha de Procesamiento**: Cuándo se añadió a la base de datos
-5. **Nivel de Confianza**: Basado en el número de fuentes
-
-#### **Niveles de Confianza:**
-
-- **✅ Alta confianza**: 3 o más fuentes
-- **⚠️ Confianza media**: 2 fuentes
-- **⚠️ Confianza limitada**: 1 fuente
-
-### **E. Sistema de Logs en Español**
-
-#### **¿Qué información muestran los logs?**
-
-Los logs te permiten seguir todo el proceso en español:
-
-```
-MCP Server: Iniciando servidor MCP RAG...
-MCP Server: Calentando sistema RAG...
-MCP Server: Precargando modelo de embedding en memoria...
-Core: Cargando modelo de embedding local: all-MiniLM-L6-v2
-Core: Este paso puede tomar unos minutos en la primera ejecución para descargar el modelo.
-Core: Usando dispositivo 'cpu' para embeddings.
-Core: ¡Modelo cargado exitosamente!
-Core: Inicializando base de datos vectorial...
-Core: Base de datos vectorial inicializada en './rag_mcp_db'
-MCP Server: Sistema RAG caliente y listo.
-```
-
-#### **Información que puedes monitorear:**
-
-- **Progreso de Carga**: Cuándo se cargan los modelos
-- **Procesamiento de Texto**: Cuántos fragmentos se crean
-- **Búsquedas**: Cuántas fuentes se encuentran
-- **Errores**: Mensajes claros con sugerencias
-
-### **F. Manejo Inteligente de Errores**
-
-#### **¿Cómo responde el sistema a los errores?**
-
-Cuando algo no funciona correctamente, el sistema proporciona:
-
-```
-❌ Error al procesar la pregunta: [Descripción del error]
-
-💡 Sugerencias:
-- Verifica que el sistema RAG esté correctamente inicializado
-- Intenta reformular tu pregunta
-- Si el problema persiste, reinicia el servidor
-```
-
-#### **Tipos de errores que maneja:**
-
-- **Archivos no encontrados**: Sugiere verificar rutas
-- **Formatos no soportados**: Lista formatos compatibles
-- **Problemas de permisos**: Guía para verificar acceso
-- **Sistema no inicializado**: Instrucciones de reinicio
-
-## **¿Cómo Funciona el Sistema Optimizado?**
-
-### **1. Proceso de Búsqueda Completo:**
-
-1. **Recepción de Pregunta**: El sistema recibe tu consulta
-2. **Limpieza Automática**: Limpia la pregunta si es necesario
-3. **Búsqueda Semántica**: Encuentra documentos relevantes
-4. **Filtrado por Calidad**: Solo usa información muy similar
-5. **Generación de Respuesta**: Crea respuesta basada en múltiples fuentes
-6. **Información de Fuentes**: Proporciona lista completa de referencias
-
-### **2. Características de Calidad:**
-
-- **Alta Precisión**: Solo documentos con >70% de similitud
-- **Contexto Completo**: 5 fragmentos de información
-- **Trazabilidad**: Sabes exactamente de dónde viene cada información
-- **Confianza Medible**: Nivel de confianza basado en fuentes
-
-### **3. Experiencia de Usuario:**
-
-- **Respuestas Completas**: Información detallada y bien estructurada
-- **Fuentes Claras**: Sabes qué documentos se consultaron
-- **Errores Útiles**: Mensajes claros con sugerencias
-- **Monitoreo Fácil**: Logs en español para seguir el proceso
-
-## **Ejemplo de Funcionamiento Completo**
-
-**Pregunta**: "¿Cuáles son las aplicaciones de machine learning en medicina?"
-
-**Proceso Interno:**
-1. Sistema busca documentos sobre "machine learning" y "medicina"
-2. Encuentra 3 documentos relevantes con similitud >70%
-3. Genera respuesta combinando información de las 3 fuentes
-4. Proporciona lista completa de fuentes utilizadas
-
-**Respuesta Final:**
-```
-🤖 Respuesta:
-Machine learning tiene múltiples aplicaciones en medicina, incluyendo diagnóstico por imágenes, análisis de datos médicos, descubrimiento de fármacos y medicina personalizada. Los algoritmos pueden analizar radiografías, resonancias magnéticas y otros estudios médicos para detectar enfermedades con alta precisión.
-
-📚 Fuentes de información utilizadas:
-   1. aplicaciones_ml.pdf (.pdf) - Procesado: 15/12/2024 14:30
-   2. medicina_digital.txt (.txt) - Procesado: 15/12/2024 14:25
-   3. ia_salud.docx (.docx) - Procesado: 15/12/2024 14:20
-
-✅ Alta confianza: Respuesta basada en múltiples fuentes
-```
-
-## **Consejos para Obtener Mejores Resultados**
-
-### **1. Añade Información Variada:**
-```python
-# Ejemplo de uso
-learn_text("La inteligencia artificial es una rama de la informática que busca crear sistemas capaces de realizar tareas que requieren inteligencia humana.", "definicion_ia")
-```
-
-### **2. Usa Preguntas Específicas:**
-- ❌ "¿Qué es la IA?"
-- ✅ "¿Cuáles son las principales aplicaciones de la inteligencia artificial en la medicina?"
-
-### **3. Verifica las Fuentes:**
-- Siempre revisa la información de fuentes en las respuestas
-- Usa múltiples documentos sobre el mismo tema para mayor confianza
-
-### **4. Monitoreo del Sistema:**
-- Los logs te mostrarán cuántos fragmentos se procesan
-- Verás información sobre la calidad de las búsquedas
-- Podrás identificar si necesitas ajustar parámetros
 
 ---
 
-## 🧠 Entendiendo los Embeddings
+## 🚀 Rendimiento y Escalabilidad
 
-Esta sección explica qué son los embeddings y por qué son fundamentales para el funcionamiento del sistema RAG.
+### **Mejoras de Rendimiento:**
 
-### **🤖 ¿Qué son los Embeddings?**
+- **Procesamiento Paralelo**: Múltiples estrategias de fallback
+- **Caché Inteligente**: Reutilización de elementos procesados
+- **Configuración Adaptativa**: Optimización por tipo de archivo
+- **Limpieza Eficiente**: Procesamiento optimizado de texto
 
-#### **Definición Simple:**
-Los **embeddings** son como "traductores" que convierten texto en números que las computadoras pueden entender y comparar. Es como crear un "código postal" para cada palabra o frase.
+### **Escalabilidad:**
 
-#### **Analogía Práctica:**
-Imagina que tienes una biblioteca con miles de libros. Para encontrar libros similares, podrías:
-- **Sin embeddings**: Leer cada libro completo (muy lento)
-- **Con embeddings**: Usar un código que describe el contenido (muy rápido)
-
-### **🔢 ¿Cómo Funcionan los Embeddings?**
-
-#### **Proceso de Conversión:**
-```python
-# Texto original (humano entiende)
-"La inteligencia artificial es fascinante"
-
-# Embedding (computadora entiende)
-[0.234, -0.567, 0.891, 0.123, -0.456, ...]  # Vector de 384 números
-```
-
-#### **¿Por qué Números?**
-- **Comparación rápida**: Las computadoras pueden comparar números muy rápido
-- **Similitud matemática**: Textos similares tienen números similares
-- **Búsqueda eficiente**: Encuentra información relevante en milisegundos
-
-### **🎯 ¿Cómo Se Usan en tu Sistema RAG?**
-
-#### **1. Proceso de Almacenamiento:**
-```python
-# Cuando añades texto al sistema:
-texto = "Machine learning es un tipo de IA"
-embedding = modelo_embedding.convertir_a_vector(texto)
-# Resultado: [0.1, 0.5, -0.3, 0.8, ...]
-
-# Se guarda en la base de datos vectorial
-base_datos.guardar(texto, embedding)
-```
-
-#### **2. Proceso de Búsqueda:**
-```python
-# Cuando haces una pregunta:
-pregunta = "¿Qué es machine learning?"
-embedding_pregunta = modelo_embedding.convertir_a_vector(pregunta)
-# Resultado: [0.12, 0.48, -0.25, 0.82, ...]
-
-# El sistema busca textos con embeddings similares
-resultados = base_datos.buscar_similares(embedding_pregunta)
-```
-
-### **🧮 ¿Cómo Se Calcula la Similitud?**
-
-#### **Cálculo de Distancia:**
-```python
-# Ejemplo simplificado:
-embedding_1 = [0.1, 0.5, -0.3, 0.8]
-embedding_2 = [0.12, 0.48, -0.25, 0.82]
-
-# Distancia = qué tan diferentes son
-distancia = calcular_distancia(embedding_1, embedding_2)
-# Resultado: 0.05 (muy similar)
-
-# Similitud = 1 - distancia
-similitud = 1 - 0.05 = 0.95 (95% similar)
-```
-
-#### **Interpretación de Similitud:**
-- **0.9 - 1.0**: Muy similar (excelente coincidencia)
-- **0.7 - 0.9**: Similar (buena coincidencia) ← **Tu sistema usa 0.7 como mínimo**
-- **0.5 - 0.7**: Moderadamente similar
-- **0.0 - 0.5**: Poco similar
-
-### **🔧 ¿Qué Modelo de Embedding Usa tu Sistema?**
-
-#### **Modelo Actual:**
-```python
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
-```
-
-#### **Características del Modelo:**
-- **Tamaño**: ~90MB (pequeño y eficiente)
-- **Dimensiones**: 384 números por texto
-- **Idiomas**: Multilingüe (español e inglés)
-- **Velocidad**: Muy rápido
-- **Calidad**: Excelente para búsquedas
-
-#### **¿Por qué Este Modelo?**
-- **Eficiente**: No necesita mucha memoria
-- **Rápido**: Procesa texto en milisegundos
-- **Preciso**: Encuentra información muy relevante
-- **Local**: Funciona sin internet
-
-### **📊 Ejemplo Práctico en tu Sistema**
-
-#### **Escenario: Buscar información sobre "machine learning"**
-
-**Paso 1: Procesar Documentos**
-```python
-# Documento 1
-texto_1 = "Machine learning es una rama de la IA"
-embedding_1 = [0.1, 0.5, -0.3, 0.8, ...]  # 384 números
-
-# Documento 2  
-texto_2 = "Los algoritmos de ML pueden aprender"
-embedding_2 = [0.12, 0.48, -0.25, 0.82, ...]  # 384 números
-
-# Documento 3
-texto_3 = "El clima hoy está soleado"
-embedding_3 = [-0.8, 0.2, 0.9, -0.1, ...]  # 384 números
-```
-
-**Paso 2: Hacer Pregunta**
-```python
-pregunta = "¿Qué es machine learning?"
-embedding_pregunta = [0.11, 0.49, -0.28, 0.81, ...]
-```
-
-**Paso 3: Calcular Similitudes**
-```python
-similitud_1 = calcular_similitud(embedding_pregunta, embedding_1)  # 0.95
-similitud_2 = calcular_similitud(embedding_pregunta, embedding_2)  # 0.92
-similitud_3 = calcular_similitud(embedding_pregunta, embedding_3)  # 0.15
-```
-
-**Paso 4: Seleccionar Resultados**
-```python
-# Solo documentos con similitud > 0.7 (70%)
-resultados = [
-    (texto_1, 0.95),  # Muy relevante
-    (texto_2, 0.92)   # Muy relevante
-    # texto_3 se descarta (0.15 < 0.7)
-]
-```
-
-### **⚡ Ventajas de los Embeddings**
-
-#### **1. Búsqueda Semántica:**
-```python
-# Encuentra información incluso con palabras diferentes
-pregunta = "¿Qué es ML?"
-# Encuentra: "Machine learning es una rama de la IA"
-# Aunque "ML" y "Machine learning" son diferentes
-```
-
-#### **2. Velocidad:**
-- **Sin embeddings**: Leer todos los documentos (muy lento)
-- **Con embeddings**: Comparar números (muy rápido)
-
-#### **3. Precisión:**
-- **Búsqueda por palabras**: "IA" no encuentra "inteligencia artificial"
-- **Búsqueda semántica**: "IA" encuentra "inteligencia artificial"
-
-#### **4. Escalabilidad:**
-- **Miles de documentos**: Procesamiento en segundos
-- **Millones de documentos**: Procesamiento en minutos
-
-### **🔍 ¿Cómo Se Configuran en tu Sistema?**
-
-#### **En `rag_core.py`:**
-```python
-def get_embedding_function():
-    embeddings = HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2",
-        model_kwargs={'device': 'cpu'}  # o 'cuda' si tienes GPU
-    )
-    return embeddings
-```
-
-#### **Parámetros Importantes:**
-- **`model_name`**: Qué modelo usar
-- **`device`**: CPU o GPU
-- **`chunk_size`**: Tamaño de fragmentos (1000 caracteres)
-- **`chunk_overlap`**: Superposición entre fragmentos (200 caracteres)
-
-### **📈 ¿Cómo Mejorar los Embeddings?**
-
-#### **1. Calidad del Texto:**
-```python
-# ✅ Texto limpio y bien estructurado
-"Machine learning es una rama de la inteligencia artificial que permite a las computadoras aprender sin ser programadas explícitamente."
-
-# ❌ Texto con ruido
-"ML is AI stuff that makes computers learn stuff without programming them explicitly."
-```
-
-#### **2. Tamaño de Fragmentos:**
-- **Muy pequeños**: Pierden contexto
-- **Muy grandes**: Menos precisos
-- **Óptimo**: 1000 caracteres con 200 de overlap
-
-#### **3. Modelo de Embedding:**
-- **Modelos más grandes**: Mejor calidad, más lento
-- **Modelos más pequeños**: Más rápido, calidad aceptable
-- **Tu modelo**: Balance perfecto
-
-### **🎯 Resumen: ¿Por qué son Importantes?**
-
-#### **Sin Embeddings:**
-- Búsquedas lentas
-- Resultados imprecisos
-- No entiende sinónimos
-- Escalabilidad limitada
-
-#### **Con Embeddings:**
-- Búsquedas instantáneas
-- Resultados muy precisos
-- Entiende significado
-- Escalable a millones de documentos
-
-**Los embeddings son el "cerebro" que hace que tu sistema RAG sea inteligente y rápido. Convierten el texto en un lenguaje que las computadoras pueden entender y comparar eficientemente, permitiendo búsquedas semánticas precisas en milisegundos.**
+- **Arquitectura Modular**: Componentes independientes y reutilizables
+- **Metadatos Estructurales**: Información para optimizaciones futuras
+- **Sistema de Fallbacks**: Garantiza funcionamiento con cualquier documento
+- **Configuración Flexible**: Fácil adaptación a nuevos formatos
 
 ---
 
-## ⚠️ Limitaciones y Elección del Modelo de Embedding
+## 📞 Soporte y Contribuciones
 
-Esta sección detalla por qué se eligió el modelo `all-mpnet-base-v2`, sus ventajas y sus limitaciones en comparación con otras alternativas.
+### **Reportar Problemas:**
 
-### **🎯 ¿Por qué `all-mpnet-base-v2`? Un excelente punto medio**
+Si encuentras algún problema o tienes sugerencias:
 
-Este modelo fue seleccionado por ofrecer el mejor **equilibrio entre rendimiento y calidad** para una ejecución local.
+1. **Revisa los logs**: El sistema proporciona información detallada sobre errores
+2. **Verifica dependencias**: Asegúrate de tener todas las dependencias instaladas
+3. **Consulta la documentación**: Revisa las guías específicas para cada componente
 
-- **Ventajas:**
-    - **Alta Calidad:** Ofrece una comprensión semántica significativamente mejor que modelos más pequeños (como `all-MiniLM-L6-v2`). Es muy bueno capturando matices y relaciones complejas en el texto.
-    - **Buen Rendimiento:** Aunque es más grande que los modelos "mini", sigue siendo lo suficientemente rápido para ejecutarse en CPUs modernas sin tiempos de espera frustrantes.
-    - **Muy Popular:** Es uno de los modelos de `sentence-transformers` más usados y mejor valorados, lo que garantiza un buen soporte y rendimiento probado.
+### **Contribuir:**
 
-- **Desventajas:**
-    - **Uso de Recursos:** Requiere más RAM y espacio en disco (420MB) que los modelos pequeños.
-    - **No es el mejor:** Modelos comerciales de vanguardia (como los de OpenAI o Cohere) o modelos locales mucho más grandes (de varios Gigabytes) pueden ofrecer una precisión aún mayor, pero a costa de no poder ejecutarse localmente o requerir hardware muy potente.
+Las contribuciones son bienvenidas. Áreas de mejora:
 
-### **⚖️ Comparativa de Modelos**
-
-| Modelo | Tamaño | Dimensiones | Calidad Semántica | Requisitos | Ideal para... |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`all-mpnet-base-v2` (Tu modelo)** | **~420MB** | **768** | **Alta** | **Moderados (CPU/GPU)** | **El mejor balance para uso local y de alta calidad.** |
-| `all-MiniLM-L6-v2` | ~90MB | 384 | Media | Bajos (CPU) | Sistemas con muy pocos recursos o donde la velocidad es más importante que la precisión. |
-| `text-embedding-3-large` (OpenAI) | N/A (API) | 3072 | Muy Alta | Conexión a Internet, API Key | Proyectos comerciales que necesitan la máxima precisión y no tienen problemas de privacidad/coste. |
-
-
-En resumen, `all-mpnet-base-v2` es la elección perfecta para este proyecto: un sistema RAG local, privado y de alto rendimiento que no requiere hardware de servidor.
+- **Nuevos formatos de archivo**: Soporte para formatos adicionales
+- **Optimizaciones de rendimiento**: Mejoras en velocidad y eficiencia
+- **Interfaz de usuario**: Mejoras en la GUI
+- **Documentación**: Mejoras en guías y ejemplos
 
 ---
 
-## ⚠️ Limitaciones del Modelo de Embedding
+## 📄 Licencia
 
-Esta sección detalla las limitaciones y desventajas del modelo `all-MiniLM-L6-v2` que usa tu sistema, para que puedas tomar decisiones informadas y optimizar su uso.
-
-### **🔍 Limitaciones de Tamaño y Complejidad**
-
-#### **Modelo Pequeño:**
-- **Tamaño**: Solo 90MB (muy pequeño)
-- **Dimensiones**: 384 números (limitado)
-- **¿Problema?** Menos capacidad para capturar matices complejos
-
-#### **Comparación con Modelos Más Grandes:**
-```python
-# Tu modelo actual:
-all-MiniLM-L6-v2: 90MB, 384 dimensiones
-
-# Modelos más potentes:
-sentence-transformers/all-mpnet-base-v2: 420MB, 768 dimensiones
-text-embedding-ada-002: 1.5GB, 1536 dimensiones
-```
-
-### **🧠 Limitaciones en Comprensión Semántica**
-
-#### **Contexto Limitado:**
-- **Longitud máxima**: ~512 tokens por fragmento
-- **¿Problema?** Puede perder contexto en textos largos o complejos
-
-#### **Ejemplo de Limitación:**
-```python
-# Texto complejo que puede ser problemático:
-texto_complejo = """
-La inteligencia artificial, específicamente el machine learning supervisado, 
-utiliza algoritmos como redes neuronales convolucionales para procesar 
-imágenes médicas y detectar anomalías en radiografías de tórax, 
-permitiendo diagnósticos más precisos y tempranos.
-"""
-
-# El modelo puede no capturar completamente la relación entre:
-# - "redes neuronales convolucionales" 
-# - "procesar imágenes médicas"
-# - "detectar anomalías"
-```
-
-### **🌍 Limitaciones en Idiomas**
-
-#### **Soporte Multilingüe Básico:**
-- **Idiomas principales**: Inglés y español
-- **¿Problema?** Rendimiento desigual en otros idiomas
-- **Calidad variable**: Mejor en inglés que en español
-
-#### **Ejemplo de Problema:**
-```python
-# En inglés (excelente):
-"machine learning" → [0.1, 0.5, -0.3, ...]
-
-# En español (bueno, pero no óptimo):
-"aprendizaje automático" → [0.08, 0.48, -0.25, ...]
-
-# En otros idiomas (limitado):
-"apprentissage automatique" → [0.05, 0.45, -0.2, ...]
-```
-
-### **🔬 Limitaciones en Dominios Específicos**
-
-#### **Conocimiento General vs Especializado:**
-- **Entrenado en**: Texto general de internet
-- **¿Problema?** Puede no entender bien terminología técnica específica
-
-#### **Ejemplos de Dominios Problemáticos:**
-```python
-# Terminología médica especializada:
-"adenocarcinoma pulmonar de células pequeñas" 
-# Puede no capturar bien la relación con "cáncer de pulmón"
-
-# Terminología legal:
-"res judicata" 
-# Puede no entender que es "cosa juzgada"
-
-# Terminología técnica muy específica:
-"microservicios con arquitectura hexagonal"
-# Puede perder matices técnicos específicos
-```
-
-### **🔗 Limitaciones en Comprensión de Relaciones**
-
-#### **Relaciones Complejas:**
-- **Relaciones simples**: Excelente (sinónimos, antónimos)
-- **Relaciones complejas**: Limitado (causalidad, implicación)
-
-#### **Ejemplo de Limitación:**
-```python
-# Relación simple (funciona bien):
-"coche" ↔ "automóvil"  # Sinónimos
-
-# Relación compleja (puede fallar):
-"Si llueve, el suelo se moja" 
-# Puede no capturar bien la relación causal
-```
-
-### **📝 Sensibilidad al Formato del Texto**
-
-#### **Dependencia del Formato:**
-- **Texto limpio**: Excelente rendimiento
-- **Texto con ruido**: Rendimiento degradado
-
-#### **Ejemplos Problemáticos:**
-```python
-# ✅ Texto limpio (funciona bien):
-"La inteligencia artificial es una rama de la informática."
-
-# ❌ Texto con ruido (puede fallar):
-"La IA es una rama de la info... muy importante!!!"
-"La inteligencia artificial (IA) es una rama de la informática."
-```
-
-### **🎯 Limitaciones en Tareas Específicas**
-
-#### **Búsqueda de Información vs Otras Tareas:**
-- **Búsqueda semántica**: Excelente
-- **Clasificación de texto**: Limitado
-- **Análisis de sentimientos**: No optimizado
-- **Extracción de entidades**: Básico
-
-### **📈 Limitaciones de Escalabilidad**
-
-#### **Rendimiento con Grandes Volúmenes:**
-- **Miles de documentos**: Excelente
-- **Millones de documentos**: Puede ser lento
-- **¿Por qué?** Comparación secuencial de vectores
-
-## **🔄 Estrategias para Mitigar Limitaciones**
-
-### **1. Optimizar el Texto de Entrada:**
-```python
-# ✅ Mejorar calidad del texto:
-texto_limpio = clean_text_for_rag(texto_original)
-
-# ✅ Usar fragmentos apropiados:
-chunk_size = 1000  # Tamaño óptimo para este modelo
-chunk_overlap = 200  # Mantener contexto
-```
-
-### **2. Ajustar Parámetros de Búsqueda:**
-```python
-# Para compensar limitaciones:
-search_kwargs = {
-    "k": 5,                # Más fragmentos para mejor cobertura
-    "score_threshold": 0.7, # Umbral alto para precisión
-    "fetch_k": 10          # Buscar más candidatos
-}
-```
-
-### **3. Mejorar la Estructura de Datos:**
-```python
-# ✅ Documentos bien estructurados:
-"Machine learning es una rama de la inteligencia artificial que permite a las computadoras aprender sin ser programadas explícitamente."
-
-# ✅ Metadatos descriptivos:
-metadata = {
-    "domain": "tecnología",
-    "language": "español",
-    "complexity": "intermedio"
-}
-```
-
-### **4. Considerar Modelos Alternativos (Futuro):**
-
-#### **Para Mejor Calidad:**
-```python
-# Modelos más potentes (requieren más recursos):
-"all-mpnet-base-v2"      # 420MB, mejor calidad
-"text-embedding-ada-002" # 1.5GB, máxima calidad
-```
-
-#### **Para Mejor Velocidad:**
-```python
-# Modelos más rápidos:
-"all-MiniLM-L6-v2"       # Tu modelo actual
-"paraphrase-MiniLM-L3-v2" # Aún más rápido
-```
-
-## **⚖️ Resumen: Ventajas vs Desventajas**
-
-### **Desventajas:**
-- ❌ Comprensión semántica limitada
-- ❌ Contexto limitado en textos largos
-- ❌ Rendimiento variable en idiomas
-- ❌ Limitado en dominios especializados
-- ❌ Sensible al formato del texto
-- ❌ Relaciones complejas limitadas
-
-### **Ventajas (que compensan):**
-- ✅ Muy rápido y eficiente
-- ✅ Poco uso de memoria
-- ✅ Funciona sin internet
-- ✅ Excelente para búsquedas básicas
-- ✅ Balance calidad/velocidad
-- ✅ Fácil de implementar
-
-## **🎯 Recomendaciones para tu Caso de Uso**
-
-### **Para tu Sistema Actual:**
-1. **Mantén el modelo actual** - Es un buen balance
-2. **Optimiza el texto de entrada** - Limpia y estructura bien
-3. **Ajusta parámetros** - Usa más fragmentos si es necesario
-4. **Monitorea resultados** - Verifica calidad de respuestas
-
-### **Para Considerar en el Futuro:**
-1. **Si necesitas mejor calidad**: Cambiar a modelo más grande
-2. **Si necesitas más velocidad**: Usar modelo más pequeño
-3. **Si tienes GPU**: Habilitar aceleración por hardware
-4. **Si tienes muchos documentos**: Considerar indexación avanzada
-
-### **Señales de que Necesitas un Modelo Mejor:**
-- Respuestas inconsistentes en tu dominio
-- No encuentra información que sabes que existe
-- Problemas con terminología técnica específica
-- Necesitas mayor precisión en relaciones complejas
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
 
 ---
 
-## ⚡ Consideraciones para Funcionamiento Óptimo
+## 🙏 Agradecimientos
 
-Esta sección detalla las consideraciones técnicas y mejores prácticas para obtener el máximo rendimiento de tu sistema RAG.
-
-### **🔧 Requisitos del Sistema**
-
-#### **Memoria RAM:**
-- **Mínimo recomendado**: 8GB RAM
-- **Óptimo**: 16GB RAM o más
-- **¿Por qué es importante?** Los modelos de embedding y el LLM necesitan memoria para funcionar eficientemente
-
-#### **Almacenamiento:**
-- **Espacio libre**: Al menos 10GB disponibles
-- **Velocidad**: SSD preferiblemente (más rápido que HDD)
-- **¿Para qué?** Modelos, base de datos vectorial y documentos procesados
-
-#### **CPU/GPU:**
-- **CPU**: Mínimo 4 núcleos, recomendado 8+ núcleos
-- **GPU**: Opcional pero mejora significativamente el rendimiento
-- **¿Por qué?** Los embeddings y el procesamiento de texto son intensivos
-
-### **🤖 Configuración de Ollama**
-
-#### **Modelos Recomendados:**
-```bash
-# Modelos por rendimiento:
-ollama pull llama3        # Equilibrio velocidad/calidad
-ollama pull phi3          # Más rápido, menos recursos
-ollama pull mistral       # Buena calidad, moderado uso de recursos
-```
-
-#### **Configuración de Memoria:**
-```bash
-# En Windows, ajustar memoria virtual:
-# Panel de Control > Sistema > Configuración avanzada > Rendimiento > Configuración
-# Memoria virtual: Al menos 16GB
-```
-
-#### **Verificar Funcionamiento:**
-```bash
-# Probar que Ollama funciona correctamente
-ollama list
-ollama run llama3 "Test de funcionamiento"
-```
-
-### **📄 Calidad de los Datos de Entrada**
-
-#### **Documentos Bien Estructurados:**
-- **Formato consistente**: Usa el mismo formato en todos los documentos
-- **Contenido relevante**: Solo añade información útil para tus consultas
-- **Tamaño apropiado**: Documentos entre 1-50 páginas funcionan mejor
-
-#### **Ejemplos de Buena Práctica:**
-```python
-# ✅ Documentos bien estructurados
-learn_text("La inteligencia artificial es una rama de la informática que busca crear sistemas capaces de realizar tareas que requieren inteligencia humana. Se divide en machine learning, procesamiento de lenguaje natural y visión por computadora.", "definicion_ia_completa")
-
-# ❌ Información fragmentada
-learn_text("IA", "definicion_corta")
-learn_text("es", "definicion_fragmentada")
-```
-
-### **✂️ Estrategia de División de Texto**
-
-#### **Tamaño de Fragmentos Actual:**
-- **Fragmentos**: 1000 caracteres con 200 de overlap
-- **Para documentos técnicos**: Puedes aumentar a 1500 caracteres
-- **Para conversaciones**: Puedes reducir a 800 caracteres
-
-#### **Separadores Inteligentes:**
-El sistema ya usa separadores óptimos, pero puedes ajustar según tu contenido:
-```python
-# Para documentos técnicos con muchas listas:
-separators=["\n\n", "\n", ". ", "• ", "- ", " ", ""]
-
-# Para documentos narrativos:
-separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
-```
-
-### **🔍 Configuración de Búsqueda**
-
-#### **Parámetros Actuales (Optimizados):**
-```python
-search_kwargs={
-    "k": 5,                # 5 fragmentos - buen balance
-    "score_threshold": 0.7, # 70% similitud - alta precisión
-    "fetch_k": 10          # 10 candidatos - buena selección
-}
-```
-
-#### **Ajustes según Necesidades:**
-- **Para respuestas más completas**: Aumentar `k` a 7-8
-- **Para mayor precisión**: Aumentar `score_threshold` a 0.8
-- **Para búsquedas más amplias**: Reducir `score_threshold` a 0.6
-
-### **🗄️ Gestión de la Base de Datos**
-
-#### **Mantenimiento Regular:**
-```bash
-# Verificar tamaño de la base de datos
-ls -la rag_mcp_db/
-
-# Limpiar archivos temporales si es necesario
-rm -rf rag_mcp_db/*.tmp
-```
-
-#### **Backup de Datos:**
-```bash
-# Crear copia de seguridad
-cp -r rag_mcp_db/ rag_mcp_db_backup_$(date +%Y%m%d)
-```
-
-### **💡 Optimización de Consultas**
-
-#### **Preguntas Efectivas:**
-```python
-# ✅ Preguntas específicas y claras
-ask_rag("¿Cuáles son las principales aplicaciones de machine learning en el diagnóstico médico?")
-
-# ❌ Preguntas muy generales
-ask_rag("¿Qué es la IA?")
-```
-
-#### **Uso de Palabras Clave:**
-- **Incluye términos técnicos** específicos de tu dominio
-- **Usa sinónimos** para conceptos importantes
-- **Sé específico** en lo que buscas
-
-### **📊 Monitoreo del Rendimiento**
-
-#### **Logs Importantes a Revisar:**
-```
-Core: Texto dividido en X fragmentos
-Core: X fragmentos añadidos y guardados en la base de conocimientos
-MCP Server: Respuesta generada exitosamente con X fuentes
-```
-
-#### **Indicadores de Rendimiento:**
-- **Tiempo de respuesta**: Debería ser < 5 segundos
-- **Número de fuentes**: 3+ fuentes = alta confianza
-- **Calidad de respuestas**: Información relevante y completa
-
-### **🔒 Consideraciones de Seguridad**
-
-#### **Datos Sensibles:**
-- **No incluyas información personal** en la base de conocimientos
-- **Revisa documentos** antes de procesarlos
-- **Usa fuentes confiables** para la información
-
-#### **Acceso al Sistema:**
-- **Mantén actualizado** el entorno virtual
-- **Revisa logs** regularmente
-- **Monitorea uso de recursos**
-
-### **⚙️ Optimización de Flujo de Trabajo**
-
-#### **Proceso Recomendado:**
-1. **Preparar documentos**: Limpiar y estructurar contenido
-2. **Procesar en lotes**: Usar `bulk_ingest.py` para muchos documentos
-3. **Verificar calidad**: Revisar respuestas de prueba
-4. **Ajustar parámetros**: Si es necesario, modificar configuración
-5. **Monitorear uso**: Revisar logs y rendimiento
-
-#### **Herramientas de Verificación:**
-```bash
-# Probar el sistema completo
-python test_rag.py
-
-# Verificar que Ollama funciona
-ollama run llama3 "Test"
-
-# Verificar dependencias
-python -c "import mcp, langchain, chromadb; print('✅ Todo OK')"
-```
-
-## **🚀 Checklist para Funcionamiento Óptimo**
-
-### **Antes de Usar:**
-- [ ] Ollama instalado y funcionando
-- [ ] Modelo de lenguaje descargado
-- [ ] Suficiente memoria RAM disponible
-- [ ] Espacio en disco suficiente
-- [ ] Entorno virtual activado
-
-### **Durante el Uso:**
-- [ ] Documentos bien estructurados
-- [ ] Preguntas específicas y claras
-- [ ] Monitoreo de logs
-- [ ] Verificación de fuentes en respuestas
-- [ ] Backup regular de datos
-
-### **Mantenimiento:**
-- [ ] Revisar logs semanalmente
-- [ ] Verificar rendimiento
-- [ ] Limpiar archivos temporales
-- [ ] Actualizar dependencias si es necesario
-- [ ] Backup de base de datos
-
-## **⚠️ Problemas Comunes y Soluciones**
-
-### **Respuestas Lentas:**
-- **Causa**: Modelo muy grande o poca RAM
-- **Solución**: Usar modelo más pequeño (phi3) o aumentar RAM
-
-### **Respuestas Pobres:**
-- **Causa**: Poca información en la base de datos
-- **Solución**: Añadir más documentos relevantes
-
-### **Errores de Memoria:**
-- **Causa**: Documentos muy grandes o muchos fragmentos
-- **Solución**: Reducir tamaño de fragmentos o procesar en lotes
-
-### **Búsquedas Sin Resultados:**
-- **Causa**: Umbral de similitud muy alto
-- **Solución**: Reducir `score_threshold` a 0.6
-
-### **Modelo No Encontrado:**
-- **Causa**: Modelo no descargado o nombre incorrecto
-- **Solución**: Verificar con `ollama list` y descargar si es necesario
-
-### **Errores de Conexión:**
-- **Causa**: Ollama no está ejecutándose
-- **Solución**: Iniciar Ollama con `ollama serve`
-
----
-
-## 📂 Estructura del Proyecto
-
-```
-/
-├── .venv/                  # Entorno virtual de Python (creado automáticamente)
-├── rag_mcp_db/             # Base de datos vectorial (se crea al usarla)
-├── converted_docs/         # Copias en Markdown de documentos procesados
-├── bulk_ingest.py          # Script para la ingesta masiva desde línea de comandos
-├── bulk_ingest_gui.py      # Script de la Interfaz Gráfica de Usuario
-├── rag_core.py             # Lógica central y reutilizable del sistema RAG
-├── rag_server.py           # El servidor MCP (lanzado por run_server.bat)
-├── run_gui.bat             # Script de arranque para la interfaz gráfica
-├── run_server.bat          # Script de arranque para el servidor en Windows
-├── requirements.txt        # Todas las dependencias del proyecto
-├── pre_download_model.py   # Script para pre-descargar el modelo de embedding
-├── test_rag.py             # Script de prueba del sistema RAG
-├── AGENT_INSTRUCTIONS.md   # Guía para agentes de IA
-└── README.md               # Este archivo
-```
+- **Unstructured.io**: Por la excelente librería de procesamiento de documentos
+- **LangChain**: Por el framework de RAG
+- **ChromaDB**: Por la base de datos vectorial
+- **Ollama**: Por los modelos de lenguaje locales
+- **Comunidad de IA**: Por el continuo desarrollo de herramientas de IA

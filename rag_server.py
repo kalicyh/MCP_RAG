@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 from rag_core import (
     get_vector_store,
     add_text_to_knowledge_base,
+    add_text_to_knowledge_base_enhanced,  # Nueva función mejorada
+    load_document_with_fallbacks,         # Nueva función de procesamiento con Unstructured
     get_qa_chain,
     log  # Importamos nuestra nueva función de log
 )
@@ -20,7 +22,7 @@ mcp = FastMCP("rag_server_knowledge")
 # El estado ahora solo guarda los componentes listos para usar
 rag_state = {}
 
-# Inicializamos el conversor de MarkItDown una sola vez.
+# Inicializamos el conversor de MarkItDown una sola vez (para URLs)
 md_converter = MarkItDown()
 
 # Carpeta donde se guardarán las copias en Markdown
@@ -49,13 +51,14 @@ def ensure_converted_docs_directory():
         os.makedirs(CONVERTED_DOCS_DIR)
         log(f"MCP Server: Creada carpeta para documentos convertidos: {CONVERTED_DOCS_DIR}")
 
-def save_markdown_copy(file_path: str, markdown_content: str) -> str:
+def save_processed_copy(file_path: str, processed_content: str, processing_method: str = "unstructured") -> str:
     """
-    Guarda una copia del documento convertido en formato Markdown.
+    Guarda una copia del documento procesado en formato Markdown.
     
     Args:
         file_path: Ruta original del archivo
-        markdown_content: Contenido convertido a Markdown
+        processed_content: Contenido procesado
+        processing_method: Método de procesamiento usado
     
     Returns:
         Ruta del archivo Markdown guardado
@@ -66,18 +69,18 @@ def save_markdown_copy(file_path: str, markdown_content: str) -> str:
     original_filename = os.path.basename(file_path)
     name_without_ext = os.path.splitext(original_filename)[0]
     
-    # Crear el nombre del archivo Markdown
-    md_filename = f"{name_without_ext}.md"
+    # Crear el nombre del archivo Markdown con información del método
+    md_filename = f"{name_without_ext}_{processing_method}.md"
     md_filepath = os.path.join(CONVERTED_DOCS_DIR, md_filename)
     
     # Guardar el contenido en el archivo Markdown
     try:
         with open(md_filepath, 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
-        log(f"MCP Server: Copia Markdown guardada en: {md_filepath}")
+            f.write(processed_content)
+        log(f"MCP Server: Copia procesada guardada en: {md_filepath}")
         return md_filepath
     except Exception as e:
-        log(f"MCP Server Advertencia: No se pudo guardar copia Markdown: {e}")
+        log(f"MCP Server Advertencia: No se pudo guardar copia procesada: {e}")
         return ""
 
 def initialize_rag():
@@ -138,24 +141,33 @@ def learn_text(text: str, source_name: str = "manual_input") -> str:
 @mcp.tool()
 def learn_document(file_path: str) -> str:
     """
-    Reads and processes a document file, converts it to Markdown, and adds it to the knowledge base.
-    Use this when you want to teach the AI from document files like PDFs, Word documents, etc.
+    Reads and processes a document file using advanced Unstructured processing, and adds it to the knowledge base.
+    Use this when you want to teach the AI from document files with intelligent processing.
     
-    Supported file types: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML
+    Supported file types: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, ODT, ODP, ODS, RTF, 
+    images (PNG, JPG, TIFF, BMP with OCR), emails (EML, MSG), and more than 25 formats total.
+    
+    Advanced features:
+    - Intelligent document structure preservation (titles, lists, tables)
+    - Automatic noise removal (headers, footers, irrelevant content)
+    - Semantic chunking for better context
+    - Robust fallback system for any document type
+    - Structural metadata extraction
     
     Examples of when to use:
-    - Processing research papers or articles
-    - Adding content from reports or manuals
-    - Importing data from spreadsheets
+    - Processing research papers or articles with complex layouts
+    - Adding content from reports or manuals with tables and lists
+    - Importing data from spreadsheets with formatting
     - Converting presentations to searchable knowledge
+    - Processing scanned documents with OCR
     
-    The document will be automatically converted to Markdown format and stored with source tracking.
-    A copy of the converted document is saved for verification.
+    The document will be intelligently processed and stored with enhanced metadata.
+    A copy of the processed document is saved for verification.
 
     Args:
         file_path: The absolute or relative path to the document file to process.
     """
-    log(f"MCP Server: Iniciando procesamiento de documento: {file_path}")
+    log(f"MCP Server: Iniciando procesamiento avanzado de documento: {file_path}")
     log(f"MCP Server: DEBUG - Ruta recibida: {repr(file_path)}")
     log(f"MCP Server: DEBUG - Verificando existencia de ruta absoluta: {os.path.abspath(file_path)}")
     initialize_rag()  # Asegura que el sistema RAG esté listo
@@ -165,55 +177,87 @@ def learn_document(file_path: str) -> str:
             log(f"MCP Server: Archivo no encontrado en la ruta: {file_path}")
             return f"Error: Archivo no encontrado en '{file_path}'"
 
-        log(f"MCP Server: Convirtiendo documento a Markdown...")
-        result = md_converter.convert(file_path)
-        markdown_content = result.text_content
+        log(f"MCP Server: Procesando documento con sistema Unstructured avanzado...")
+        
+        # Usar el nuevo sistema de procesamiento con Unstructured y fallbacks
+        processed_content, metadata = load_document_with_fallbacks(file_path)
 
-        if not markdown_content or markdown_content.isspace():
-            log(f"MCP Server: Advertencia: Documento procesado pero no se pudo extraer texto: {file_path}")
+        if not processed_content or processed_content.isspace():
+            log(f"MCP Server: Advertencia: Documento procesado pero no se pudo extraer contenido: {file_path}")
             return f"Advertencia: El documento '{file_path}' fue procesado, pero no se pudo extraer contenido de texto."
 
-        log(f"MCP Server: Documento convertido exitosamente ({len(markdown_content)} caracteres)")
+        log(f"MCP Server: Documento procesado exitosamente ({len(processed_content)} caracteres)")
         
-        # Guardar copia en Markdown
-        log(f"MCP Server: Guardando copia Markdown...")
-        md_copy_path = save_markdown_copy(file_path, markdown_content)
+        # Guardar copia procesada
+        log(f"MCP Server: Guardando copia procesada...")
+        processing_method = metadata.get("processing_method", "unstructured_enhanced")
+        processed_copy_path = save_processed_copy(file_path, processed_content, processing_method)
         
-        # Reutilizamos la herramienta learn_text que ahora usa el núcleo
-        log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
+        # Añadir contenido a la base de conocimientos con metadatos estructurales
+        log(f"MCP Server: Añadiendo contenido a la base de conocimientos con metadatos estructurales...")
         
-        # Crear metadatos específicos del documento
-        doc_metadata = {
-            "source": os.path.basename(file_path),
-            "file_path": file_path,
-            "file_type": os.path.splitext(file_path)[1].lower(),
+        # Enriquecer metadatos con información del servidor
+        enhanced_metadata = metadata.copy()
+        enhanced_metadata.update({
             "input_type": "document",
-            "processed_date": datetime.now().isoformat(),
-            "converted_to_md": md_copy_path if md_copy_path else "No"
-        }
+            "converted_to_md": processed_copy_path if processed_copy_path else "No",
+            "server_processed_date": datetime.now().isoformat()
+        })
         
-        # Añadir directamente con metadatos en lugar de usar learn_text
-        add_text_to_knowledge_base(markdown_content, rag_state["vector_store"], doc_metadata)
+        # Usar la función mejorada que soporta chunking semántico
+        add_text_to_knowledge_base_enhanced(
+            processed_content, 
+            rag_state["vector_store"], 
+            enhanced_metadata, 
+            use_semantic_chunking=True
+        )
+        
+        # Construir respuesta informativa
+        file_type = enhanced_metadata.get("file_type", "desconocido")
+        structural_info = enhanced_metadata.get("structural_info", {})
+        
+        response_parts = [
+            f"✅ **Documento procesado exitosamente**",
+            f"📄 **Archivo:** {os.path.basename(file_path)}",
+            f"📋 **Tipo:** {file_type.upper()}",
+            f"🔧 **Método:** {processing_method.replace('_', ' ').title()}"
+        ]
+        
+        # Añadir información estructural si está disponible
+        if structural_info:
+            response_parts.extend([
+                f"📊 **Estructura del documento:**",
+                f"   • Elementos totales: {structural_info.get('total_elements', 'N/A')}",
+                f"   • Títulos: {structural_info.get('titles_count', 'N/A')}",
+                f"   • Tablas: {structural_info.get('tables_count', 'N/A')}",
+                f"   • Listas: {structural_info.get('lists_count', 'N/A')}",
+                f"   • Bloques narrativos: {structural_info.get('narrative_blocks', 'N/A')}"
+            ])
         
         # Añadir información sobre la copia guardada
-        if md_copy_path:
-            log(f"MCP Server: Proceso completado - Copia Markdown guardada")
-            return f"Documento añadido exitosamente a la base de conocimientos. Fuente: {os.path.basename(file_path)}\n\nCopia Markdown guardada en: {md_copy_path}"
-        else:
-            log(f"MCP Server: Proceso completado - No se guardó copia Markdown")
-            return f"Documento añadido exitosamente a la base de conocimientos. Fuente: {os.path.basename(file_path)}"
+        if processed_copy_path:
+            response_parts.append(f"💾 **Copia guardada:** {processed_copy_path}")
+        
+        response_parts.append(f"📚 **Estado:** Añadido a la base de conocimientos con chunking semántico")
+        
+        log(f"MCP Server: Proceso completado - Documento procesado con éxito")
+        return "\n".join(response_parts)
 
     except Exception as e:
         log(f"MCP Server: Error procesando documento '{file_path}': {e}")
-        error_msg = f"Error procesando documento '{file_path}': {e}"
+        error_msg = f"❌ **Error procesando documento '{file_path}':** {e}"
         
         # Proporcionar información más útil para el agente
         if "File not found" in str(e):
-            error_msg += "\n\n💡 Consejo: Asegúrate de que la ruta del archivo sea correcta y que el archivo exista."
+            error_msg += "\n\n💡 **Consejo:** Asegúrate de que la ruta del archivo sea correcta y que el archivo exista."
         elif "UnsupportedFormatException" in str(e):
-            error_msg += "\n\n💡 Consejo: Este formato de archivo no es compatible. Formatos soportados: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML"
+            error_msg += "\n\n💡 **Consejo:** Este formato de archivo no es compatible. El sistema soporta más de 25 formatos incluyendo PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, imágenes con OCR, y más."
         elif "permission" in str(e).lower():
-            error_msg += "\n\n💡 Consejo: Verifica si tienes permisos para acceder a este archivo."
+            error_msg += "\n\n💡 **Consejo:** Verifica si tienes permisos para acceder a este archivo."
+        elif "tesseract" in str(e).lower():
+            error_msg += "\n\n💡 **Consejo:** Para procesar imágenes con texto, instala Tesseract OCR: `choco install tesseract` (Windows) o desde GitHub."
+        elif "unstructured" in str(e).lower():
+            error_msg += "\n\n💡 **Consejo:** Verifica que Unstructured esté instalado correctamente: `pip install 'unstructured[local-inference,all-docs]'`"
         
         return error_msg
 
@@ -227,15 +271,17 @@ def learn_from_url(url: str) -> str:
     - Web pages (HTML content)
     - YouTube videos (transcripts)
     - Any URL that MarkItDown can process
+    - Direct file downloads (PDF, DOCX, etc.) - will use enhanced Unstructured processing
     
     Examples of when to use:
     - Adding content from news articles or blog posts
     - Processing YouTube video transcripts
     - Importing information from web pages
     - Converting web content to searchable knowledge
+    - Processing documents directly from URLs
     
-    The content will be automatically converted to Markdown format and stored with source tracking.
-    A copy of the converted content is saved for verification.
+    The content will be intelligently processed and stored with enhanced metadata.
+    A copy of the processed content is saved for verification.
 
     Args:
         url: The URL of the web page or video to process.
@@ -244,81 +290,390 @@ def learn_from_url(url: str) -> str:
     initialize_rag()
     
     try:
-        log(f"MCP Server: Convirtiendo contenido de URL a Markdown...")
-        
-        # Usar MarkItDown para procesar la URL directamente
-        result = md_converter.convert_url(url)
-        markdown_content = result.text_content
-
-        if not markdown_content or markdown_content.isspace():
-            log(f"MCP Server: Advertencia: URL procesada pero no se pudo extraer contenido: {url}")
-            return f"Advertencia: La URL '{url}' fue procesada, pero no se pudo extraer contenido de texto."
-
-        log(f"MCP Server: Contenido de URL convertido exitosamente ({len(markdown_content)} caracteres)")
-        
-        # Guardar copia en Markdown
-        log(f"MCP Server: Guardando copia Markdown...")
-        
-        # Crear nombre de archivo basado en la URL
+        # Verificar si es una URL de descarga directa de archivo
         parsed_url = urlparse(url)
-        domain = parsed_url.netloc.replace('.', '_')
-        path = parsed_url.path.replace('/', '_').replace('.', '_')
-        if not path or path == '_':
-            path = 'homepage'
+        file_extension = os.path.splitext(parsed_url.path)[1].lower()
         
-        # Crear nombre de archivo único
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{domain}_{path}_{timestamp}.md"
-        md_filepath = os.path.join(CONVERTED_DOCS_DIR, filename)
+        # Lista de extensiones que soportan procesamiento mejorado
+        enhanced_extensions = ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', 
+                              '.txt', '.html', '.htm', '.csv', '.json', '.xml', '.rtf',
+                              '.odt', '.odp', '.ods', '.md', '.yaml', '.yml']
         
-        # Guardar el contenido
-        try:
-            ensure_converted_docs_directory()
-            with open(md_filepath, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
-            log(f"MCP Server: Copia Markdown guardada en: {md_filepath}")
-        except Exception as e:
-            log(f"MCP Server Advertencia: No se pudo guardar copia Markdown: {e}")
-            md_filepath = ""
+        if file_extension in enhanced_extensions:
+            log(f"MCP Server: Detectado archivo descargable ({file_extension}), usando procesamiento mejorado...")
+            
+            # Crear nombre de archivo temporal
+            import tempfile
+            import requests
+            import signal
+            
+            # Configurar timeout para la descarga
+            timeout_seconds = 30
+            
+            # Descargar el archivo con timeout
+            log(f"MCP Server: Descargando archivo con timeout de {timeout_seconds} segundos...")
+            response = requests.get(url, stream=True, timeout=timeout_seconds)
+            response.raise_for_status()
+            
+            # Crear archivo temporal
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    temp_file.write(chunk)
+                temp_file_path = temp_file.name
+            
+            log(f"MCP Server: Archivo descargado temporalmente en: {temp_file_path}")
+            
+            try:
+                # Usar el procesamiento mejorado con timeout
+                log(f"MCP Server: Iniciando procesamiento con Unstructured (puede tomar varios minutos para PDFs grandes)...")
+                
+                # Para PDFs, usar configuración más rápida para evitar colgadas
+                if file_extension == '.pdf':
+                    log(f"MCP Server: PDF detectado, usando configuración optimizada para evitar timeouts...")
+                    
+                    # Opción 1: Intentar con PyPDF2 directamente (más rápido para Cursor)
+                    log(f"MCP Server: Intentando con PyPDF2 directo para mayor velocidad...")
+                    try:
+                        import PyPDF2
+                        with open(temp_file_path, 'rb') as file:
+                            pdf_reader = PyPDF2.PdfReader(file)
+                            processed_content = ""
+                            for page_num, page in enumerate(pdf_reader.pages):
+                                page_text = page.extract_text()
+                                if page_text:
+                                    processed_content += f"\n--- Página {page_num + 1} ---\n{page_text}\n"
+                            
+                            if processed_content.strip():
+                                log(f"MCP Server: PyPDF2 directo exitoso, {len(processed_content)} caracteres extraídos")
+                                metadata = {
+                                    "source": os.path.basename(temp_file_path),
+                                    "file_path": temp_file_path,
+                                    "file_type": ".pdf",
+                                    "processed_date": datetime.now().isoformat(),
+                                    "processing_method": "pypdf2_direct",
+                                    "structural_info": {
+                                        "total_elements": len(pdf_reader.pages),
+                                        "titles_count": 0,
+                                        "tables_count": 0,
+                                        "lists_count": 0,
+                                        "narrative_blocks": len(pdf_reader.pages),
+                                        "other_elements": 0,
+                                        "total_text_length": len(processed_content),
+                                        "avg_element_length": len(processed_content) / len(pdf_reader.pages) if pdf_reader.pages else 0
+                                    }
+                                }
+                                log(f"MCP Server: Procesamiento con PyPDF2 directo completado")
+                            else:
+                                # Si PyPDF2 no extrae texto, intentar con Unstructured
+                                log(f"MCP Server: PyPDF2 no extrajo texto, intentando con Unstructured...")
+                                raise Exception("PyPDF2 no extrajo texto")
+                    except Exception as e:
+                        log(f"MCP Server: PyPDF2 directo falló: {e}")
+                        log(f"MCP Server: Intentando con Unstructured con timeout...")
+                        
+                        # Opción 2: Unstructured con timeout (fallback)
+                        # Usar threading con timeout para evitar colgadas
+                        import threading
+                        import time
+                        
+                        elements = None
+                        processing_error = None
+                        
+                        def process_pdf():
+                            nonlocal elements, processing_error
+                            try:
+                                from rag_core import partition
+                                log(f"MCP Server: Iniciando partición del PDF con strategy='fast'...")
+                                log(f"MCP Server: Procesando archivo: {os.path.basename(temp_file_path)}")
+                                elements = partition(filename=temp_file_path, strategy="fast", max_partition=1000)
+                                log(f"MCP Server: Partición completada, {len(elements)} elementos extraídos")
+                            except Exception as e:
+                                processing_error = e
+                                log(f"MCP Server: Error en partición: {e}")
+                        
+                        # Ejecutar procesamiento en hilo separado con timeout
+                        thread = threading.Thread(target=process_pdf)
+                        thread.daemon = True
+                        thread.start()
+                        
+                        # Esperar máximo 30 segundos para el procesamiento
+                        timeout_seconds = 30  # Reducido de 60 a 30 segundos para Cursor
+                        
+                        # Logs de progreso durante la espera
+                        log(f"MCP Server: Esperando procesamiento (timeout: {timeout_seconds}s)...")
+                        
+                        # Esperar con logs de progreso cada 10 segundos
+                        for i in range(0, timeout_seconds, 10):
+                            thread.join(10)  # Esperar 10 segundos
+                            if not thread.is_alive():
+                                break
+                            log(f"MCP Server: Procesamiento en progreso... ({i+10}/{timeout_seconds}s)")
+                        
+                        # Verificar si terminó o si necesitamos esperar más
+                        if thread.is_alive():
+                            remaining_time = timeout_seconds - (timeout_seconds // 10) * 10
+                            if remaining_time > 0:
+                                thread.join(remaining_time)
+                        
+                        if thread.is_alive():
+                            log(f"MCP Server: Timeout en procesamiento de PDF después de {timeout_seconds} segundos")
+                            # Intentar con configuración mínima
+                            log(f"MCP Server: Intentando con configuración mínima...")
+                            try:
+                                from rag_core import partition
+                                elements = partition(filename=temp_file_path, strategy="fast", max_partition=500)
+                                log(f"MCP Server: Partición mínima completada, {len(elements)} elementos extraídos")
+                            except Exception as e:
+                                log(f"MCP Server: Error en partición mínima: {e}")
+                                return f"❌ **Error de timeout:** El procesamiento del PDF tardó demasiado.\n\n💡 **Consejos:**\n- El PDF puede ser muy grande o complejo\n- Intenta con un PDF más pequeño\n- Verifica que el archivo no esté corrupto"
+                        
+                        if processing_error:
+                            log(f"MCP Server: Error en procesamiento: {processing_error}")
+                            return f"❌ **Error procesando PDF:** {processing_error}\n\n💡 **Consejos:**\n- El archivo puede estar corrupto\n- Intenta con un PDF diferente\n- Verifica que el archivo sea accesible"
+                        
+                        if not elements:
+                            log(f"MCP Server: No se pudieron extraer elementos del PDF")
+                            # Intentar con PyPDF2 como fallback
+                            log(f"MCP Server: Intentando con PyPDF2 como fallback...")
+                            try:
+                                import PyPDF2
+                                with open(temp_file_path, 'rb') as file:
+                                    pdf_reader = PyPDF2.PdfReader(file)
+                                    processed_content = ""
+                                    for page_num, page in enumerate(pdf_reader.pages):
+                                        page_text = page.extract_text()
+                                        if page_text:
+                                            processed_content += f"\n--- Página {page_num + 1} ---\n{page_text}\n"
+                                    
+                                    if processed_content.strip():
+                                        log(f"MCP Server: PyPDF2 fallback exitoso, {len(processed_content)} caracteres extraídos")
+                                        metadata = {
+                                            "source": os.path.basename(temp_file_path),
+                                            "file_path": temp_file_path,
+                                            "file_type": ".pdf",
+                                            "processed_date": datetime.now().isoformat(),
+                                            "processing_method": "pypdf2_fallback",
+                                            "structural_info": {
+                                                "total_elements": len(pdf_reader.pages),
+                                                "titles_count": 0,
+                                                "tables_count": 0,
+                                                "lists_count": 0,
+                                                "narrative_blocks": len(pdf_reader.pages),
+                                                "other_elements": 0,
+                                                "total_text_length": len(processed_content),
+                                                "avg_element_length": len(processed_content) / len(pdf_reader.pages) if pdf_reader.pages else 0
+                                            }
+                                        }
+                                    else:
+                                        return f"❌ **Error:** No se pudo extraer texto del PDF con ningún método.\n\n💡 **Consejos:**\n- El PDF puede estar escaneado (solo imágenes)\n- El archivo puede estar corrupto\n- Intenta con un PDF diferente"
+                            except ImportError:
+                                log(f"MCP Server: PyPDF2 no disponible")
+                                return f"❌ **Error:** No se pudieron extraer elementos del PDF.\n\n💡 **Consejos:**\n- El archivo puede estar vacío o corrupto\n- Intenta con un PDF diferente"
+                            except Exception as e:
+                                log(f"MCP Server: Error en PyPDF2 fallback: {e}")
+                                return f"❌ **Error:** No se pudieron extraer elementos del PDF.\n\n💡 **Consejos:**\n- El archivo puede estar vacío o corrupto\n- Intenta con un PDF diferente"
+                        else:
+                            log(f"MCP Server: Procesando elementos extraídos...")
+                            from rag_core import process_unstructured_elements, extract_structural_metadata
+                            processed_content = process_unstructured_elements(elements)
+                            log(f"MCP Server: Elementos procesados, {len(processed_content)} caracteres extraídos")
+                            
+                            metadata = extract_structural_metadata(elements, temp_file_path)
+                            metadata["processing_method"] = "unstructured_fast_pdf"
+                            log(f"MCP Server: Metadatos estructurales extraídos")
+                else:
+                    # Para otros formatos, usar el procesamiento normal
+                    processed_content, metadata = load_document_with_fallbacks(temp_file_path)
+                
+                if not processed_content or processed_content.isspace():
+                    log(f"MCP Server: Advertencia: Archivo descargado pero no se pudo extraer contenido: {url}")
+                    return f"Advertencia: El archivo de la URL '{url}' fue descargado, pero no se pudo extraer contenido de texto."
+                
+                log(f"MCP Server: Archivo descargado y procesado exitosamente ({len(processed_content)} caracteres)")
+                
+                # Guardar copia procesada
+                log(f"MCP Server: Guardando copia procesada...")
+                processing_method = metadata.get("processing_method", "unstructured_enhanced")
+                domain = parsed_url.netloc.replace('.', '_')
+                path = parsed_url.path.replace('/', '_').replace('.', '_')
+                if not path or path == '_':
+                    path = 'homepage'
+                
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"{domain}_{path}_{timestamp}_{processing_method}.md"
+                processed_filepath = os.path.join(CONVERTED_DOCS_DIR, filename)
+                
+                try:
+                    ensure_converted_docs_directory()
+                    with open(processed_filepath, 'w', encoding='utf-8') as f:
+                        f.write(processed_content)
+                    log(f"MCP Server: Copia procesada guardada en: {processed_filepath}")
+                except Exception as e:
+                    log(f"MCP Server Advertencia: No se pudo guardar copia procesada: {e}")
+                    processed_filepath = ""
+                
+                # Enriquecer metadatos
+                enhanced_metadata = metadata.copy()
+                enhanced_metadata.update({
+                    "source": url,
+                    "domain": parsed_url.netloc,
+                    "input_type": "url_download",
+                    "converted_to_md": processed_filepath if processed_filepath else "No",
+                    "server_processed_date": datetime.now().isoformat()
+                })
+                
+                # Usar procesamiento mejorado
+                log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
+                add_text_to_knowledge_base_enhanced(
+                    processed_content, 
+                    rag_state["vector_store"], 
+                    enhanced_metadata, 
+                    use_semantic_chunking=True
+                )
+                
+                # Construir respuesta informativa
+                structural_info = enhanced_metadata.get("structural_info", {})
+                
+                response_parts = [
+                    f"✅ **Archivo descargado y procesado exitosamente**",
+                    f"🌐 **URL:** {url}",
+                    f"📄 **Archivo:** {os.path.basename(parsed_url.path)}",
+                    f"📋 **Tipo:** {file_extension.upper()}",
+                    f"🔧 **Método:** {processing_method.replace('_', ' ').title()}"
+                ]
+                
+                # Añadir información estructural si está disponible
+                if structural_info:
+                    response_parts.extend([
+                        f"📊 **Estructura del documento:**",
+                        f"   • Elementos totales: {structural_info.get('total_elements', 'N/A')}",
+                        f"   • Títulos: {structural_info.get('titles_count', 'N/A')}",
+                        f"   • Tablas: {structural_info.get('tables_count', 'N/A')}",
+                        f"   • Listas: {structural_info.get('lists_count', 'N/A')}",
+                        f"   • Bloques narrativos: {structural_info.get('narrative_blocks', 'N/A')}"
+                    ])
+                
+                if processed_filepath:
+                    response_parts.append(f"💾 **Copia guardada:** {processed_filepath}")
+                
+                response_parts.append(f"📚 **Estado:** Añadido a la base de conocimientos con chunking semántico")
+                
+                log(f"MCP Server: Procesamiento de URL completado exitosamente")
+                return "\n".join(response_parts)
+                
+            finally:
+                # Limpiar archivo temporal
+                try:
+                    os.unlink(temp_file_path)
+                    log(f"MCP Server: Archivo temporal eliminado: {temp_file_path}")
+                except Exception as e:
+                    log(f"MCP Server Advertencia: No se pudo eliminar archivo temporal: {e}")
         
-        # Añadir contenido a la base de conocimientos
-        log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
-        
-        # Crear metadatos específicos de la URL
-        url_metadata = {
-            "source": url,
-            "domain": parsed_url.netloc,
-            "input_type": "url",
-            "processed_date": datetime.now().isoformat(),
-            "converted_to_md": md_filepath if md_filepath else "No"
-        }
-        
-        # Añadir directamente con metadatos
-        add_text_to_knowledge_base(markdown_content, rag_state["vector_store"], url_metadata)
-        
-        # Información sobre el proceso completado
-        if md_filepath:
-            log(f"MCP Server: Proceso completado - Copia Markdown guardada")
-            return f"Contenido de URL añadido exitosamente a la base de conocimientos.\n\nURL: {url}\nDominio: {parsed_url.netloc}\n\nCopia Markdown guardada en: {md_filepath}"
         else:
-            log(f"MCP Server: Proceso completado - No se guardó copia Markdown")
-            return f"Contenido de URL añadido exitosamente a la base de conocimientos.\n\nURL: {url}\nDominio: {parsed_url.netloc}"
+            # Procesamiento tradicional para páginas web
+            log(f"MCP Server: Procesando contenido web con MarkItDown...")
+            
+            # Usar MarkItDown para procesar la URL directamente con timeout
+            try:
+                result = md_converter.convert_url(url)
+                markdown_content = result.text_content
+            except Exception as e:
+                log(f"MCP Server: Error con MarkItDown, intentando descarga directa: {e}")
+                # Fallback: intentar descarga directa
+                import requests
+                response = requests.get(url, timeout=30)
+                response.raise_for_status()
+                markdown_content = response.text
 
+            if not markdown_content or markdown_content.isspace():
+                log(f"MCP Server: Advertencia: URL procesada pero no se pudo extraer contenido: {url}")
+                return f"Advertencia: La URL '{url}' fue procesada, pero no se pudo extraer contenido de texto."
+
+            log(f"MCP Server: Contenido de URL convertido exitosamente ({len(markdown_content)} caracteres)")
+            
+            # Guardar copia en Markdown
+            log(f"MCP Server: Guardando copia Markdown...")
+            
+            # Crear nombre de archivo basado en la URL
+            domain = parsed_url.netloc.replace('.', '_')
+            path = parsed_url.path.replace('/', '_').replace('.', '_')
+            if not path or path == '_':
+                path = 'homepage'
+            
+            # Crear nombre de archivo único
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{domain}_{path}_{timestamp}_markitdown.md"
+            md_filepath = os.path.join(CONVERTED_DOCS_DIR, filename)
+            
+            # Guardar el contenido
+            try:
+                ensure_converted_docs_directory()
+                with open(md_filepath, 'w', encoding='utf-8') as f:
+                    f.write(markdown_content)
+                log(f"MCP Server: Copia Markdown guardada en: {md_filepath}")
+            except Exception as e:
+                log(f"MCP Server Advertencia: No se pudo guardar copia Markdown: {e}")
+                md_filepath = ""
+            
+            # Añadir contenido a la base de conocimientos
+            log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
+            
+            # Crear metadatos específicos de la URL
+            url_metadata = {
+                "source": url,
+                "domain": parsed_url.netloc,
+                "input_type": "url_web",
+                "processed_date": datetime.now().isoformat(),
+                "processing_method": "markitdown",
+                "converted_to_md": md_filepath if md_filepath else "No"
+            }
+            
+            # Añadir directamente con metadatos
+            add_text_to_knowledge_base(markdown_content, rag_state["vector_store"], url_metadata)
+            
+            # Información sobre el proceso completado
+            response_parts = [
+                f"✅ **Contenido web procesado exitosamente**",
+                f"🌐 **URL:** {url}",
+                f"🌍 **Dominio:** {parsed_url.netloc}",
+                f"🔧 **Método:** MarkItDown"
+            ]
+            
+            if md_filepath:
+                response_parts.append(f"💾 **Copia guardada:** {md_filepath}")
+            
+            response_parts.append(f"📚 **Estado:** Añadido a la base de conocimientos")
+            
+            log(f"MCP Server: Procesamiento de URL completado exitosamente")
+            return "\n".join(response_parts)
+
+    except requests.exceptions.Timeout:
+        log(f"MCP Server: Timeout al procesar URL: {url}")
+        return f"❌ **Error de timeout:** La URL '{url}' tardó demasiado en responder.\n\n💡 **Consejos:**\n- Verifica tu conexión a internet\n- Intenta más tarde\n- La URL puede estar temporalmente lenta"
+    
+    except requests.exceptions.ConnectionError:
+        log(f"MCP Server: Error de conexión al procesar URL: {url}")
+        return f"❌ **Error de conexión:** No se pudo conectar a la URL '{url}'.\n\n💡 **Consejos:**\n- Verifica tu conexión a internet\n- La URL puede no estar disponible\n- Intenta más tarde"
+    
     except Exception as e:
         log(f"MCP Server: Error procesando URL '{url}': {e}")
-        error_msg = f"Error procesando URL '{url}': {e}"
+        error_msg = f"❌ **Error procesando URL '{url}':** {e}"
         
         # Proporcionar información más útil para el agente
         if "404" in str(e) or "Not Found" in str(e):
-            error_msg += "\n\n💡 Consejo: La URL no existe o no es accesible. Verifica que la URL sea correcta."
+            error_msg += "\n\n💡 **Consejo:** La URL no existe o no es accesible. Verifica que la URL sea correcta."
         elif "timeout" in str(e).lower():
-            error_msg += "\n\n💡 Consejo: La página tardó demasiado en cargar. Intenta más tarde o verifica tu conexión a internet."
+            error_msg += "\n\n💡 **Consejo:** La página tardó demasiado en cargar. Intenta más tarde o verifica tu conexión a internet."
         elif "permission" in str(e).lower() or "403" in str(e):
-            error_msg += "\n\n💡 Consejo: No tienes permisos para acceder a esta página. Algunas páginas bloquean el acceso automático."
+            error_msg += "\n\n💡 **Consejo:** No tienes permisos para acceder a esta página. Algunas páginas bloquean el acceso automático."
         elif "youtube" in url.lower() and "transcript" in str(e).lower():
-            error_msg += "\n\n💡 Consejo: Este video de YouTube no tiene transcripción disponible o está deshabilitada."
+            error_msg += "\n\n💡 **Consejo:** Este video de YouTube no tiene transcripción disponible o está deshabilitada."
         elif "ssl" in str(e).lower() or "certificate" in str(e).lower():
-            error_msg += "\n\n💡 Consejo: Problema con el certificado SSL de la página. Intenta con una URL diferente."
+            error_msg += "\n\n💡 **Consejo:** Problema con el certificado SSL de la página. Intenta con una URL diferente."
+        elif "download" in str(e).lower() or "connection" in str(e).lower():
+            error_msg += "\n\n💡 **Consejo:** Error al descargar el archivo. Verifica que la URL sea accesible y el archivo exista."
+        elif "unstructured" in str(e).lower():
+            error_msg += "\n\n💡 **Consejo:** Error en el procesamiento del documento. El archivo puede estar corrupto o ser muy grande."
         
         return error_msg
 
@@ -375,6 +730,59 @@ def ask_rag(query: str) -> str:
                 if file_path:
                     source_info += f"\n      - **Ruta:** `{file_path}`"
                 
+                # Añadir tipo de archivo si está disponible
+                file_type = metadata.get("file_type")
+                if file_type:
+                    source_info += f"\n      - **Tipo:** {file_type.upper()}"
+                
+                # Añadir método de procesamiento si está disponible
+                processing_method = metadata.get("processing_method")
+                if processing_method:
+                    method_display = processing_method.replace('_', ' ').title()
+                    source_info += f"\n      - **Procesamiento:** {method_display}"
+                
+                # Añadir información estructural si está disponible
+                structural_info = metadata.get("structural_info")
+                if structural_info:
+                    source_info += f"\n      - **Estructura:** {structural_info.get('total_elements', 'N/A')} elementos"
+                    titles_count = structural_info.get('titles_count', 0)
+                    tables_count = structural_info.get('tables_count', 0)
+                    lists_count = structural_info.get('lists_count', 0)
+                    if titles_count > 0 or tables_count > 0 or lists_count > 0:
+                        structure_details = []
+                        if titles_count > 0:
+                            structure_details.append(f"{titles_count} títulos")
+                        if tables_count > 0:
+                            structure_details.append(f"{tables_count} tablas")
+                        if lists_count > 0:
+                            structure_details.append(f"{lists_count} listas")
+                        source_info += f" ({', '.join(structure_details)})"
+                
+                # Reconstruir información estructural desde metadatos planos
+                structural_elements = []
+                titles_count = metadata.get("structural_titles_count", 0)
+                tables_count = metadata.get("structural_tables_count", 0)
+                lists_count = metadata.get("structural_lists_count", 0)
+                total_elements = metadata.get("structural_total_elements", 0)
+                
+                if total_elements > 0:
+                    source_info += f"\n      - **Estructura:** {total_elements} elementos"
+                    if titles_count > 0 or tables_count > 0 or lists_count > 0:
+                        structure_details = []
+                        if titles_count > 0:
+                            structure_details.append(f"{titles_count} títulos")
+                        if tables_count > 0:
+                            structure_details.append(f"{tables_count} tablas")
+                        if lists_count > 0:
+                            structure_details.append(f"{lists_count} listas")
+                        source_info += f" ({', '.join(structure_details)})"
+                
+                # Añadir información de chunk si está disponible
+                chunk_index = metadata.get("chunk_index")
+                total_chunks = metadata.get("total_chunks")
+                if chunk_index is not None and total_chunks:
+                    source_info += f"\n      - **Fragmento:** {chunk_index + 1} de {total_chunks}"
+                
                 # Añadir fecha de procesamiento
                 processed_date = metadata.get("processed_date")
                 if processed_date:
@@ -399,6 +807,11 @@ def ask_rag(query: str) -> str:
             enhanced_answer += "\n⚠️ **Confianza media:** Respuesta basada en 2 fuentes"
         else:
             enhanced_answer += "\n⚠️ **Confianza limitada:** Respuesta basada en 1 fuente"
+        
+        # Añadir información sobre el procesamiento si hay documentos con metadatos estructurales
+        enhanced_docs = [doc for doc in source_documents if hasattr(doc, 'metadata') and doc.metadata.get("processing_method") == "unstructured_enhanced"]
+        if enhanced_docs:
+            enhanced_answer += f"\n🧠 **Procesamiento inteligente:** {len(enhanced_docs)} fuentes procesadas con Unstructured (preservación de estructura)"
         
         log(f"MCP Server: Respuesta generada exitosamente con {len(source_documents)} fuentes")
         return enhanced_answer

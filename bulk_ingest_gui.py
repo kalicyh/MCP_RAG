@@ -4,13 +4,24 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 from datetime import datetime
 import queue
-from markitdown import MarkItDown
-from rag_core import get_vector_store, add_text_to_knowledge_base, log
+from rag_core import get_vector_store, add_text_to_knowledge_base, log, load_document_with_fallbacks
 
 # Lista de extensiones de archivo que queremos procesar
 SUPPORTED_EXTENSIONS = [
-    ".pdf", ".docx", ".pptx", ".xlsx", ".txt", 
-    ".html", ".csv", ".json", ".xml"
+    # Documentos de Office
+    ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", ".rtf",
+    # Documentos OpenDocument
+    ".odt", ".odp", ".ods",
+    # Formatos web y markup
+    ".html", ".htm", ".xml", ".md",
+    # Formatos de texto plano
+    ".txt", ".csv", ".tsv",
+    # Formatos de datos
+    ".json", ".yaml", ".yml",
+    # Imágenes (requieren OCR)
+    ".png", ".jpg", ".jpeg", ".tiff", ".bmp",
+    # Correos electrónicos
+    ".eml", ".msg"
 ]
 
 # Carpeta donde se guardarán las copias en Markdown
@@ -18,11 +29,12 @@ CONVERTED_DOCS_DIR = "./converted_docs"
 
 class DocumentPreview:
     """Clase para manejar la previsualización de documentos"""
-    def __init__(self, file_path, markdown_content, file_type, original_name):
+    def __init__(self, file_path, markdown_content, file_type, original_name, metadata=None):
         self.file_path = file_path
         self.markdown_content = markdown_content
         self.file_type = file_type
         self.original_name = original_name
+        self.metadata = metadata or {}
         self.selected = tk.BooleanVar(value=True)  # Por defecto seleccionado
         self.preview_visible = False
 
@@ -596,15 +608,14 @@ class BulkIngestAdvancedGUI:
         self.review_btn.config(state='disabled')
         
         # Iniciar procesamiento en thread separado
-        self.processing_thread = threading.Thread(target=self.process_directory)
-        self.processing_thread.daemon = True
+        self.processing_thread = threading.Thread(target=self.process_directory, daemon=True)
         self.processing_thread.start()
     
     def stop_processing(self):
         """Detener el procesamiento"""
         self.processing_running = False
         self.stop_requested = True
-        self.log_message("⏹️ Procesamiento detenido por el usuario")
+        self.log_message("Proceso de ingesta detenido por el usuario.")
         self.finish_processing()
     
     def finish_processing(self):
@@ -625,91 +636,71 @@ class BulkIngestAdvancedGUI:
             self.update_summary()
     
     def process_directory(self):
-        """Procesar el directorio seleccionado"""
+        """Recorre un directorio, convierte archivos a Markdown y los prepara para revisión."""
         try:
             directory_path = self.selected_directory.get()
-            self.log_message(f"🚀 Iniciando procesamiento masivo para: {directory_path}")
+            self.log_message(f"Iniciando procesamiento para el directorio: {directory_path}")
             
-            # Configurar conversor
-            md_converter = MarkItDown()
-            self.log_message("✅ Conversor configurado")
-            
-            # Contar archivos totales
+            # Contar archivos totales para la barra de progreso
             total_files = 0
+            file_paths = []
             for root, _, files in os.walk(directory_path):
                 for file in files:
                     if any(file.lower().endswith(ext) for ext in SUPPORTED_EXTENSIONS):
                         total_files += 1
+                        file_paths.append(os.path.join(root, file))
             
-            self.log_message(f"📁 Encontrados {total_files} archivos soportados")
+            self.log_message(f"Se encontraron {total_files} archivos compatibles.")
             
-            # Asegurar directorio de documentos convertidos
-            if self.save_markdown.get():
-                if not os.path.exists(CONVERTED_DOCS_DIR):
-                    os.makedirs(CONVERTED_DOCS_DIR)
-                    self.log_message(f"📁 Creada carpeta: {CONVERTED_DOCS_DIR}")
-            
-            # Procesar archivos
             processed_count = 0
-            for root, _, files in os.walk(directory_path):
-                if not self.processing_running:
+            for file_path in file_paths:
+                if self.stop_requested:
                     break
+                
+                original_filename = os.path.basename(file_path)
+                processed_count += 1
+                self.log_message(f"[{processed_count}/{total_files}] Procesando: {original_filename}")
+                self.update_progress(processed_count, total_files, original_filename)
+                
+                try:
+                    # Usar el sistema mejorado de Unstructured
+                    self.log_message(f"   - Cargando con sistema mejorado de Unstructured...")
+                    markdown_content, metadata = load_document_with_fallbacks(file_path)
                     
-                for file in files:
-                    if not self.processing_running:
-                        break
+                    if not markdown_content or markdown_content.isspace():
+                        self.log_message(f"   - Advertencia: El documento resultó vacío tras el procesamiento. Omitiendo.")
+                        continue
                         
-                    if any(file.lower().endswith(ext) for ext in SUPPORTED_EXTENSIONS):
-                        file_path = os.path.join(root, file)
-                        self.log_message(f"📄 Procesando: {file}")
-                        
-                        try:
-                            # Convertir a Markdown
-                            result = md_converter.convert(file_path)
-                            markdown_content = result.text_content
-                            
-                            # Guardar copia si está habilitado
-                            md_copy_path = ""
-                            if self.save_markdown.get():
-                                md_copy_path = self.save_markdown_copy(file_path, markdown_content)
-                                if md_copy_path:
-                                    self.log_message(f"💾 Copia guardada: {os.path.basename(md_copy_path)}")
-                            
-                            # Crear objeto de documento
-                            doc = DocumentPreview(
-                                file_path=file_path,
-                                markdown_content=markdown_content,
-                                file_type=os.path.splitext(file)[1].lower(),
-                                original_name=file
-                            )
-                            
-                            # Añadir a la lista de documentos procesados
-                            self.processed_documents.append(doc)
-                            processed_count += 1
-                            
-                            self.log_message(f"✅ {file} procesado exitosamente")
-                            
-                        except Exception as e:
-                            self.log_message(f"❌ Error procesando {file}: {str(e)}")
-                        
-                        # Actualizar progreso
-                        self.update_progress(processed_count, total_files, file_path)
-            
-            if self.processing_running:
-                self.log_message("🎉 ¡Procesamiento completado!")
-                self.log_message(f"📊 Total de documentos procesados: {len(self.processed_documents)}")
-                
-                # Actualizar interfaz en el thread principal
-                self.root.after(0, self.update_documents_list)
-                self.root.after(0, self.update_summary)
-                
+                    self.log_message(f"   - Convertido ({len(markdown_content)} caracteres)")
+                    self.log_message(f"   - Método de procesamiento: {metadata.get('processing_method', 'unknown')}")
+                    
+                    # Mostrar información estructural si está disponible
+                    if 'structural_info' in metadata:
+                        struct_info = metadata['structural_info']
+                        self.log_message(f"   - Estructura: {struct_info['titles_count']} títulos, {struct_info['tables_count']} tablas, {struct_info['lists_count']} listas")
+                    
+                    # Guardar copia en Markdown si la opción está seleccionada
+                    if self.save_markdown.get():
+                        self.log_message(f"   - Guardando copia Markdown...")
+                        md_copy_path = self.save_markdown_copy(file_path, markdown_content)
+                        if md_copy_path:
+                            metadata['converted_to_md'] = md_copy_path
+                            self.log_message(f"   - Copia guardada: {os.path.basename(md_copy_path)}")
+
+                    file_type = os.path.splitext(original_filename)[1]
+                    
+                    # Guardar el resultado en la lista para la pestaña de revisión
+                    preview = DocumentPreview(file_path, markdown_content, file_type, original_filename, metadata)
+                    self.processed_documents.append(preview)
+                    
+                except Exception as e:
+                    self.log_message(f"   - Error procesando '{original_filename}': {e}")
+
         except Exception as e:
-            self.log_message(f"💥 Error general: {str(e)}")
-            messagebox.showerror("Error", f"Error durante el procesamiento:\n{str(e)}")
-        
+            self.log_message(f"Error inesperado durante el procesamiento: {e}")
         finally:
-            # Restaurar interfaz
-            self.root.after(0, self.finish_processing)
+            if not self.stop_requested:
+                self.finish_processing()
     
     def save_markdown_copy(self, file_path: str, markdown_content: str) -> str:
         """Guardar copia en Markdown"""
@@ -1007,75 +998,6 @@ class BulkIngestAdvancedGUI:
         
         # El thread se detendrá automáticamente en la siguiente iteración
     
-    def perform_storage(self, selected_docs):
-        """Realizar el almacenamiento de documentos seleccionados"""
-        try:
-            self.log_storage_message("🚀 Iniciando almacenamiento en base de datos...")
-            
-            # Configurar base de datos vectorial
-            self.log_storage_message("⚙️ Configurando base de datos vectorial...")
-            vector_store = get_vector_store()
-            self.log_storage_message("✅ Base de datos configurada")
-            
-            # Procesar cada documento seleccionado
-            for i, doc in enumerate(selected_docs):
-                # Verificar si se debe detener
-                if not self.storage_running:
-                    self.log_storage_message("⏹️ Almacenamiento detenido por el usuario")
-                    break
-                
-                self.log_storage_message(f"📄 Procesando {i+1}/{len(selected_docs)}: {doc.original_name}")
-                
-                try:
-                    # Crear metadatos
-                    source_metadata = {
-                        "source": doc.original_name,
-                        "file_path": doc.file_path,
-                        "file_type": doc.file_type,
-                        "processed_date": datetime.now().isoformat(),
-                        "converted_to_md": "Yes"
-                    }
-                    
-                    # Añadir a la base de conocimiento
-                    add_text_to_knowledge_base(doc.markdown_content, vector_store, source_metadata)
-                    
-                    self.log_storage_message(f"✅ {doc.original_name} almacenado exitosamente")
-                    
-                except Exception as e:
-                    self.log_storage_message(f"❌ Error almacenando {doc.original_name}: {str(e)}")
-
-                # Actualizar progreso DESPUÉS de procesar el documento
-                self.root.after(0, lambda c=i+1, t=len(selected_docs), f=doc.file_path: 
-                              self.update_storage_progress(c, t, f))
-            
-            # Completar progreso solo si no se detuvo
-            if self.storage_running:
-                # El progreso ya está al 100%, solo actualizamos el estado
-                self.root.after(0, lambda: self.storage_status_label.config(text="¡Almacenamiento completado!"))
-                self.root.after(0, lambda: self.storage_current_file_label.config(text=""))
-                
-                self.log_storage_message("🎉 ¡Almacenamiento completado!")
-                self.log_storage_message(f"📊 Total de documentos almacenados: {len(selected_docs)}")
-                
-                messagebox.showinfo("Completado", 
-                                  f"¡Almacenamiento completado exitosamente!\n\n"
-                                  f"Documentos almacenados: {len(selected_docs)}")
-            else:
-                # Almacenamiento detenido
-                self.root.after(0, lambda: self.storage_status_label.config(text="Almacenamiento detenido"))
-                self.root.after(0, lambda: self.storage_current_file_label.config(text=""))
-            
-        except Exception as e:
-            self.log_storage_message(f"💥 Error general: {str(e)}")
-            self.root.after(0, lambda: self.storage_status_label.config(text="Error durante el almacenamiento"))
-            messagebox.showerror("Error", f"Error durante el almacenamiento:\n{str(e)}")
-        
-        finally:
-            # Restaurar interfaz
-            self.storage_running = False
-            self.root.after(0, lambda: self.store_btn.config(state='normal'))
-            self.root.after(0, lambda: self.stop_storage_btn.config(state='disabled'))
-
 def main():
     """Función principal para ejecutar la aplicación."""
     root = tk.Tk()
