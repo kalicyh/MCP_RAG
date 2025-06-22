@@ -665,6 +665,38 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
     log(f"Core Error: Todas las estrategias de carga fallaron para '{file_path}'")
     return "", {}
 
+def flatten_metadata(metadata: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
+    """
+    Aplana un diccionario de metadatos anidados para que sea compatible con ChromaDB.
+    
+    Args:
+        metadata: Diccionario de metadatos que puede contener estructuras anidadas
+        prefix: Prefijo para las claves aplanadas (usado en recursión)
+    
+    Returns:
+        Diccionario aplanado con solo valores simples (str, int, float, bool)
+    """
+    flattened = {}
+    
+    for key, value in metadata.items():
+        new_key = f"{prefix}{key}" if prefix else key
+        
+        if isinstance(value, dict):
+            # Recursivamente aplanar diccionarios anidados
+            nested_flattened = flatten_metadata(value, f"{new_key}_")
+            flattened.update(nested_flattened)
+        elif isinstance(value, (list, tuple)):
+            # Convertir listas y tuplas a string
+            flattened[new_key] = str(value)
+        elif isinstance(value, (str, int, float, bool)):
+            # Valores simples que ChromaDB puede manejar
+            flattened[new_key] = value
+        else:
+            # Cualquier otro tipo se convierte a string
+            flattened[new_key] = str(value)
+    
+    return flattened
+
 def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_metadata: dict = None, use_semantic_chunking: bool = True):
     """
     Versión mejorada que soporta chunking semántico y metadatos estructurales.
@@ -715,24 +747,8 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
     if source_metadata:
         metadatas = []
         for i in range(len(texts)):
-            # Crear una copia limpia de los metadatos
-            metadata = {}
-            
-            # Copiar metadatos básicos
-            for key, value in source_metadata.items():
-                if key != 'structural_info':
-                    metadata[key] = value
-            
-            # Convertir structural_info a metadatos planos
-            if 'structural_info' in source_metadata:
-                structural_info = source_metadata['structural_info']
-                if isinstance(structural_info, dict):
-                    for struct_key, struct_value in structural_info.items():
-                        # Convertir a string si es necesario para ChromaDB
-                        if isinstance(struct_value, (int, float, bool)):
-                            metadata[f'structural_{struct_key}'] = struct_value
-                        else:
-                            metadata[f'structural_{struct_key}'] = str(struct_value)
+            # Crear una copia limpia de los metadatos y aplanarlos
+            metadata = flatten_metadata(source_metadata)
             
             # Añadir información del chunk
             metadata['chunk_index'] = i
@@ -779,19 +795,33 @@ def load_document_with_unstructured(file_path: str) -> str:
     content, _ = load_document_with_fallbacks(file_path)
     return content
 
-def get_qa_chain(vector_store: Chroma) -> RetrievalQA:
-    """Crea y retorna la cadena de Pregunta/Respuesta usando un LLM local."""
+def get_qa_chain(vector_store: Chroma, metadata_filter: dict = None) -> RetrievalQA:
+    """
+    Crea y retorna la cadena de Pregunta/Respuesta usando un LLM local.
+    
+    Args:
+        vector_store: La base de datos vectorial
+        metadata_filter: Diccionario con filtros de metadatos (ej: {"file_type": ".pdf", "processing_method": "unstructured_enhanced"})
+    """
     log(f"Core: Inicializando modelo de lenguaje local (Ollama)...")
     llm = ChatOllama(model="llama3", temperature=0)
     log(f"Core: Configurando cadena RAG con recuperación de fuentes mejorada...")
     
+    # Configurar parámetros de búsqueda
+    search_kwargs = {
+        "k": 5,  # Aumentar a 5 fragmentos para más contexto
+        "score_threshold": 0.1,  # Umbral más bajo para obtener resultados
+    }
+    
+    # Añadir filtros de metadatos si se proporcionan
+    if metadata_filter:
+        search_kwargs["filter"] = metadata_filter
+        log(f"Core: Aplicando filtros de metadatos: {metadata_filter}")
+    
     # Configurar el retriever con parámetros optimizados para mejor recuperación
     retriever = vector_store.as_retriever(
         search_type="similarity_score_threshold",  # Cambiado para soportar filtrado por score
-        search_kwargs={
-            "k": 5,  # Aumentar a 5 fragmentos para más contexto
-            "score_threshold": 0.3,  # Umbral de distancia. Similitud > 0.7 = Distancia < 0.3
-        }
+        search_kwargs=search_kwargs
     )
     
     qa_chain = RetrievalQA.from_chain_type(
@@ -804,4 +834,181 @@ def get_qa_chain(vector_store: Chroma) -> RetrievalQA:
         }
     )
     log(f"Core: Cadena RAG configurada exitosamente con seguimiento de fuentes mejorado")
-    return qa_chain 
+    return qa_chain
+
+def search_with_metadata_filters(vector_store: Chroma, query: str, metadata_filter: dict = None, k: int = 5) -> List[Any]:
+    """
+    Realiza una búsqueda con filtros de metadatos opcionales.
+    
+    Args:
+        vector_store: La base de datos vectorial
+        query: La consulta de búsqueda
+        metadata_filter: Diccionario con filtros de metadatos
+        k: Número de resultados a retornar
+    
+    Returns:
+        Lista de documentos que coinciden con la consulta y filtros
+    """
+    log(f"Core: Realizando búsqueda con filtros de metadatos...")
+    
+    # Configurar parámetros de búsqueda
+    search_kwargs = {
+        "k": k,
+        "score_threshold": 0.1,  # Umbral más bajo para obtener resultados
+    }
+    
+    # Añadir filtros si se proporcionan
+    if metadata_filter:
+        search_kwargs["filter"] = metadata_filter
+        log(f"Core: Filtros aplicados: {metadata_filter}")
+    
+    # Realizar búsqueda
+    retriever = vector_store.as_retriever(
+        search_type="similarity_score_threshold",
+        search_kwargs=search_kwargs
+    )
+    
+    results = retriever.get_relevant_documents(query)
+    log(f"Core: Búsqueda completada - {len(results)} resultados encontrados")
+    
+    return results
+
+def create_simple_metadata_filter(file_type: str = None, processing_method: str = None, 
+                                 min_tables: int = None, min_titles: int = None) -> dict:
+    """
+    Crea un filtro de metadatos simple compatible con ChromaDB.
+    Esta versión maneja mejor los filtros múltiples.
+    
+    Args:
+        file_type: Tipo de archivo (ej: ".pdf", ".docx")
+        processing_method: Método de procesamiento (ej: "unstructured_enhanced")
+        min_tables: Mínimo número de tablas en el documento
+        min_titles: Mínimo número de títulos en el documento
+    
+    Returns:
+        Diccionario con filtros de metadatos compatibles con ChromaDB
+    """
+    # ChromaDB requiere un formato específico para filtros múltiples
+    # Usar operador $and para combinar múltiples condiciones
+    
+    conditions = []
+    
+    # Añadir filtros simples
+    if file_type:
+        conditions.append({"file_type": file_type})
+    
+    if processing_method:
+        conditions.append({"processing_method": processing_method})
+    
+    # Añadir filtros numéricos - usar los nombres correctos de metadatos aplanados
+    if min_tables is not None:
+        conditions.append({"structural_info_tables_count": {"$gte": min_tables}})
+    
+    if min_titles is not None:
+        conditions.append({"structural_info_titles_count": {"$gte": min_titles}})
+    
+    # Retornar el filtro apropiado
+    if len(conditions) == 0:
+        return {}
+    elif len(conditions) == 1:
+        return conditions[0]
+    else:
+        return {"$and": conditions}
+
+def create_metadata_filter(file_type: str = None, processing_method: str = None, 
+                          min_tables: int = None, min_titles: int = None,
+                          source_contains: str = None) -> dict:
+    """
+    Crea un filtro de metadatos para búsquedas específicas.
+    
+    Args:
+        file_type: Tipo de archivo (ej: ".pdf", ".docx")
+        processing_method: Método de procesamiento (ej: "unstructured_enhanced")
+        min_tables: Mínimo número de tablas en el documento
+        min_titles: Mínimo número de títulos en el documento
+        source_contains: Texto que debe contener el nombre de la fuente
+    
+    Returns:
+        Diccionario con filtros de metadatos compatibles con ChromaDB
+    """
+    # Usar la versión mejorada
+    return create_simple_metadata_filter(file_type, processing_method, min_tables, min_titles)
+
+def get_document_statistics(vector_store: Chroma) -> dict:
+    """
+    Obtiene estadísticas sobre los documentos en la base de datos.
+    
+    Args:
+        vector_store: La base de datos vectorial
+    
+    Returns:
+        Diccionario con estadísticas de la base de datos
+    """
+    log(f"Core: Obteniendo estadísticas de la base de datos...")
+    
+    try:
+        # Obtener todos los documentos para análisis
+        all_docs = vector_store.get()
+        
+        if not all_docs or not all_docs['documents']:
+            return {"total_documents": 0, "message": "Base de datos vacía"}
+        
+        documents = all_docs['documents']
+        metadatas = all_docs.get('metadatas', [])
+        
+        stats = {
+            "total_documents": len(documents),
+            "file_types": {},
+            "processing_methods": {},
+            "structural_stats": {
+                "documents_with_tables": 0,
+                "documents_with_lists": 0,
+                "documents_with_titles": 0,
+                "avg_tables_per_doc": 0,
+                "avg_titles_per_doc": 0,
+                "avg_lists_per_doc": 0
+            }
+        }
+        
+        total_tables = 0
+        total_titles = 0
+        total_lists = 0
+        
+        for metadata in metadatas:
+            # Contar tipos de archivo
+            file_type = metadata.get("file_type", "unknown")
+            stats["file_types"][file_type] = stats["file_types"].get(file_type, 0) + 1
+            
+            # Contar métodos de procesamiento
+            processing_method = metadata.get("processing_method", "unknown")
+            stats["processing_methods"][processing_method] = stats["processing_methods"].get(processing_method, 0) + 1
+            
+            # Estadísticas estructurales
+            tables_count = metadata.get("structural_info_tables_count", 0)
+            titles_count = metadata.get("structural_info_titles_count", 0)
+            lists_count = metadata.get("structural_info_lists_count", 0)
+            
+            if tables_count > 0:
+                stats["structural_stats"]["documents_with_tables"] += 1
+                total_tables += tables_count
+            
+            if titles_count > 0:
+                stats["structural_stats"]["documents_with_titles"] += 1
+                total_titles += titles_count
+            
+            if lists_count > 0:
+                stats["structural_stats"]["documents_with_lists"] += 1
+                total_lists += lists_count
+        
+        # Calcular promedios
+        if stats["total_documents"] > 0:
+            stats["structural_stats"]["avg_tables_per_doc"] = total_tables / stats["total_documents"]
+            stats["structural_stats"]["avg_titles_per_doc"] = total_titles / stats["total_documents"]
+            stats["structural_stats"]["avg_lists_per_doc"] = total_lists / stats["total_documents"]
+        
+        log(f"Core: Estadísticas obtenidas - {stats['total_documents']} documentos")
+        return stats
+        
+    except Exception as e:
+        log(f"Core Error: Error obteniendo estadísticas: {e}")
+        return {"error": str(e)} 

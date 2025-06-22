@@ -10,6 +10,8 @@ Este proyecto implementa un servidor compatible con el Protocolo de Contexto de 
 - **🧠 Procesamiento Inteligente con Unstructured:** Sistema de procesamiento de documentos de nivel empresarial que preserva la estructura semántica, elimina ruido automáticamente y maneja formatos complejos.
 - **🔄 Sistema de Fallbacks Robusto:** Múltiples estrategias de procesamiento garantizan que cualquier documento sea procesado exitosamente.
 - **📊 Metadatos Estructurales:** Información detallada sobre la estructura del documento (títulos, tablas, listas) para mejor rastreabilidad.
+- **🔍 Búsquedas Avanzadas con Filtros:** Sistema de filtrado por metadatos para búsquedas más precisas y relevantes.
+- **📈 Estadísticas de Base de Conocimientos:** Información detallada sobre el contenido almacenado y su estructura.
 - **LLM Local y Privado:** Utiliza modelos de lenguaje locales a través de [Ollama](https://ollama.com/) (ej. Llama 3, Mistral), asegurando que tus datos y preguntas nunca salgan de tu máquina.
 - **100% Local y Offline:** Tanto el modelo de lenguaje como los embeddings se ejecutan en tu máquina. Ningún dato sale a internet. Una vez descargados los modelos, funciona sin conexión.
 - **Ingesta Masiva:** Scripts dedicados para procesar directorios enteros de documentos y construir la base de conocimiento de manera eficiente.
@@ -24,8 +26,8 @@ Este proyecto implementa un servidor compatible con el Protocolo de Contexto de 
 
 El proyecto está dividido en tres componentes principales:
 
-1.  `rag_core.py`: El corazón del sistema. Contiene toda la lógica reutilizable para manejar la base de datos vectorial (ChromaDB), procesar texto y crear la cadena de preguntas y respuestas con LangChain. **Incluye procesamiento avanzado con Unstructured, metadatos estructurales y sistema de fallbacks robusto.**
-2.  `rag_server.py`: El servidor MCP. Expone las herramientas (`learn_text`, `learn_document`, `ask_rag`) que el cliente de IA puede invocar. Se comunica a través de `stdio`. **Optimizado con descripciones detalladas para agentes de IA.**
+1.  `rag_core.py`: El corazón del sistema. Contiene toda la lógica reutilizable para manejar la base de datos vectorial (ChromaDB), procesar texto y crear la cadena de preguntas y respuestas con LangChain. **Incluye procesamiento avanzado con Unstructured, metadatos estructurales, sistema de fallbacks robusto, y sistema de filtrado de metadatos.**
+2.  `rag_server.py`: El servidor MCP. Expone las herramientas (`learn_text`, `learn_document`, `ask_rag`, `ask_rag_filtered`, `get_knowledge_base_stats`) que el cliente de IA puede invocar. Se comunica a través de `stdio`. **Optimizado con descripciones detalladas para agentes de IA y herramientas de búsqueda avanzada.**
 3.  `bulk_ingest.py`: Un script de línea de comandos para procesar una carpeta llena de documentos y añadirlos a la base de conocimiento de forma masiva. **Incluye procesamiento mejorado con Unstructured y metadatos estructurales automáticos.**
 
 ### Archivos de Documentación:
@@ -349,6 +351,29 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
   - 📚 Lista de fuentes utilizadas con metadatos estructurales
   - Información sobre la relevancia de cada fuente
 
+**4. `ask_rag_filtered(query, file_type, min_tables, min_titles, processing_method)` - Búsquedas con filtros**
+```
+@rag_server_knowledge ask_rag_filtered("¿Qué tablas de datos tenemos?", file_type=".pdf", min_tables=1)
+```
+- **Cuándo usar**: Para búsquedas más precisas usando filtros de metadatos
+- **Filtros disponibles**:
+  - `file_type`: Tipo de archivo (ej. ".pdf", ".docx", ".xlsx")
+  - `min_tables`: Mínimo número de tablas en el documento
+  - `min_titles`: Mínimo número de títulos en el documento
+  - `processing_method`: Método de procesamiento usado
+- **Ventajas**: Búsquedas más relevantes y específicas
+
+**5. `get_knowledge_base_stats()` - Estadísticas de la base de conocimientos**
+```
+@rag_server_knowledge get_knowledge_base_stats()
+```
+- **Cuándo usar**: Para obtener información sobre el contenido almacenado
+- **Información proporcionada**:
+  - Número total de documentos
+  - Distribución por tipo de archivo
+  - Estadísticas de estructura (tablas, títulos, listas)
+  - Métodos de procesamiento utilizados
+
 #### Ejemplo de Flujo Completo:
 
 ```bash
@@ -360,6 +385,12 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 # 3. Hacer preguntas (con respuestas mejoradas)
 @rag_server_knowledge ask_rag("¿Cuál es la temperatura de fusión del titanio?")
+
+# 4. Búsqueda filtrada por documentos con tablas
+@rag_server_knowledge ask_rag_filtered("¿Qué datos tabulares tenemos?", min_tables=1)
+
+# 5. Ver estadísticas de la base de conocimientos
+@rag_server_knowledge get_knowledge_base_stats()
 ```
 
 **Respuesta esperada:**
@@ -369,6 +400,11 @@ La temperatura de fusión del titanio es 1,668°C.
 📚 Fuentes de información:
    1. material_properties (manual_input)
    2. manual_titanio.pdf (página 3, sección "Propiedades Físicas")
+
+📊 Estadísticas de búsqueda filtrada:
+   • Documentos con tablas encontrados: 3
+   • Tipos de archivo: PDF (2), DOCX (1)
+   • Total de tablas: 7
 ```
 
 ---
@@ -642,6 +678,140 @@ def clean_text_for_rag(text: str) -> str:
     
     return text
 ```
+
+### **G. Sistema de Filtrado de Metadatos Avanzado**
+
+#### **Funcionalidades de Filtrado:**
+
+El sistema ahora incluye capacidades avanzadas de filtrado que permiten búsquedas más precisas y relevantes:
+
+```python
+def create_metadata_filter(file_type: str = None, processing_method: str = None,
+                          min_tables: int = None, min_titles: int = None,
+                          source_contains: str = None) -> dict:
+    """Crea filtros de metadatos para búsquedas más precisas."""
+    filters = []
+    
+    if file_type:
+        filters.append({"file_type": file_type})
+    if processing_method:
+        filters.append({"processing_method": processing_method})
+    if min_tables:
+        filters.append({"structural_info_tables_count": {"$gte": min_tables}})
+    if min_titles:
+        filters.append({"structural_info_titles_count": {"$gte": min_titles}})
+    if source_contains:
+        filters.append({"source": {"$contains": source_contains}})
+    
+    return {"$and": filters} if len(filters) > 1 else filters[0] if filters else None
+```
+
+#### **Búsquedas con Filtros:**
+
+```python
+def search_with_metadata_filters(vector_store: Chroma, query: str, 
+                                metadata_filter: dict = None, k: int = 5) -> List[Any]:
+    """Realiza búsquedas con filtros de metadatos para mayor precisión."""
+    if metadata_filter:
+        # Búsqueda con filtros específicos
+        results = vector_store.similarity_search_with_relevance_scores(
+            query, k=k, filter=metadata_filter
+        )
+    else:
+        # Búsqueda normal sin filtros
+        results = vector_store.similarity_search_with_relevance_scores(query, k=k)
+    
+    return results
+```
+
+#### **Estadísticas de Base de Conocimientos:**
+
+```python
+def get_document_statistics(vector_store: Chroma) -> dict:
+    """Obtiene estadísticas detalladas sobre la base de conocimientos."""
+    all_docs = vector_store.get()
+    
+    if not all_docs or not all_docs.get('metadatas'):
+        return {"total_documents": 0}
+    
+    metadatas = all_docs['metadatas']
+    
+    # Análisis por tipo de archivo
+    file_types = {}
+    processing_methods = {}
+    total_tables = 0
+    total_titles = 0
+    
+    for metadata in metadatas:
+        file_type = metadata.get("file_type", "unknown")
+        processing_method = metadata.get("processing_method", "unknown")
+        tables_count = metadata.get("structural_info_tables_count", 0)
+        titles_count = metadata.get("structural_info_titles_count", 0)
+        
+        file_types[file_type] = file_types.get(file_type, 0) + 1
+        processing_methods[processing_method] = processing_methods.get(processing_method, 0) + 1
+        total_tables += tables_count
+        total_titles += titles_count
+    
+    return {
+        "total_documents": len(metadatas),
+        "file_types": file_types,
+        "processing_methods": processing_methods,
+        "total_tables": total_tables,
+        "total_titles": total_titles,
+        "avg_tables_per_doc": total_tables / len(metadatas) if metadatas else 0,
+        "avg_titles_per_doc": total_titles / len(metadatas) if metadatas else 0
+    }
+```
+
+#### **Casos de Uso de Filtrado:**
+
+1. **Búsqueda por Tipo de Archivo:**
+   ```python
+   # Solo buscar en PDFs
+   pdf_filter = create_metadata_filter(file_type=".pdf")
+   results = search_with_metadata_filters(vector_store, "datos", pdf_filter)
+   ```
+
+2. **Búsqueda por Estructura:**
+   ```python
+   # Solo documentos con tablas
+   tables_filter = create_metadata_filter(min_tables=1)
+   results = search_with_metadata_filters(vector_store, "datos tabulares", tables_filter)
+   ```
+
+3. **Búsqueda por Método de Procesamiento:**
+   ```python
+   # Solo documentos procesados con Unstructured
+   unstructured_filter = create_metadata_filter(processing_method="unstructured_enhanced")
+   results = search_with_metadata_filters(vector_store, "contenido", unstructured_filter)
+   ```
+
+4. **Filtros Combinados:**
+   ```python
+   # PDFs con tablas procesados con Unstructured
+   complex_filter = create_metadata_filter(
+       file_type=".pdf", 
+       min_tables=1, 
+       processing_method="unstructured_enhanced"
+   )
+   results = search_with_metadata_filters(vector_store, "datos", complex_filter)
+   ```
+
+### **H. Herramientas MCP Mejoradas**
+
+#### **Nuevas Herramientas Disponibles:**
+
+1. **`ask_rag_filtered`**: Búsquedas con filtros de metadatos
+2. **`get_knowledge_base_stats`**: Estadísticas detalladas de la base de conocimientos
+
+#### **Integración con Agentes de IA:**
+
+Las nuevas herramientas están optimizadas para uso por agentes de IA con:
+- **Descripciones detalladas** de parámetros y casos de uso
+- **Ejemplos específicos** de cada herramienta
+- **Manejo de errores inteligente** con sugerencias útiles
+- **Respuestas estructuradas** con información de metadatos
 
 ---
 

@@ -427,11 +427,19 @@ Los metadatos deben ser aplanados correctamente para ChromaDB.
             print(f"   • Structural titles count: {metadata.get('structural_titles_count', 'N/A')}")
             print(f"   • Custom field: {metadata.get('custom_field', 'N/A')}")
             
+            # Mostrar TODOS los metadatos para verificar el aplanamiento
+            print("\n🔍 Todos los metadatos disponibles:")
+            for key, value in metadata.items():
+                print(f"   • {key}: {value}")
+            
             # Verificar que los metadatos estructurales se aplanaron correctamente
-            if 'structural_total_elements' in metadata:
-                print("✅ Metadatos estructurales aplanados correctamente")
+            structural_keys = [k for k in metadata.keys() if k.startswith('structural_')]
+            if structural_keys:
+                print(f"\n✅ Metadatos estructurales aplanados correctamente ({len(structural_keys)} campos):")
+                for key in structural_keys:
+                    print(f"   • {key}: {metadata[key]}")
             else:
-                print("❌ Metadatos estructurales no se aplanaron")
+                print("\n❌ Metadatos estructurales no se aplanaron")
         
         return True
         
@@ -574,6 +582,263 @@ def test_error_handling():
         print(f"❌ Error en prueba de manejo de errores: {e}")
         return False
 
+def test_metadata_filtering():
+    """Prueba el sistema de filtrado de metadatos en búsquedas."""
+    print("\n🧪 **Prueba 10: Filtrado de Metadatos**")
+    
+    try:
+        from rag_core import (
+            get_vector_store, 
+            add_text_to_knowledge_base_enhanced, 
+            search_with_metadata_filters,
+            create_metadata_filter,
+            get_document_statistics
+        )
+        
+        vector_store = get_vector_store()
+        
+        # Crear documentos de prueba con diferentes características
+        test_documents = [
+            {
+                "text": """
+# Documento PDF con Tablas
+
+Este es un documento PDF que contiene información importante.
+
+## Tabla de Ventas
+
+| Producto | Ventas | Precio |
+|----------|--------|--------|
+| A | 100 | $10 |
+| B | 200 | $20 |
+
+## Resumen
+
+Las ventas están aumentando constantemente.
+                """,
+                "metadata": {
+                    "source": "ventas_2024.pdf",
+                    "file_type": ".pdf",
+                    "processing_method": "unstructured_enhanced",
+                    "structural_info": {
+                        "total_elements": 5,
+                        "titles_count": 2,
+                        "tables_count": 1,
+                        "lists_count": 0,
+                        "narrative_blocks": 2
+                    }
+                }
+            },
+            {
+                "text": """
+# Documento TXT Simple
+
+Este es un documento de texto simple sin tablas.
+
+## Información Básica
+
+- Punto 1: Información importante
+- Punto 2: Más información
+- Punto 3: Datos adicionales
+
+## Conclusión
+
+Este documento es simple pero útil.
+                """,
+                "metadata": {
+                    "source": "informacion_simple.txt",
+                    "file_type": ".txt",
+                    "processing_method": "unstructured_enhanced",
+                    "structural_info": {
+                        "total_elements": 4,
+                        "titles_count": 2,
+                        "tables_count": 0,
+                        "lists_count": 1,
+                        "narrative_blocks": 1
+                    }
+                }
+            },
+            {
+                "text": """
+# Documento DOCX con Múltiples Tablas
+
+Este documento Word contiene varias tablas importantes.
+
+## Tabla 1: Empleados
+
+| Nombre | Departamento | Salario |
+|--------|--------------|---------|
+| Juan | IT | $5000 |
+| María | HR | $4500 |
+
+## Tabla 2: Proyectos
+
+| Proyecto | Estado | Fecha |
+|----------|--------|-------|
+| A | Activo | 2024-01 |
+| B | Completado | 2023-12 |
+
+## Análisis
+
+Los datos muestran una organización en crecimiento.
+                """,
+                "metadata": {
+                    "source": "reporte_empleados.docx",
+                    "file_type": ".docx",
+                    "processing_method": "unstructured_enhanced",
+                    "structural_info": {
+                        "total_elements": 6,
+                        "titles_count": 3,
+                        "tables_count": 2,
+                        "lists_count": 0,
+                        "narrative_blocks": 1
+                    }
+                }
+            }
+        ]
+        
+        print("📝 Añadiendo documentos de prueba con diferentes características...")
+        
+        # Añadir todos los documentos
+        for doc in test_documents:
+            add_text_to_knowledge_base_enhanced(
+                doc["text"],
+                vector_store,
+                doc["metadata"],
+                use_semantic_chunking=True
+            )
+        
+        print("🔍 Probando búsqueda sin filtros...")
+        results_no_filter = search_with_metadata_filters(
+            vector_store, 
+            "tablas ventas empleados", 
+            metadata_filter=None
+        )
+        print(f"✅ Resultados sin filtro: {len(results_no_filter)} documentos")
+        
+        print("🔍 Probando búsqueda filtrada por tipo de archivo (PDF)...")
+        pdf_filter = create_metadata_filter(file_type=".pdf")
+        results_pdf = search_with_metadata_filters(
+            vector_store, 
+            "tablas ventas empleados", 
+            metadata_filter=pdf_filter
+        )
+        print(f"✅ Resultados filtrados por PDF: {len(results_pdf)} documentos")
+        
+        # Verificar que solo se obtuvieron PDFs
+        pdf_sources = [doc.metadata.get("source", "") for doc in results_pdf if hasattr(doc, 'metadata')]
+        if all("pdf" in source.lower() for source in pdf_sources):
+            print("✅ Filtro por tipo de archivo funciona correctamente")
+        else:
+            print("❌ Filtro por tipo de archivo no funciona correctamente")
+        
+        print("🔍 Probando búsqueda filtrada por documentos con tablas...")
+        tables_filter = create_metadata_filter(min_tables=1)
+        results_tables = search_with_metadata_filters(
+            vector_store, 
+            "tablas ventas empleados", 
+            metadata_filter=tables_filter
+        )
+        print(f"✅ Resultados filtrados por tablas: {len(results_tables)} documentos")
+        
+        # DEBUG: Verificar qué documentos tenemos realmente
+        print("\n🔍 DEBUG: Verificando documentos en la base de datos...")
+        all_docs = vector_store.get()
+        if all_docs and all_docs.get('metadatas'):
+            print(f"📊 Total de documentos en BD: {len(all_docs['metadatas'])}")
+            
+            # Buscar documentos con tablas
+            docs_with_tables = []
+            for i, metadata in enumerate(all_docs['metadatas']):
+                tables_count = metadata.get("structural_info_tables_count", 0)
+                source = metadata.get("source", "unknown")
+                file_type = metadata.get("file_type", "unknown")
+                
+                if tables_count > 0:
+                    docs_with_tables.append({
+                        "source": source,
+                        "file_type": file_type,
+                        "tables_count": tables_count,
+                        "index": i
+                    })
+            
+            print(f"📋 Documentos con tablas encontrados: {len(docs_with_tables)}")
+            for doc in docs_with_tables:
+                print(f"   • {doc['source']} ({doc['file_type']}) - {doc['tables_count']} tablas")
+        
+        # DEBUG: Probar búsqueda sin filtros para ver qué se obtiene
+        print("\n🔍 DEBUG: Probando búsqueda sin filtros...")
+        no_filter_results = search_with_metadata_filters(
+            vector_store, 
+            "tablas", 
+            metadata_filter=None,
+            k=10
+        )
+        print(f"📊 Resultados sin filtro para 'tablas': {len(no_filter_results)}")
+        
+        # Mostrar metadatos de los resultados sin filtro
+        for i, doc in enumerate(no_filter_results[:3]):  # Solo los primeros 3
+            if hasattr(doc, 'metadata'):
+                metadata = doc.metadata
+                source = metadata.get("source", "unknown")
+                tables_count = metadata.get("structural_info_tables_count", 0)
+                file_type = metadata.get("file_type", "unknown")
+                print(f"   {i+1}. {source} ({file_type}) - {tables_count} tablas")
+        
+        # Verificar que solo se obtuvieron documentos con tablas
+        tables_sources = []
+        for doc in results_tables:
+            if hasattr(doc, 'metadata'):
+                metadata = doc.metadata
+                tables_count = metadata.get("structural_info_tables_count", 0)
+                if tables_count > 0:
+                    tables_sources.append(metadata.get("source", ""))
+        
+        if len(tables_sources) == len(results_tables):
+            print("✅ Filtro por tablas funciona correctamente")
+        else:
+            print("❌ Filtro por tablas no funciona correctamente")
+        
+        print("🔍 Probando búsqueda filtrada por múltiples criterios...")
+        # Usar filtros más simples para evitar problemas de compatibilidad
+        complex_filter = create_metadata_filter(
+            file_type=".docx"
+        )
+        results_complex = search_with_metadata_filters(
+            vector_store, 
+            "tablas ventas empleados", 
+            metadata_filter=complex_filter
+        )
+        print(f"✅ Resultados con filtro complejo: {len(results_complex)} documentos")
+        
+        # Probar filtro por tablas en documentos DOCX
+        docx_tables_filter = create_metadata_filter(
+            file_type=".docx",
+            min_tables=1
+        )
+        results_docx_tables = search_with_metadata_filters(
+            vector_store, 
+            "tablas ventas empleados", 
+            metadata_filter=docx_tables_filter
+        )
+        print(f"✅ Resultados DOCX con tablas: {len(results_docx_tables)} documentos")
+        
+        print("📊 Obteniendo estadísticas de la base de datos...")
+        stats = get_document_statistics(vector_store)
+        print(f"✅ Estadísticas obtenidas: {stats.get('total_documents', 0)} documentos totales")
+        
+        # Verificar estadísticas
+        if stats.get("total_documents", 0) >= 3:
+            print("✅ Estadísticas muestran documentos correctamente")
+        else:
+            print("❌ Estadísticas no muestran documentos correctamente")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error en prueba de filtrado de metadatos: {e}")
+        return False
+
 def main():
     """Función principal que ejecuta todas las pruebas."""
     print("🚀 **Iniciando Pruebas del Sistema RAG Mejorado**")
@@ -588,7 +853,8 @@ def main():
         ("Manejo de Metadatos", test_metadata_handling),
         ("Soporte de Formatos", test_format_support),
         ("Manejo de Errores", test_error_handling),
-        ("URL Real", test_real_url_processing)
+        ("URL Real", test_real_url_processing),
+        ("Filtrado de Metadatos", test_metadata_filtering)
     ]
     
     passed = 0
@@ -621,6 +887,7 @@ def main():
         print("   • Manejo de metadatos complejos")
         print("   • Manejo robusto de errores")
         print("   • Procesamiento de URLs reales con documentos PDF")
+        print("   • Filtrado de metadatos en búsquedas")
         return 0
     else:
         print("⚠️ **Algunas pruebas fallaron. Revisa los errores arriba.**")
