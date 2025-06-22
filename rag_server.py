@@ -12,6 +12,9 @@ from rag_core import (
     add_text_to_knowledge_base_enhanced,  # Nueva función mejorada
     load_document_with_fallbacks,         # Nueva función de procesamiento con Unstructured
     get_qa_chain,
+    search_with_metadata_filters,         # Nueva función de búsqueda con filtros
+    create_metadata_filter,               # Nueva función para crear filtros
+    get_document_statistics,              # Nueva función para estadísticas
     log  # Importamos nuestra nueva función de log
 )
 
@@ -680,40 +683,33 @@ def learn_from_url(url: str) -> str:
 @mcp.tool()
 def ask_rag(query: str) -> str:
     """
-    Searches the knowledge base and generates an AI-powered answer based on stored information.
-    Use this when you need to retrieve specific information that has been previously stored.
+    Asks a question to the RAG knowledge base and returns an answer based on the stored information.
+    Use this when you want to get information from the knowledge base that has been previously learned.
     
     Examples of when to use:
-    - Looking up facts, definitions, or explanations that were previously added
-    - Finding information from processed documents
-    - Retrieving context about specific topics
-    - Getting answers based on stored research or notes
+    - Asking about specific topics or concepts
+    - Requesting explanations or definitions
+    - Seeking information from processed documents
+    - Getting answers based on learned text or documents
     
-    The response will include the answer plus a list of sources used to generate it.
-    If no relevant information is found, the AI will indicate this clearly.
+    The system will search through all stored information and provide the most relevant answer.
 
     Args:
-        query: The specific question or information request to search for in the knowledge base.
+        query: The question or query to ask the knowledge base.
     """
-    log(f"MCP Server: Procesando pregunta: '{query[:50]}{'...' if len(query) > 50 else ''}'")
+    log(f"MCP Server: Procesando pregunta: {query}")
     initialize_rag()
-
+    
     try:
-        log(f"MCP Server: Buscando información relevante en la base de conocimientos...")
-        qa_chain = rag_state["qa_chain"]
+        # Usar la cadena QA estándar (sin filtros)
+        qa_chain = get_qa_chain(rag_state["vector_store"])
         response = qa_chain.invoke({"query": query})
         
-        # Obtener la respuesta principal
-        answer = response.get("result", "No se pudo obtener una respuesta.")
-        
-        # Verificar si se encontró información relevante
+        answer = response.get("result", "No se encontró información relevante para responder tu pregunta.")
         source_documents = response.get("source_documents", [])
         
-        if not source_documents:
-            return "❌ **No se encontró información relevante** en la base de conocimientos para responder a tu pregunta.\n\n💡 **Sugerencias:**\n- Verifica que hayas añadido documentos o texto relacionado con este tema\n- Intenta reformular tu pregunta con palabras diferentes\n- Usa la herramienta `learn_text` o `learn_document` para añadir información sobre este tema"
-        
         # Construir respuesta mejorada con información de fuentes
-        enhanced_answer = f"🤖 **Respuesta:**\n{answer}\n\n"
+        enhanced_answer = f"🤖 **Respuesta:**\n\n{answer}\n"
         
         # Añadir información de fuentes con más detalles
         if source_documents:
@@ -766,38 +762,20 @@ def ask_rag(query: str) -> str:
                 total_elements = metadata.get("structural_total_elements", 0)
                 
                 if total_elements > 0:
-                    source_info += f"\n      - **Estructura:** {total_elements} elementos"
-                    if titles_count > 0 or tables_count > 0 or lists_count > 0:
-                        structure_details = []
-                        if titles_count > 0:
-                            structure_details.append(f"{titles_count} títulos")
-                        if tables_count > 0:
-                            structure_details.append(f"{tables_count} tablas")
-                        if lists_count > 0:
-                            structure_details.append(f"{lists_count} listas")
-                        source_info += f" ({', '.join(structure_details)})"
-                
-                # Añadir información de chunk si está disponible
-                chunk_index = metadata.get("chunk_index")
-                total_chunks = metadata.get("total_chunks")
-                if chunk_index is not None and total_chunks:
-                    source_info += f"\n      - **Fragmento:** {chunk_index + 1} de {total_chunks}"
-                
-                # Añadir fecha de procesamiento
-                processed_date = metadata.get("processed_date")
-                if processed_date:
-                    try:
-                        date_obj = datetime.fromisoformat(processed_date.replace('Z', '+00:00'))
-                        readable_date = date_obj.strftime("%d/%m/%Y %H:%M")
-                        source_info += f"\n      - **Procesado:** {readable_date}"
-                    except:
-                        pass
-                
-                # Añadir un fragmento del contenido relevante
-                content_snippet = doc.page_content.strip().replace('\n', ' ')
-                source_info += f"\n      - **Fragmento Relevante:**\n        > _{content_snippet[:150]}{'...' if len(content_snippet) > 150 else ''}_"
+                    structural_details = []
+                    if titles_count > 0:
+                        structural_details.append(f"{titles_count} títulos")
+                    if tables_count > 0:
+                        structural_details.append(f"{tables_count} tablas")
+                    if lists_count > 0:
+                        structural_details.append(f"{lists_count} listas")
+                    
+                    if structural_details:
+                        source_info += f"\n      - **Estructura:** {', '.join(structural_details)}"
                 
                 enhanced_answer += source_info + "\n\n"
+        else:
+            enhanced_answer += "\n⚠️ **No se encontraron fuentes específicas para esta respuesta.**\n"
         
         # Añadir información sobre la calidad de la respuesta
         num_sources = len(source_documents)
@@ -819,6 +797,179 @@ def ask_rag(query: str) -> str:
     except Exception as e:
         log(f"MCP Server: Error procesando pregunta: {e}")
         return f"❌ **Error al procesar la pregunta:** {e}\n\n💡 **Sugerencias:**\n- Verifica que el sistema RAG esté correctamente inicializado\n- Intenta reformular tu pregunta\n- Si el problema persiste, reinicia el servidor"
+
+@mcp.tool()
+def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, min_titles: int = None, processing_method: str = None) -> str:
+    """
+    Asks a question to the RAG knowledge base with specific filters to focus the search.
+    Use this when you want to get information from specific types of documents or documents with certain characteristics.
+    
+    Examples of when to use:
+    - Searching only in PDF documents: file_type=".pdf"
+    - Looking for documents with tables: min_tables=1
+    - Finding well-structured documents: min_titles=5
+    - Searching in enhanced processed documents: processing_method="unstructured_enhanced"
+    
+    This provides more targeted and relevant results by filtering the search scope.
+
+    Args:
+        query: The question or query to ask the knowledge base.
+        file_type: Filter by file type (e.g., ".pdf", ".docx", ".txt")
+        min_tables: Minimum number of tables the document must have
+        min_titles: Minimum number of titles the document must have
+        processing_method: Filter by processing method (e.g., "unstructured_enhanced", "markitdown")
+    """
+    log(f"MCP Server: Procesando pregunta con filtros: {query}")
+    log(f"MCP Server: Filtros aplicados - Tipo: {file_type}, Tablas: {min_tables}, Títulos: {min_titles}, Método: {processing_method}")
+    initialize_rag()
+    
+    try:
+        # Crear filtros de metadatos
+        metadata_filter = create_metadata_filter(
+            file_type=file_type,
+            processing_method=processing_method,
+            min_tables=min_tables,
+            min_titles=min_titles
+        )
+        
+        # Usar la cadena QA con filtros
+        qa_chain = get_qa_chain(rag_state["vector_store"], metadata_filter)
+        response = qa_chain.invoke({"query": query})
+        
+        answer = response.get("result", "No se encontró información relevante con los filtros especificados.")
+        source_documents = response.get("source_documents", [])
+        
+        # Construir respuesta mejorada
+        enhanced_answer = f"🔍 **Respuesta (con filtros aplicados):**\n\n{answer}\n"
+        
+        # Mostrar filtros aplicados
+        if metadata_filter:
+            enhanced_answer += "\n📋 **Filtros aplicados:**\n"
+            for key, value in metadata_filter.items():
+                if key == "file_type":
+                    enhanced_answer += f"   • Tipo de archivo: {value}\n"
+                elif key == "processing_method":
+                    enhanced_answer += f"   • Método de procesamiento: {value.replace('_', ' ').title()}\n"
+                elif key == "structural_tables_count":
+                    enhanced_answer += f"   • Mínimo de tablas: {value['$gte']}\n"
+                elif key == "structural_titles_count":
+                    enhanced_answer += f"   • Mínimo de títulos: {value['$gte']}\n"
+        
+        # Añadir información de fuentes
+        if source_documents:
+            enhanced_answer += f"\n📚 **Fuentes encontradas ({len(source_documents)}):**\n\n"
+            for i, doc in enumerate(source_documents, 1):
+                metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+                source_name = metadata.get("source", "Fuente desconocida")
+                
+                source_info = f"   {i}. **{source_name}**"
+                
+                # Información estructural
+                tables_count = metadata.get("structural_tables_count", 0)
+                titles_count = metadata.get("structural_titles_count", 0)
+                file_type = metadata.get("file_type", "")
+                
+                structural_details = []
+                if tables_count > 0:
+                    structural_details.append(f"{tables_count} tablas")
+                if titles_count > 0:
+                    structural_details.append(f"{titles_count} títulos")
+                
+                if structural_details:
+                    source_info += f" ({', '.join(structural_details)})"
+                
+                if file_type:
+                    source_info += f" [{file_type.upper()}]"
+                
+                enhanced_answer += source_info + "\n"
+        else:
+            enhanced_answer += "\n⚠️ **No se encontraron documentos que cumplan con los filtros especificados.**\n"
+        
+        # Información sobre la búsqueda filtrada
+        enhanced_answer += f"\n🎯 **Búsqueda filtrada:** Los resultados se limitaron a documentos que cumplen con los criterios especificados."
+        
+        log(f"MCP Server: Respuesta filtrada generada exitosamente con {len(source_documents)} fuentes")
+        return enhanced_answer
+        
+    except Exception as e:
+        log(f"MCP Server: Error procesando pregunta filtrada: {e}")
+        return f"❌ **Error al procesar la pregunta filtrada:** {e}"
+
+@mcp.tool()
+def get_knowledge_base_stats() -> str:
+    """
+    Gets comprehensive statistics about the knowledge base, including document types, processing methods, and structural information.
+    Use this to understand what information is available in your knowledge base and how it was processed.
+    
+    Examples of when to use:
+    - Checking how many documents are in the knowledge base
+    - Understanding the distribution of file types
+    - Seeing which processing methods were used
+    - Analyzing the structural complexity of stored documents
+    
+    This helps you make informed decisions about what to search for and how to filter your queries.
+
+    Returns:
+        Detailed statistics about the knowledge base contents.
+    """
+    log(f"MCP Server: Obteniendo estadísticas de la base de conocimientos...")
+    initialize_rag()
+    
+    try:
+        stats = get_document_statistics(rag_state["vector_store"])
+        
+        if "error" in stats:
+            return f"❌ **Error obteniendo estadísticas:** {stats['error']}"
+        
+        if stats.get("total_documents", 0) == 0:
+            return "📊 **Base de conocimientos vacía**\n\nNo hay documentos almacenados en la base de conocimientos."
+        
+        # Construir respuesta detallada
+        response = f"📊 **Estadísticas de la Base de Conocimientos**\n\n"
+        response += f"📚 **Total de documentos:** {stats['total_documents']}\n\n"
+        
+        # Tipos de archivo
+        if stats["file_types"]:
+            response += "📄 **Tipos de archivo:**\n"
+            for file_type, count in sorted(stats["file_types"].items(), key=lambda x: x[1], reverse=True):
+                percentage = (count / stats["total_documents"]) * 100
+                response += f"   • {file_type.upper()}: {count} ({percentage:.1f}%)\n"
+            response += "\n"
+        
+        # Métodos de procesamiento
+        if stats["processing_methods"]:
+            response += "🔧 **Métodos de procesamiento:**\n"
+            for method, count in sorted(stats["processing_methods"].items(), key=lambda x: x[1], reverse=True):
+                percentage = (count / stats["total_documents"]) * 100
+                method_display = method.replace('_', ' ').title()
+                response += f"   • {method_display}: {count} ({percentage:.1f}%)\n"
+            response += "\n"
+        
+        # Estadísticas estructurales
+        structural = stats["structural_stats"]
+        response += "🏗️ **Información estructural:**\n"
+        response += f"   • Documentos con tablas: {structural['documents_with_tables']}\n"
+        response += f"   • Documentos con títulos: {structural['documents_with_titles']}\n"
+        response += f"   • Documentos con listas: {structural['documents_with_lists']}\n"
+        response += f"   • Promedio de tablas por documento: {structural['avg_tables_per_doc']:.1f}\n"
+        response += f"   • Promedio de títulos por documento: {structural['avg_titles_per_doc']:.1f}\n"
+        response += f"   • Promedio de listas por documento: {structural['avg_lists_per_doc']:.1f}\n\n"
+        
+        # Sugerencias de búsqueda
+        response += "💡 **Sugerencias de búsqueda:**\n"
+        if structural['documents_with_tables'] > 0:
+            response += f"   • Usa `ask_rag_filtered` con `min_tables=1` para buscar información en documentos con tablas\n"
+        if structural['documents_with_titles'] > 5:
+            response += f"   • Usa `ask_rag_filtered` con `min_titles=5` para buscar en documentos bien estructurados\n"
+        if ".pdf" in stats["file_types"]:
+            response += f"   • Usa `ask_rag_filtered` con `file_type=\".pdf\"` para buscar solo en documentos PDF\n"
+        
+        log(f"MCP Server: Estadísticas obtenidas exitosamente")
+        return response
+        
+    except Exception as e:
+        log(f"MCP Server: Error obteniendo estadísticas: {e}")
+        return f"❌ **Error obteniendo estadísticas:** {e}"
 
 # --- Punto de Entrada para Correr el Servidor ---
 if __name__ == "__main__":
