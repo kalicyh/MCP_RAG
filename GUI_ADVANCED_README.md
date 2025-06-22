@@ -43,29 +43,47 @@ run_gui_advanced.bat
 python bulk_ingest_gui_advanced.py
 ```
 
-## 📖 Guía de Uso Paso a Paso
+## 📖 Guía Visual Paso a Paso
 
-### 🔄 **Paso 1: Procesamiento**
-1. **Selecciona la carpeta** con tus documentos
-2. **Configura las opciones** (guardar copias, etc.)
-3. **Inicia el procesamiento** con "🚀 Iniciar Procesamiento"
-4. **Observa el progreso** en tiempo real
-5. **Ve a la pestaña de Revisión** cuando termine
+Esta guía te llevará a través de cada pestaña de la aplicación para que saques el máximo provecho de la ingesta masiva de documentos.
 
-### 👀 **Paso 2: Revisión y Selección**
-1. **Revisa la lista** de documentos procesados
-2. **Selecciona un documento** de la lista
-3. **Previsualiza el contenido** en Markdown
-4. **Decide si incluirlo** en la base de datos
-5. **Navega entre documentos** con los botones de flecha
-6. **Usa "Seleccionar Todos"** o "Deseleccionar Todos" si es necesario
+### 🔄 **Paso 1: Pestaña de Procesamiento - Carga y Conversión**
 
-### 💾 **Paso 3: Almacenamiento Final**
-1. **Revisa el resumen** de documentos seleccionados
-2. **Marca la confirmación** de almacenamiento
-3. **Haz clic en "💾 Almacenar Seleccionados"**
-4. **Observa el progreso** de almacenamiento
-5. **Confirma la finalización**
+Esta es la primera pantalla. Aquí es donde le dices a la aplicación qué documentos procesar.
+
+![Pestaña de Procesamiento](src/images/gui_procesamiento.png)
+
+1.  **Selecciona tu carpeta:** Usa el botón `Explorar...` para elegir el directorio que contiene tus documentos.
+2.  **Configura las opciones:** Puedes decidir si quieres `Guardar copias en formato Markdown` para tener un respaldo del contenido convertido.
+3.  **Inicia el Proceso:** Haz clic en `Iniciar Procesamiento`.
+4.  **Monitorea el Progreso:** La barra de progreso te mostrará el estado y el `Registro de Actividad` te dará detalles de cada paso.
+5.  **Avanza:** Una vez finalizado, haz clic en `Ir a Revisión` para continuar.
+
+### 👀 **Paso 2: Pestaña de Revisión - Previsualiza y Selecciona**
+
+En esta pestaña tienes el control total. Puedes ver qué se convirtió y decidir qué información es valiosa para tu base de conocimientos.
+
+![Pestaña de Revisión](src/images/gui_revision.png)
+
+1.  **Explora los Documentos:** La lista de la izquierda (`Documentos Procesados`) muestra todos los archivos que se convirtieron a Markdown.
+2.  **Previsualiza el Contenido:** Al hacer clic en un archivo de la lista, verás su contenido a la derecha, junto con detalles como su tipo y tamaño. Esto te permite verificar la calidad de la conversión.
+3.  **Toma Decisiones:** Marca la casilla `Incluir en base de datos` para cada documento que quieras añadir.
+4.  **Usa los Controles:** Para agilizar el trabajo, puedes usar `Seleccionar Todos` o `Deseleccionar Todos`. También puedes navegar entre documentos con los botones `Anterior` y `Siguiente`.
+
+### 💾 **Paso 3: Pestaña de Almacenamiento - Confirma y Guarda**
+
+Este es el último paso. Aquí confirmas tu selección y la guardas permanentemente en la base de datos vectorial para que la IA pueda usarla.
+
+![Pestaña de Almacenamiento en Progreso](src/images/gui_almacenamiento_progreso.png)
+
+1.  **Verifica el Resumen:** El `Resumen de Selección` te muestra cuántos documentos vas a guardar y el tamaño total.
+2.  **Confirma la Operación:** Es obligatorio activar la casilla `Confirmar almacenamiento en base de datos`. Esta es una medida de seguridad para evitar acciones accidentales.
+3.  **Inicia el Almacenamiento:** Presiona `Almacenar Seleccionados`.
+4.  **Observa el Progreso:** Al igual que en el procesamiento, una barra de progreso y un registro de actividad te mantendrán informado sobre qué documento se está guardando.
+
+![Almacenamiento Completado](src/images/gui_almacenamiento_completado.png)
+
+Una vez que el proceso termina, verás que la barra de progreso se completa y aparecerá un mensaje de confirmación. ¡Y listo! Tus conocimientos ahora forman parte de la memoria de tu IA.
 
 ## 🎯 Ventajas de la Versión Avanzada
 

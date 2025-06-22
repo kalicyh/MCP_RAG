@@ -188,6 +188,16 @@ La forma más fácil e intuitiva de añadir documentos es usando la interfaz gr�
 5.  Ve a la pestaña "Revisión", selecciona los archivos que quieres guardar y previsualiza su contenido.
 6.  Ve a la pestaña "Almacenamiento" y haz clic en "Iniciar Almacenamiento" para guardar los documentos seleccionados en la base de datos.
 
+#### ✨ **Nueva GUI Avanzada con Previsualización y Selección**
+
+Para un control total sobre el proceso de ingesta, hemos añadido una **GUI avanzada**. Esta versión te permite **previsualizar** el contenido de cada documento convertido a Markdown y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
+
+Es ideal para asegurar la calidad de los datos, excluir documentos irrelevantes y tener una visión clara de lo que estás almacenando.
+
+![Pestaña de Procesamiento de la GUI Avanzada](src/images/gui_procesamiento.png)
+
+➡️ **Para una guía completa sobre cómo usarla, consulta el [README de la GUI Avanzada](./GUI_ADVANCED_README.md).**
+
 ### Uso 2: Poblar la Base de Conocimiento desde la Línea de Comandos
 
 Si prefieres usar la línea de comandos o necesitas automatizar la ingesta.
