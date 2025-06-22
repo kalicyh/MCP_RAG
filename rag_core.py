@@ -7,6 +7,7 @@ import requests
 import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+import unicodedata
 
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models import ChatOllama
@@ -296,9 +297,218 @@ def get_vector_store() -> Chroma:
     log(f"Core: Base de datos vectorial inicializada en '{PERSIST_DIRECTORY}'")
     return vector_store
 
+def fix_duplicated_characters(text: str) -> str:
+    """
+    Corrige caracteres duplicados que pueden aparecer por problemas de codificación.
+    NO toca los números para evitar corregir datos legítimos.
+    
+    Args:
+        text: Texto con posibles caracteres duplicados
+    
+    Returns:
+        Texto con caracteres duplicados corregidos (solo letras y espacios)
+    """
+    if not text:
+        return ""
+    
+    # Patrones de caracteres duplicados SEGUROS (solo letras y espacios)
+    safe_duplicated_patterns = [
+        # Letras duplicadas
+        ('AA', 'A'), ('BB', 'B'), ('CC', 'C'), ('DD', 'D'), ('EE', 'E'),
+        ('FF', 'F'), ('GG', 'G'), ('HH', 'H'), ('II', 'I'), ('JJ', 'J'),
+        ('KK', 'K'), ('LL', 'L'), ('MM', 'M'), ('NN', 'N'), ('OO', 'O'),
+        ('PP', 'P'), ('QQ', 'Q'), ('RR', 'R'), ('SS', 'S'), ('TT', 'T'),
+        ('UU', 'U'), ('VV', 'V'), ('WW', 'W'), ('XX', 'X'), ('YY', 'Y'),
+        ('ZZ', 'Z'),
+        
+        # Letras minúsculas duplicadas
+        ('aa', 'a'), ('bb', 'b'), ('cc', 'c'), ('dd', 'd'), ('ee', 'e'),
+        ('ff', 'f'), ('gg', 'g'), ('hh', 'h'), ('ii', 'i'), ('jj', 'j'),
+        ('kk', 'k'), ('ll', 'l'), ('mm', 'm'), ('nn', 'n'), ('oo', 'o'),
+        ('pp', 'p'), ('qq', 'q'), ('rr', 'r'), ('ss', 's'), ('tt', 't'),
+        ('uu', 'u'), ('vv', 'v'), ('ww', 'w'), ('xx', 'x'), ('yy', 'y'),
+        ('zz', 'z'),
+        
+        # Espacios duplicados
+        ('  ', ' '), ('   ', ' '), ('    ', ' '),
+        
+        # Puntuación duplicada
+        ('..', '.'), ('...', '...'), ('!!', '!'), ('??', '?'),
+        (',,', ','), (';;', ';'), ('::', ':'),
+    ]
+    
+    # Aplicar correcciones SEGURAS de patrones duplicados
+    for duplicated, corrected in safe_duplicated_patterns:
+        text = text.replace(duplicated, corrected)
+    
+    # Detectar y corregir secuencias largas de caracteres duplicados
+    # PERO IGNORAR COMPLETAMENTE LOS NÚMEROS
+    import re
+    
+    # Buscar secuencias de 3 o más caracteres iguales consecutivos
+    def fix_long_duplications(match):
+        char = match.group(1)
+        count = len(match.group(0))
+        
+        # IGNORAR COMPLETAMENTE LOS NÚMEROS
+        if char.isdigit():
+            return match.group(0)  # Mantener números tal como están
+        else:
+            # Para letras y otros caracteres, ser más agresivo
+            if count > 2:
+                return char
+            return match.group(0)
+    
+    # Aplicar corrección de secuencias largas
+    text = re.sub(r'(.)\1{2,}', fix_long_duplications, text)
+    
+    # Corregir casos específicos de palabras comunes duplicadas
+    common_duplicated_words = {
+        'CCOOMMPPOONNEENNTTEESS': 'COMPONENTES',
+        'DDOOSS': 'DOS',
+        'DDEELL': 'DEL',
+        'PPAARRA': 'PARA',
+        'CCOONN': 'CON',
+        'PPRROO': 'PRO',
+        'IINNFFOORRMMAACCIIOONN': 'INFORMACION',
+        'MMAANNUUAALL': 'MANUAL',
+        'RREEPPAARRAACCIIOONN': 'REPARACION',
+        'MMAANNTTEENNIIMMIIEENNTTOO': 'MANTENIMIENTO',
+    }
+    
+    for duplicated_word, corrected_word in common_duplicated_words.items():
+        text = text.replace(duplicated_word, corrected_word)
+    
+    return text
+
+def normalize_spanish_characters(text: str) -> str:
+    """
+    Normaliza caracteres especiales del español que pueden causar problemas de codificación.
+    Incluye corrección de caracteres duplicados.
+    
+    Args:
+        text: Texto original con posibles problemas de codificación
+    
+    Returns:
+        Texto con caracteres normalizados
+    """
+    if not text:
+        return ""
+    
+    # Primero corregir caracteres duplicados
+    text = fix_duplicated_characters(text)
+    
+    # Mapeo de caracteres problemáticos comunes en español
+    character_mapping = {
+        # Caracteres acentuados mal codificados - casos específicos
+        "M´etodo": "Método",
+        "An´alisis": "Análisis", 
+        "Bisecci´on": "Bisección",
+        "Convergencia": "Convergencia",
+        "M´etodos": "Métodos",
+        "An´alisis": "Análisis",
+        
+        # Caracteres acentuados mal codificados - patrones generales
+        '´': "'",  # Acento agudo mal codificado
+        '`': "'",  # Acento grave mal codificado
+        
+        # Caracteres especiales mal codificados
+        'ﬁ': 'fi',  # Ligadura fi
+        'ﬂ': 'fl',  # Ligadura fl
+        'ﬀ': 'ff',  # Ligadura ff
+        'ﬃ': 'ffi', # Ligadura ffi
+        'ﬄ': 'ffl', # Ligadura ffl
+        
+        # Otros caracteres problemáticos
+        '…': '...',  # Puntos suspensivos
+        '–': '-',    # Guión medio
+        '—': '-',    # Guión largo
+        '"': '"',    # Comillas tipográficas
+        '"': '"',    # Comillas tipográficas
+        ''': "'",    # Apóstrofe tipográfico
+        ''': "'",    # Apóstrofe tipográfico
+        
+        # Caracteres de control que pueden aparecer
+        '\x00': '',  # Null character
+        '\x01': '',  # Start of heading
+        '\x02': '',  # Start of text
+        '\x03': '',  # End of text
+        '\x04': '',  # End of transmission
+        '\x05': '',  # Enquiry
+        '\x06': '',  # Acknowledge
+        '\x07': '',  # Bell
+        '\x08': '',  # Backspace
+        '\x0b': '',  # Vertical tab
+        '\x0c': '',  # Form feed
+        '\x0e': '',  # Shift out
+        '\x0f': '',
+        '\x10': '',  # Data link escape
+        '\x11': '',  # Device control 1
+        '\x12': '',  # Device control 2
+        '\x13': '',  # Device control 3
+        '\x14': '',  # Device control 4
+        '\x15': '',  # Negative acknowledge
+        '\x16': '',  # Synchronous idle
+        '\x17': '',  # End of transmission block
+        '\x18': '',  # Cancel
+        '\x19': '',  # End of medium
+        '\x1a': '',  # Substitute
+        '\x1b': '',  # Escape
+        '\x1c': '',  # File separator
+        '\x1d': '',  # Group separator
+        '\x1e': '',  # Record separator
+        '\x1f': '',  # Unit separator
+    }
+    
+    # Aplicar mapeo de caracteres específicos primero
+    for old_char, new_char in character_mapping.items():
+        text = text.replace(old_char, new_char)
+    
+    # Normalizar caracteres Unicode (NFD -> NFC)
+    try:
+        text = unicodedata.normalize('NFC', text)
+    except Exception as e:
+        log(f"Core Warning: Error normalizando Unicode: {e}")
+    
+    # Corregir patrones específicos de acentos mal codificados
+    # Patrón: letra + acento mal codificado
+    accent_patterns = [
+        (r'([aeiouAEIOU])´', r'\1á'),  # a´ -> á
+        (r'([aeiouAEIOU])`', r'\1à'),  # a` -> à
+    ]
+    
+    for pattern, replacement in accent_patterns:
+        text = re.sub(pattern, replacement, text)
+    
+    # Corregir casos específicos de ñ mal codificada
+    # Casos de ñ con caracteres Unicode combinados
+    text = text.replace('ã', 'ñ')  # Corregir ñ mal codificada
+    text = text.replace('ĩ', 'ñ')  # Otro caso de ñ mal codificada
+    
+    # Casos específicos de ñ con caracteres Unicode combinados
+    # Estos son casos donde la ñ se representa como n + tilde combinada
+    text = text.replace('ñ', 'ñ')  # Normalizar ñ ya correcta
+    text = text.replace('ñ', 'ñ')  # n + tilde combinada (U+006E + U+0303)
+    text = text.replace('Ñ', 'Ñ')  # N + tilde combinada (U+004E + U+0303)
+    
+    # Corregir casos específicos de acentos que quedaron mal
+    text = text.replace("M'etodo", "Método")
+    text = text.replace("An'alisis", "Análisis")
+    text = text.replace("Bisecci'on", "Bisección")
+    text = text.replace("M'etodos", "Métodos")
+    
+    # Corregir casos específicos de ñ que quedaron mal
+    text = text.replace("espña", "españa")
+    text = text.replace("nño", "niño")
+    text = text.replace("espãa", "españa")
+    text = text.replace("nĩo", "niño")
+    
+    return text
+
 def clean_text_for_rag(text: str) -> str:
     """
     Limpia y prepara el texto para mejorar la calidad de las búsquedas RAG.
+    Incluye normalización de caracteres especiales del español.
     
     Args:
         text: Texto original a limpiar
@@ -309,11 +519,15 @@ def clean_text_for_rag(text: str) -> str:
     if not text:
         return ""
     
+    # Primero normalizar caracteres especiales del español
+    text = normalize_spanish_characters(text)
+    
     # Eliminar espacios múltiples y saltos de línea excesivos
     text = re.sub(r'\s+', ' ', text)
     
-    # Eliminar caracteres especiales problemáticos pero mantener puntuación importante
-    text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\{\}\"\']', '', text)
+    # Eliminar caracteres especiales problemáticos pero mantener puntuación importante y caracteres españoles
+    # Mantener: letras, números, espacios, puntuación básica, caracteres acentuados
+    text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\{\}\"\'áéíóúÁÉÍÓÚñÑüÜ]', '', text)
     
     # Normalizar espacios alrededor de puntuación
     text = re.sub(r'\s+([\.\,\!\?\;\:])', r'\1', text)
@@ -329,38 +543,52 @@ def clean_text_for_rag(text: str) -> str:
 def convert_table_to_text(table_element) -> str:
     """
     Convierte un elemento de tabla a texto legible.
+    Incluye normalización de caracteres especiales del español.
     
     Args:
         table_element: Elemento de tabla de Unstructured
     
     Returns:
-        Texto formateado de la tabla
+        Texto formateado de la tabla con caracteres normalizados
     """
     try:
         if hasattr(table_element, 'text'):
-            return table_element.text
+            # Normalizar caracteres del texto de la tabla
+            normalized_text = normalize_spanish_characters(table_element.text)
+            return normalized_text
         elif hasattr(table_element, 'metadata') and 'text_as_html' in table_element.metadata:
             # Si tenemos HTML, extraer el texto
             html_text = table_element.metadata['text_as_html']
             # Limpiar tags HTML básicos
             clean_text = re.sub(r'<[^>]+>', ' ', html_text)
             clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-            return f"Tabla: {clean_text}"
+            # Normalizar caracteres del texto extraído
+            normalized_text = normalize_spanish_characters(clean_text)
+            return f"Tabla: {normalized_text}"
         else:
-            return str(table_element)
+            # Normalizar caracteres de la representación en string
+            text_representation = str(table_element)
+            normalized_text = normalize_spanish_characters(text_representation)
+            return normalized_text
     except Exception as e:
         log(f"Core Warning: Error convirtiendo tabla: {e}")
-        return str(table_element)
+        # Intentar normalizar incluso en caso de error
+        try:
+            text_representation = str(table_element)
+            return normalize_spanish_characters(text_representation)
+        except:
+            return str(table_element)
 
 def process_unstructured_elements(elements: List[Any]) -> str:
     """
     Procesa elementos de Unstructured de manera inteligente preservando la estructura semántica.
+    Incluye normalización de caracteres especiales del español.
     
     Args:
         elements: Lista de elementos extraídos por Unstructured
     
     Returns:
-        Texto procesado con estructura preservada
+        Texto procesado con estructura preservada y caracteres normalizados
     """
     processed_parts = []
     
@@ -370,24 +598,34 @@ def process_unstructured_elements(elements: List[Any]) -> str:
         if element_type == 'Title':
             # Los títulos van en líneas separadas con formato especial
             if hasattr(element, 'text') and element.text:
-                processed_parts.append(f"\n## {element.text.strip()}\n")
+                # Normalizar caracteres del título
+                normalized_text = normalize_spanish_characters(element.text.strip())
+                processed_parts.append(f"\n## {normalized_text}\n")
         elif element_type == 'ListItem':
             # Las listas mantienen su estructura
             if hasattr(element, 'text') and element.text:
-                processed_parts.append(f"• {element.text.strip()}")
+                # Normalizar caracteres del elemento de lista
+                normalized_text = normalize_spanish_characters(element.text.strip())
+                processed_parts.append(f"• {normalized_text}")
         elif element_type == 'Table':
             # Las tablas se convierten a formato legible
             table_text = convert_table_to_text(element)
             if table_text:
-                processed_parts.append(f"\n{table_text}\n")
+                # Normalizar caracteres de la tabla
+                normalized_table_text = normalize_spanish_characters(table_text)
+                processed_parts.append(f"\n{normalized_table_text}\n")
         elif element_type == 'NarrativeText':
             # El texto narrativo va tal como está
             if hasattr(element, 'text') and element.text:
-                processed_parts.append(element.text.strip())
+                # Normalizar caracteres del texto narrativo
+                normalized_text = normalize_spanish_characters(element.text.strip())
+                processed_parts.append(normalized_text)
         else:
             # Para otros tipos, usar el texto básico
             if hasattr(element, 'text') and element.text:
-                processed_parts.append(element.text.strip())
+                # Normalizar caracteres de otros elementos
+                normalized_text = normalize_spanish_characters(element.text.strip())
+                processed_parts.append(normalized_text)
     
     return "\n\n".join(processed_parts)
 
@@ -483,12 +721,13 @@ def create_semantic_chunks(elements: List[Any], max_chunk_size: int = 1000, over
 def load_with_langchain_fallbacks(file_path: str) -> str:
     """
     Sistema de fallback usando cargadores específicos de LangChain.
+    Incluye normalización de caracteres especiales del español.
     
     Args:
         file_path: Ruta del archivo a cargar
     
     Returns:
-        Contenido del archivo como texto
+        Contenido del archivo como texto normalizado
     """
     file_extension = os.path.splitext(file_path)[1].lower()
     
@@ -497,55 +736,100 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.docx', '.doc']:
             from langchain_community.document_loaders import Docx2txtLoader
             loader = Docx2txtLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.pptx', '.ppt']:
             from langchain_community.document_loaders import UnstructuredPowerPointLoader
             loader = UnstructuredPowerPointLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.xlsx', '.xls']:
             from langchain_community.document_loaders import UnstructuredExcelLoader
             loader = UnstructuredExcelLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.txt', '.md', '.rtf']:
             from langchain_community.document_loaders import TextLoader
             loader = TextLoader(file_path, encoding='utf-8')
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.html', '.htm']:
             from langchain_community.document_loaders import BSHTMLLoader
             loader = BSHTMLLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension == '.xml':
             from langchain_community.document_loaders import UnstructuredXMLLoader
             loader = UnstructuredXMLLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.csv', '.tsv']:
             from langchain_community.document_loaders import CSVLoader
             loader = CSVLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.json', '.yaml', '.yml']:
             from langchain_community.document_loaders import JSONLoader
             loader = JSONLoader(file_path, jq_schema='.', text_content=False)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.png', '.jpg', '.jpeg', '.tiff', '.bmp']:
             # Para imágenes, intentar con OCR
@@ -553,26 +837,46 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
                 from langchain_community.document_loaders import UnstructuredImageLoader
                 loader = UnstructuredImageLoader(file_path)
                 documents = loader.load()
-                return "\n\n".join([doc.page_content for doc in documents])
+                # Normalizar cada documento antes de concatenar
+                normalized_contents = []
+                for doc in documents:
+                    normalized_content = normalize_spanish_characters(doc.page_content)
+                    normalized_contents.append(normalized_content)
+                return "\n\n".join(normalized_contents)
             except:
                 # Si falla, intentar con TextLoader como último recurso
                 from langchain_community.document_loaders import TextLoader
                 loader = TextLoader(file_path, encoding='utf-8')
                 documents = loader.load()
-                return "\n\n".join([doc.page_content for doc in documents])
+                # Normalizar cada documento antes de concatenar
+                normalized_contents = []
+                for doc in documents:
+                    normalized_content = normalize_spanish_characters(doc.page_content)
+                    normalized_contents.append(normalized_content)
+                return "\n\n".join(normalized_contents)
         
         elif file_extension in ['.eml', '.msg']:
             from langchain_community.document_loaders import UnstructuredEmailLoader
             loader = UnstructuredEmailLoader(file_path)
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
         
         else:
             # Para otros formatos, intentar con TextLoader
             from langchain_community.document_loaders import TextLoader
             loader = TextLoader(file_path, encoding='utf-8')
             documents = loader.load()
-            return "\n\n".join([doc.page_content for doc in documents])
+            # Normalizar cada documento antes de concatenar
+            normalized_contents = []
+            for doc in documents:
+                normalized_content = normalize_spanish_characters(doc.page_content)
+                normalized_contents.append(normalized_content)
+            return "\n\n".join(normalized_contents)
             
     except Exception as e:
         log(f"Core Warning: Fallback de LangChain falló: {e}")
