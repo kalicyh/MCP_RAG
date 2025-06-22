@@ -44,8 +44,8 @@ class BulkIngestAdvancedGUI:
         self.root.title("Bulk Ingest Avanzado")
 
         # --- Geometría de la ventana ---
-        self.root.geometry("1024x768") 
-        self.root.minsize(900, 600)
+        self.root.geometry("1100x850") 
+        self.root.minsize(900, 700)
 
         # --- Variables de estado (DEBEN INICIALIZARSE ANTES DE CREAR WIDGETS) ---
         self.selected_directory = tk.StringVar()

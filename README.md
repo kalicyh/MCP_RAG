@@ -815,6 +815,95 @@ Las nuevas herramientas están optimizadas para uso por agentes de IA con:
 
 ---
 
+## 🌍 Soporte para Idiomas - Español
+
+### **Soporte Completo para Español**
+
+El sistema RAG está optimizado para trabajar con documentos en español, incluyendo el manejo correcto de caracteres especiales y acentos.
+
+#### **Características de Soporte para Español:**
+
+- **Normalización de Caracteres**: Corrección automática de acentos mal codificados
+- **Ligaduras Tipográficas**: Conversión de caracteres especiales a texto normal
+- **Normalización Unicode**: Manejo correcto de caracteres combinados
+- **Búsquedas Inteligentes**: Funcionamiento correcto con caracteres acentuados
+
+#### **Problemas Resueltos:**
+
+**Antes (caracteres mal codificados):**
+```
+M´etodo de punto ﬁjo
+An´alisis del error
+Bisecci´on ﬁnanciera
+```
+
+**Después (caracteres normalizados):**
+```
+Método de punto fijo
+Análisis del error
+Bisección financiera
+```
+
+#### **Tipos de Caracteres Corregidos:**
+
+1. **Acentos Mal Codificados:**
+   - `M´etodo` → `Método`
+   - `An´alisis` → `Análisis`
+   - `Bisecci´on` → `Bisección`
+
+2. **Ligaduras Tipográficas:**
+   - `ﬁnal` → `final`
+   - `ﬂujo` → `flujo`
+   - `oﬃcial` → `official`
+
+3. **Caracteres Especiales:**
+   - `…` → `...`
+   - `–` → `-`
+   - `—` → `-`
+
+4. **Normalización Unicode:**
+   - `a\u0301` → `á`
+   - `espa\u0303a` → `españa`
+
+#### **Impacto en las Búsquedas:**
+
+El sistema de normalización asegura que:
+- **Las búsquedas funcionen correctamente** con caracteres acentuados
+- **Los documentos se almacenen** con caracteres normalizados
+- **Las respuestas sean legibles** y sin caracteres extraños
+- **La compatibilidad sea total** con diferentes codificaciones
+
+#### **Ejemplo de Uso:**
+
+```python
+# El sistema procesa automáticamente caracteres problemáticos
+learn_document("documento_con_acentos.pdf")
+
+# Las búsquedas funcionan con caracteres normales
+ask_rag("¿Qué es el método de punto fijo?")
+
+# Las respuestas son legibles y correctas
+ask_rag_filtered("¿Qué análisis tenemos?", min_titles=1)
+```
+
+#### **Verificación del Sistema:**
+
+Para verificar que el sistema maneja correctamente los caracteres españoles:
+
+```bash
+# Ejecutar pruebas específicas de caracteres españoles
+python test_spanish_characters.py
+```
+
+Este script verifica:
+- ✅ Normalización de acentos mal codificados
+- ✅ Corrección de ligaduras tipográficas
+- ✅ Manejo de caracteres especiales
+- ✅ Normalización Unicode
+- ✅ Búsquedas con caracteres españoles
+
+---
+
 ## 🚀 Rendimiento y Escalabilidad
 
 ### **Mejoras de Rendimiento:**
