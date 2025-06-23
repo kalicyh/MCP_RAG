@@ -11,9 +11,12 @@ de documentos en un sistema RAG (Retrieval-Augmented Generation), incluyendo:
 - Optimizaciones para bases de datos grandes
 - Normalización de texto y limpieza
 - Gestión avanzada de metadatos
-
-Autor: Sistema RAG Modular
-Versión: 2.0
+- Sistema de cache de embeddings
+- Sistema de cache de documentos
+- Sistema de cache de consultas
+- Sistema de cache de respuestas
+- Sistema de cache de metadatos
+- Sistema de cache de embeddings
 """
 
 # =============================================================================
