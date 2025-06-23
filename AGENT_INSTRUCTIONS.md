@@ -137,6 +137,8 @@ learn_from_url("https://example.com/manual.docx")
 - **Información de Chunks**: Número de fragmento y total
 - **Método de Procesamiento**: Tipo de procesamiento usado
 - **Información de Confianza**: Nivel de confianza basado en número de fuentes
+- **Detección de Alucinaciones**: Previene respuestas falsas cuando no hay información
+- **Sugerencias Útiles**: Guía cuando no hay información disponible
 
 **Ejemplos de uso**:
 ```python
@@ -148,6 +150,50 @@ ask_rag("¿Qué dice el informe trimestral sobre las ventas?")
 
 # Buscar contexto sobre un tema
 ask_rag("¿Qué información tenemos sobre inteligencia artificial?")
+```
+
+**Respuesta mejorada de `ask_rag`**:
+```
+🤖 **Respuesta:**
+El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para aplicaciones aeroespaciales donde se requieren materiales resistentes a altas temperaturas.
+
+📚 **Fuentes de información utilizadas:**
+
+   1. **material_properties**
+      - **Tipo:** MANUAL_INPUT
+      - **Procesamiento:** Manual Text
+      - **Procesado:** 21/06/2025 17:30
+      - **Fragmento:** 1 de 1
+      - **Fragmento Relevante:**
+        > _La temperatura de fusión del titanio es 1,668°C._
+
+   2. **datasheet_titanium.pdf**
+      - **Ruta:** `D:\Docs\datasheet_titanium.pdf`
+      - **Tipo:** PDF
+      - **Procesamiento:** Unstructured Enhanced
+      - **Estructura:** 12 elementos (2 títulos, 1 tabla, 3 listas)
+      - **Fragmento:** 3 de 5
+      - **Procesado:** 21/06/2025 17:32
+      - **Fragmento Relevante:**
+        > _...el titanio puro tiene un punto de fusión de 1,668 grados Celsius, lo que lo hace ideal para aplicaciones aeroespaciales..._
+
+✅ **Alta confianza:** Respuesta basada en múltiples fuentes
+🧠 **Procesamiento inteligente:** 1 fuentes procesadas con Unstructured (preservación de estructura)
+```
+
+**Manejo de errores mejorado**:
+```
+🤖 **Respuesta:**
+
+❌ **No se encontró información relevante en la base de conocimientos para responder tu pregunta.**
+
+💡 **Sugerencias:**
+• Verifica que hayas cargado documentos relacionados con tu pregunta
+• Intenta reformular tu pregunta con términos más específicos
+• Usa `get_knowledge_base_stats()` para ver qué información está disponible
+• Considera cargar más documentos sobre el tema que te interesa
+
+⚠️ **Nota:** El sistema solo puede responder basándose en la información que ha sido previamente cargada en la base de conocimientos.
 ```
 
 ### 5. `ask_rag_filtered(query, file_type, min_tables, min_titles, processing_method)` - **NUEVA**
@@ -237,6 +283,193 @@ stats = get_knowledge_base_stats()
    • Contenido rico en estructura semántica
 ```
 
+### 7. `get_embedding_cache_stats()` - **NUEVA**
+**Cuándo usar**: Para monitorear el rendimiento del cache de embeddings y optimizar el sistema.
+
+**Información proporcionada**:
+- **Total de requests** al cache
+- **Hits en memoria** (muy rápidos)
+- **Hits en disco** (rápidos, persistentes)
+- **Misses** (requieren cálculo nuevo)
+- **Tasas de éxito** (porcentajes)
+- **Tamaño del cache** en memoria
+- **Ubicación** del cache en disco
+
+**Ejemplos de uso**:
+```python
+# Verificar rendimiento del cache
+get_embedding_cache_stats()
+
+# Monitorear antes y después de procesar documentos
+stats_before = get_embedding_cache_stats()
+learn_document("documento.pdf")
+stats_after = get_embedding_cache_stats()
+```
+
+**Respuesta de `get_embedding_cache_stats`**:
+```
+📊 **Estadísticas del Cache de Embeddings**
+
+🔄 **Total de requests:** 150
+⚡ **Memory hits:** 45 (30.0%)
+💾 **Disk hits:** 85 (56.7%)
+❌ **Misses:** 20 (13.3%)
+📈 **Overall hit rate:** 86.7%
+
+💾 **Cache en memoria:** 45 embeddings
+📁 **Cache en disco:** 130 embeddings
+📂 **Ubicación:** ./embedding_cache/
+
+🚀 **Rendimiento:** Cache funcionando de manera óptima
+```
+
+### 8. `clear_embedding_cache_tool()` - **NUEVA**
+**Cuándo usar**: Para limpiar el cache de embeddings cuando sea necesario.
+
+**Opciones de limpieza**:
+- **Limpieza completa**: Elimina cache en memoria y disco
+- **Liberación de recursos**: Útil cuando hay problemas de memoria
+- **Reinicio limpio**: Para empezar desde cero
+
+**Ejemplos de uso**:
+```python
+# Limpiar cache cuando hay problemas
+clear_embedding_cache_tool()
+
+# Limpiar antes de procesar muchos documentos nuevos
+clear_embedding_cache_tool()
+learn_document("documento1.pdf")
+learn_document("documento2.pdf")
+```
+
+**Respuesta de `clear_embedding_cache_tool`**:
+```
+🧹 **Cache de Embeddings Limpiado**
+
+✅ **Acciones realizadas:**
+   • Cache en memoria limpiado
+   • Cache en disco limpiado
+   • Estadísticas reiniciadas
+
+📊 **Estado actual:**
+   • Memory hits: 0
+   • Disk hits: 0
+   • Misses: 0
+   • Total requests: 0
+
+💡 **Nota:** El cache se reconstruirá automáticamente con el uso
+```
+
+### 9. `optimize_vector_database()` - **NUEVA**
+**Cuándo usar**: Para optimizar la base de datos vectorial y mejorar el rendimiento de búsquedas.
+
+**Información proporcionada**:
+- **Optimización de índices**: Reorganiza los índices internos
+- **Estadísticas antes/después**: Comparación de rendimiento
+- **Documentos procesados**: Número de documentos optimizados
+- **Beneficios**: Búsquedas más rápidas y precisas
+
+**Ejemplos de uso**:
+```python
+# Optimizar cuando las búsquedas son lentas
+optimize_vector_database()
+
+# Optimizar después de añadir muchos documentos
+learn_document("documento1.pdf")
+learn_document("documento2.pdf")
+optimize_vector_database()
+```
+
+**Respuesta de `optimize_vector_database`**:
+```
+✅ **Base de datos vectorial optimizada exitosamente**
+
+📊 **Estadísticas antes de la optimización:**
+   • Documentos totales: 8,934
+
+📊 **Estadísticas después de la optimización:**
+   • Documentos totales: 8,934
+
+🚀 **Beneficios:**
+   • Búsquedas más rápidas
+   • Mejor precisión en resultados
+   • Índices optimizados
+```
+
+### 10. `get_vector_database_stats()` - **NUEVA**
+**Cuándo usar**: Para obtener estadísticas detalladas de la base de datos vectorial.
+
+**Información proporcionada**:
+- **Total de documentos** almacenados
+- **Distribución por tipo de archivo** (PDF, DOCX, etc.)
+- **Métodos de procesamiento** utilizados
+- **Perfil recomendado** basado en el tamaño
+- **Dimensión de embeddings**
+
+**Ejemplos de uso**:
+```python
+# Verificar el estado de la base de datos
+get_vector_database_stats()
+
+# Analizar distribución de documentos
+stats = get_vector_database_stats()
+# Luego usar ask_rag_filtered con filtros apropiados
+```
+
+**Respuesta de `get_vector_database_stats`**:
+```
+📊 **Estadísticas de la Base de Datos Vectorial**
+
+📚 **Información General:**
+   • Total de documentos: 8,934
+   • Nombre de colección: mcp_rag_collection
+   • Dimensión de embeddings: 768
+
+📄 **Distribución por tipo de archivo:**
+   • .pdf: 5,093 documentos
+   • .xlsx: 2,642 documentos
+   • .docx: 396 documentos
+   • .txt: 502 documentos
+
+🔧 **Métodos de procesamiento:**
+   • unstructured_enhanced: 8,500 documentos
+   • markitdown: 434 documentos
+
+🎯 **Perfil recomendado:** medium
+```
+
+### 11. `reindex_vector_database(profile)` - **NUEVA**
+**Cuándo usar**: Para reindexar la base de datos con una configuración optimizada.
+
+**Parámetros**:
+- **`profile`**: Perfil de configuración ('small', 'medium', 'large', 'auto')
+
+**Ejemplos de uso**:
+```python
+# Reindexar con perfil automático
+reindex_vector_database('auto')
+
+# Reindexar con perfil específico para bases grandes
+reindex_vector_database('large')
+
+# Reindexar cuando hay problemas de rendimiento
+reindex_vector_database('medium')
+```
+
+**Respuesta de `reindex_vector_database`**:
+```
+✅ **Base de datos vectorial reindexada exitosamente**
+
+📊 **Información del proceso:**
+   • Perfil aplicado: medium
+   • Documentos procesados: 8,934
+
+🚀 **Beneficios del reindexado:**
+   • Índices optimizados para el tamaño actual
+   • Búsquedas más rápidas y precisas
+   • Mejor uso de memoria
+```
+
 ## 🔄 Flujo de Trabajo Recomendado
 
 ### Paso 1: Cargar Información
@@ -321,6 +554,12 @@ El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para 
 7. **Explorar estadísticas** antes de hacer búsquedas filtradas
 8. **Combinar filtros** para búsquedas más precisas
 9. **Verificar resultados** de búsquedas filtradas para confirmar relevancia
+10. **Monitorear el cache** usando `get_embedding_cache_stats()` para optimizar rendimiento
+11. **Limpiar cache** cuando sea necesario usando `clear_embedding_cache_tool()`
+12. **Aprovechar la persistencia** del cache en disco entre sesiones
+13. **Optimizar la base vectorial** usando `optimize_vector_database()` cuando las búsquedas sean lentas
+14. **Monitorear estadísticas** de la base vectorial con `get_vector_database_stats()`
+15. **Reindexar cuando sea necesario** usando `reindex_vector_database()` para mejorar rendimiento
 
 ### Manejo de Errores Mejorado
 - **Archivo no encontrado**: Verificar la ruta del archivo
@@ -330,6 +569,8 @@ El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para 
 - **Sin información**: Asegurarse de que se haya cargado información relevante
 - **Filtros sin resultados**: Usar filtros menos restrictivos o verificar estadísticas
 - **Error en filtros**: Verificar formato de parámetros de filtrado
+- **Cache corrupto**: Usar `clear_embedding_cache_tool()` para limpiar
+- **Baja tasa de aciertos**: Revisar patrones de consulta y optimizar
 
 ## 📝 Ejemplos de Casos de Uso Mejorados
 
@@ -460,3 +701,139 @@ ask_rag_filtered("¿Qué contenido de alta calidad tenemos?", processing_method=
 - **Métricas estructurales**: Totales y promedios de elementos
 - **Métodos de procesamiento**: Distribución de estrategias utilizadas
 - **Insights automáticos**: Análisis de calidad del contenido 
+
+## Herramientas Disponibles
+
+### 🔍 **Búsqueda y Consulta**
+- `search_documents`: Busca documentos en la base de conocimiento
+- `ask_rag`: Realiza consultas RAG con el modelo de lenguaje
+- `ask_rag_filtered`: Consultas RAG con filtros de metadatos
+
+### 📊 **Gestión de Base de Datos**
+- `get_document_statistics`: Obtiene estadísticas detalladas de la base
+- `get_vector_store_stats`: Estadísticas básicas de la base vectorial
+- `get_vector_store_stats_advanced`: **NUEVO** - Estadísticas avanzadas con información de escalabilidad
+
+### ⚡ **Optimización y Rendimiento**
+- `optimize_vector_store`: Optimiza la base vectorial (detecta automáticamente si es base grande)
+- `reindex_vector_store`: Reindexa la base con nuevo perfil
+- `optimize_vector_store_large`: **NUEVO** - Optimización incremental para bases muy grandes
+- `reindex_vector_store_large`: **NUEVO** - Reindexado incremental para bases muy grandes
+
+### 🧠 **Cache de Embeddings**
+- `get_cache_stats`: Estadísticas del cache de embeddings
+- `print_cache_stats`: Imprime estadísticas del cache
+- `clear_embedding_cache`: Limpia el cache de embeddings
+
+### 🔧 **Configuración y Perfiles**
+- `get_optimal_vector_store_profile`: Detecta el perfil óptimo automáticamente
+- `get_vector_store`: Obtiene la base vectorial con perfil optimizado
+
+## Características de Escalabilidad
+
+### **Detección Automática de Tamaño**
+El sistema detecta automáticamente si la base de datos es "grande" (>10,000 documentos) y aplica optimizaciones especiales:
+
+- **Bases pequeñas/medianas** (<10,000 docs): Optimización estándar
+- **Bases grandes** (>10,000 docs): Optimización incremental con checkpoints
+
+### **Optimización Incremental para Bases Grandes**
+- **Procesamiento por lotes**: Batches de 2,000 documentos
+- **Checkpoints automáticos**: Cada 5,000 documentos
+- **Monitoreo de memoria**: Control de uso de RAM
+- **Recuperación automática**: Reanudación desde checkpoint en caso de error
+- **Almacenamiento temporal**: Datos guardados en disco durante proceso
+
+### **Estimaciones de Rendimiento**
+El sistema proporciona estimaciones basadas en el tamaño:
+- **<1,000 docs**: 1-5 minutos
+- **1,000-10,000 docs**: 5-15 minutos  
+- **10,000-50,000 docs**: 15-45 minutos
+- **50,000-100,000 docs**: 45-90 minutos
+- **>100,000 docs**: 2-4 horas
+
+## Mejores Prácticas
+
+### **Para Bases Pequeñas/Medianas**
+1. Usar optimización estándar
+2. Cache de embeddings mejora rendimiento
+3. Reindexado ocasional para mantenimiento
+
+### **Para Bases Grandes**
+1. Optimización incremental automática
+2. Monitorear uso de memoria
+3. Checkpoints frecuentes
+4. Considerar particionamiento de datos
+5. Usar almacenamiento SSD
+
+### **Configuraciones Recomendadas**
+- **Umbral de base grande**: 10,000 documentos
+- **Batch incremental**: 2,000 documentos
+- **Checkpoint cada**: 5,000 documentos
+- **Límite de memoria**: 2,048 MB
+
+## Manejo de Errores Mejorado
+
+### **Detección de Falta de Información**
+- El sistema detecta cuando no hay información relevante
+- Proporciona mensajes claros al usuario
+- Evita respuestas falsas o inventadas
+
+### **Recuperación de Errores**
+- Errores de batch: Reducción automática del tamaño
+- Errores de memoria: Limpieza automática y pausa
+- Errores de proceso: Recuperación desde checkpoint
+
+## Ejemplos de Uso
+
+### **Consulta Simple**
+```python
+# Consulta básica
+result = ask_rag("¿Qué es la inteligencia artificial?")
+```
+
+### **Consulta con Filtros**
+```python
+# Consulta filtrada por tipo de archivo
+filter_metadata = {"file_type": ".pdf"}
+result = ask_rag_filtered("Explica machine learning", filter_metadata)
+```
+
+### **Optimización Automática**
+```python
+# El sistema detecta automáticamente el tamaño y usa el método apropiado
+result = optimize_vector_store()
+```
+
+### **Estadísticas Avanzadas**
+```python
+# Obtener información completa de escalabilidad
+stats = get_vector_store_stats_advanced()
+print(f"Es base grande: {stats['is_large_database']}")
+print(f"Tiempo estimado: {stats['estimated_optimization_time']}")
+```
+
+## Notas Importantes
+
+1. **Detección Automática**: Las funciones detectan automáticamente si es necesario usar optimización incremental
+2. **Monitoreo de Memoria**: Requiere `psutil` instalado para funcionar completamente
+3. **Checkpoints**: Se guardan automáticamente en `./temp_reindex/`
+4. **Recuperación**: Los errores en bases grandes son recuperables desde el último checkpoint
+5. **Rendimiento**: Las estimaciones son aproximadas y pueden variar según el hardware
+
+## Troubleshooting
+
+### **Error de Memoria**
+- El sistema reduce automáticamente el tamaño de batch
+- Limpia memoria y continúa el proceso
+- Considerar aumentar RAM si es frecuente
+
+### **Error de Batch**
+- Reducción automática del tamaño de batch
+- Procesamiento en sub-batches más pequeños
+- Logs detallados para debugging
+
+### **Error de Checkpoint**
+- Verificar espacio en disco
+- Limpiar directorio temporal si es necesario
+- Reanudar desde el último checkpoint válido 

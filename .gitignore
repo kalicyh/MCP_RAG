@@ -63,6 +63,7 @@ venv.bak/
 # Local database and generated files
 /rag_mcp_db/
 /converted_docs/
+/embedding_cache/
 
 # IDE / Editor specific
 .vscode/

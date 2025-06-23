@@ -223,12 +223,25 @@ La previsualización te permite:
 
 ```
 MCP_RAG/
-├── bulk_ingest_gui_advanced.py    # Aplicación GUI avanzada
-├── run_gui_advanced.bat          # Lanzador para Windows
-├── GUI_ADVANCED_README.md        # Esta documentación
-├── bulk_ingest_gui.py            # Versión básica
-├── converted_docs/               # Copias Markdown
-└── rag_mcp_db/                  # Base de datos vectorial
+├── bulk_ingest_GUI/                # Módulo principal de la GUI avanzada
+│   ├── controllers/                # Controladores (lógica de interacción)
+│   ├── models/                     # Modelos de datos y documentos
+│   ├── services/                   # Servicios de procesamiento y almacenamiento
+│   ├── views/                      # Vistas gráficas (pantallas y pestañas)
+│   ├── widgets/                    # Widgets personalizados (previsualización, estadísticas, etc.)
+│   ├── utils/                      # Utilidades y constantes
+│   ├── main.py                     # Entrada principal de la GUI modular
+│   ├── run_gui.py                  # Script para lanzar la GUI
+│   ├── start_app.py                # Alternativa de arranque
+│   └── README.md                   # Documentación interna del módulo
+├── bulk_ingest_gui.py              # Versión básica de la GUI
+├── run_gui.bat                     # Lanzador para Windows
+├── GUI_ADVANCED_README.md          # Esta documentación
+├── converted_docs/                 # Copias Markdown generadas
+├── rag_mcp_db/                     # Base de datos vectorial (ChromaDB)
+├── rag_core.py                     # Núcleo de procesamiento RAG
+├── requirements.txt                # Dependencias principales
+└── ...                             # Otros scripts y archivos auxiliares
 ```
 
 ## 🎉 Beneficios Finales
@@ -252,3 +265,80 @@ MCP_RAG/
 - **Control de calidad** en cada paso
 
 ¡Disfruta usando la versión avanzada con control total sobre tu bulk_ingest! 🚀 
+
+## 📊 Estadísticas del Sistema
+
+La aplicación cuenta con una pestaña dedicada a **Estadísticas del Sistema** para que puedas monitorear el estado y el rendimiento de tu flujo de trabajo. Esta sección está dividida en tres apartados:
+
+### Procesamiento
+- Muestra un resumen del último procesamiento realizado: total de documentos, exitosos, fallidos, omitidos y tamaño total.
+- **Actualización automática:** Los datos se refrescan automáticamente al finalizar cada procesamiento, sin necesidad de pulsar ningún botón.
+
+### Cache de Embeddings
+- Visualiza el estado del sistema de cache de embeddings, que acelera el procesamiento y almacenamiento evitando cálculos repetidos.
+- Usa el botón **"Actualizar"** para refrescar los datos del cache (hits, misses, tamaño, etc.) en tiempo real.
+- Usa el botón **"Limpiar Cache"** para borrar todo el cache de embeddings (memoria y disco), útil para liberar recursos o reiniciar el sistema de cache.
+- Después de limpiar, los valores de hits y tamaño bajan a cero; al procesar de nuevo, los valores aumentan según el uso.
+
+### Base de Datos
+- Muestra estadísticas de la base vectorial: cantidad de documentos, uso de memoria, perfil de optimización recomendado, etc.
+- Permite optimizar la base de datos (función en desarrollo).
+
+### 📋 Navegación y Selección de Documentos
+- Explora y selecciona documentos directamente desde la lista de la pestaña de revisión.
+- La previsualización se actualiza automáticamente al seleccionar un documento.
+- Usa los botones **Seleccionar Todos** o **Deseleccionar Todos** para agilizar la selección.
+- El resumen de documentos seleccionados se actualiza en tiempo real.
+
+### Consejos para el Uso del Cache y Estadísticas
+- Limpia el cache si notas que el sistema usa mucha memoria o quieres empezar de cero.
+- Observa los hits/misses: un alto número de hits indica que el cache está funcionando eficientemente.
+- No necesitas actualizar manualmente las estadísticas de procesamiento: la aplicación lo hace automáticamente.
+
+### 📤 Exportar e Importar Listas de Documentos
+En la pestaña de almacenamiento puedes:
+- **Exportar lista:** Guarda la lista de documentos procesados en un archivo JSON para reutilizarla o compartirla.
+- **Importar lista:** Carga una lista de documentos previamente exportada para continuar el flujo de trabajo o restaurar una sesión anterior.
+
+---
+
+### 🖼️ Ejemplo visual de la pestaña de Estadísticas del Sistema
+
+```
+┌───────────────────────────────┐
+│ Estadísticas del Sistema      │
+├─────────────┬────────┬────────┤
+│Procesamiento│ Cache  │BaseDatos│
+├─────────────┴────────┴────────┤
+│ Total procesados: 10         │
+│ Exitosos: 8                  │
+│ Fallidos: 0                  │
+│ Omitidos: 2                  │
+│ Tamaño total (MB): 1.2       │
+│------------------------------│
+│ Hits en memoria: 5           │
+│ Hits en disco: 20            │
+│ Misses: 2                    │
+│ Tasa de hit en memoria: 20%  │
+│ Tasa de hit general: 90%     │
+│ Tamaño en memoria: 5         │
+│ Tamaño máximo: 1000          │
+│------------------------------│
+│ Total de documentos: 120     │
+│ Nombre de colección: mcp_rag │
+│ Uso de memoria (MB): 150     │
+│ ...                          │
+└───────────────────────────────┘
+```
+
+---
+
+## 📚 Mini-glosario de términos técnicos
+
+- **Embeddings:** Representaciones numéricas de textos que permiten comparar similitud semántica entre documentos.
+- **Cache:** Espacio temporal donde se guardan datos para acelerar operaciones repetidas.
+- **Vectorial/Base vectorial:** Base de datos que almacena información como vectores para búsquedas semánticas.
+- **Chunking:** Proceso de dividir un texto largo en fragmentos más pequeños para su análisis o almacenamiento.
+- **Markdown:** Formato de texto plano que permite dar formato (negritas, listas, títulos) de manera sencilla.
+- **JSON:** Formato estándar para intercambio de datos, fácil de leer y escribir por humanos y máquinas.
+- **Optimización:** Proceso de mejorar el rendimiento de la base de datos o el sistema.

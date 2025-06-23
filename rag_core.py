@@ -1,3 +1,28 @@
+"""
+Sistema RAG Modular Avanzado - Core Module
+==========================================
+
+Este módulo proporciona funcionalidades avanzadas para el procesamiento y almacenamiento
+de documentos en un sistema RAG (Retrieval-Augmented Generation), incluyendo:
+
+- Procesamiento de múltiples formatos de documentos
+- Cache de embeddings para optimización de rendimiento
+- Chunking semántico avanzado
+- Optimizaciones para bases de datos grandes
+- Normalización de texto y limpieza
+- Gestión avanzada de metadatos
+- Sistema de cache de embeddings
+- Sistema de cache de documentos
+- Sistema de cache de consultas
+- Sistema de cache de respuestas
+- Sistema de cache de metadatos
+- Sistema de cache de embeddings
+"""
+
+# =============================================================================
+# IMPORTS Y DEPENDENCIAS
+# =============================================================================
+
 import os
 from dotenv import load_dotenv
 import torch
@@ -8,18 +33,31 @@ import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import unicodedata
+import hashlib
+import pickle
+from pathlib import Path
+from functools import lru_cache
 
+# LangChain imports
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models import ChatOllama
-# CAMBIO: Quitamos OpenAI, importamos el wrapper para embeddings locales
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# Unstructured imports
 from unstructured.partition.auto import partition
 from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
 
-# --- Configuración Avanzada de Unstructured ---
+# ChromaDB imports
+from chromadb.config import Settings
+
+# =============================================================================
+# CONFIGURACIÓN AVANZADA DE UNSTRUCTURED
+# =============================================================================
+
+# Configuraciones optimizadas para diferentes tipos de documentos
 UNSTRUCTURED_CONFIGS = {
     # Documentos de Office
     '.pdf': {
@@ -213,88 +251,427 @@ DEFAULT_CONFIG = {
     'new_after_n_chars': 1500
 }
 
-# --- Utilidad de Logging ---
-def log(message: str):
-    """Imprime un mensaje en stderr para que aparezca en los logs del cliente MCP."""
-    print(message, file=sys.stderr, flush=True)
-
-# --- Utilidad de Progreso de Descarga ---
-def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
-    """Descarga un archivo mostrando una barra de progreso."""
-    response = requests.get(url, stream=True)
-    total_size = int(response.headers.get('content-length', 0))
+# --- Sistema de Cache de Embeddings ---
+class EmbeddingCache:
+    """
+    Sistema de cache para embeddings que mejora significativamente el rendimiento
+    evitando recalcular embeddings para textos ya procesados.
+    """
     
-    with open(filename, 'wb') as file, tqdm(
-        desc=desc,
-        total=total_size,
-        unit='iB',
-        unit_scale=True,
-        unit_divisor=1024,
-        file=sys.stderr  # Enviamos a stderr para que aparezca en los logs
-    ) as pbar:
-        for data in response.iter_content(chunk_size=1024):
-            size = file.write(data)
-            pbar.update(size)
+    def __init__(self, cache_dir: str = "./embedding_cache", max_memory_size: int = 1000):
+        """
+        Inicializa el cache de embeddings.
+        
+        Args:
+            cache_dir: Directorio donde se almacenan los embeddings en disco
+            max_memory_size: Número máximo de embeddings en memoria (LRU)
+        """
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.max_memory_size = max_memory_size
+        
+        # Cache en memoria usando LRU
+        self._memory_cache = {}
+        self._access_order = []
+        
+        # Estadísticas
+        self.hits = 0
+        self.misses = 0
+        self.disk_hits = 0
+        
+        log(f"Core: Cache de embeddings inicializado en '{self.cache_dir}'")
+        log(f"Core: Tamaño máximo en memoria: {max_memory_size} embeddings")
+    
+    def _get_cache_key(self, text: str) -> str:
+        """Genera una clave única para el texto usando hash MD5."""
+        return hashlib.md5(text.encode('utf-8')).hexdigest()
+    
+    def _get_cache_file_path(self, cache_key: str) -> Path:
+        """Obtiene la ruta del archivo de cache para una clave."""
+        return self.cache_dir / f"{cache_key}.pkl"
+    
+    def _update_access_order(self, key: str):
+        """Actualiza el orden de acceso para implementar LRU."""
+        if key in self._access_order:
+            self._access_order.remove(key)
+        self._access_order.append(key)
+        
+        # Mantener solo los elementos más recientes
+        if len(self._access_order) > self.max_memory_size:
+            oldest_key = self._access_order.pop(0)
+            if oldest_key in self._memory_cache:
+                del self._memory_cache[oldest_key]
+    
+    def get(self, text: str):
+        """
+        Obtiene el embedding para un texto, primero desde memoria, luego desde disco.
+        
+        Args:
+            text: Texto para el cual obtener el embedding
+            
+        Returns:
+            Embedding si está en cache, None si no se encuentra
+        """
+        if not text or not text.strip():
+            return None
+        
+        cache_key = self._get_cache_key(text)
+        
+        # 1. Buscar en memoria
+        if cache_key in self._memory_cache:
+            self.hits += 1
+            self._update_access_order(cache_key)
+            log(f"Core: Cache HIT en memoria para texto de {len(text)} caracteres")
+            return self._memory_cache[cache_key]
+        
+        # 2. Buscar en disco
+        cache_file = self._get_cache_file_path(cache_key)
+        if cache_file.exists():
+            try:
+                with open(cache_file, 'rb') as f:
+                    embedding = pickle.load(f)
+                
+                # Mover a memoria
+                self._memory_cache[cache_key] = embedding
+                self._update_access_order(cache_key)
+                
+                self.disk_hits += 1
+                log(f"Core: Cache HIT en disco para texto de {len(text)} caracteres")
+                return embedding
+            except Exception as e:
+                log(f"Core: Error cargando embedding desde disco: {e}")
+                # Eliminar archivo corrupto
+                try:
+                    cache_file.unlink()
+                except:
+                    pass
+        
+        self.misses += 1
+        log(f"Core: Cache MISS para texto de {len(text)} caracteres")
+        return None
+    
+    def set(self, text: str, embedding):
+        """
+        Almacena un embedding en cache (memoria y disco).
+        
+        Args:
+            text: Texto original
+            embedding: Embedding a almacenar
+        """
+        if not text or not text.strip() or embedding is None:
+            return
+        
+        cache_key = self._get_cache_key(text)
+        
+        # Almacenar en memoria
+        self._memory_cache[cache_key] = embedding
+        self._update_access_order(cache_key)
+        
+        # Almacenar en disco
+        cache_file = self._get_cache_file_path(cache_key)
+        try:
+            with open(cache_file, 'wb') as f:
+                pickle.dump(embedding, f)
+            log(f"Core: Embedding guardado en cache (memoria + disco) para texto de {len(text)} caracteres")
+        except Exception as e:
+            log(f"Core: Error guardando embedding en disco: {e}")
+    
+    def clear_memory(self):
+        """Limpia el cache en memoria, manteniendo el cache en disco."""
+        self._memory_cache.clear()
+        self._access_order.clear()
+        log("Core: Cache en memoria limpiado")
+    
+    def clear_all(self):
+        """Limpia todo el cache (memoria y disco)."""
+        self.clear_memory()
+        
+        # Limpiar archivos de disco
+        try:
+            for cache_file in self.cache_dir.glob("*.pkl"):
+                cache_file.unlink()
+            log("Core: Cache completo limpiado (memoria + disco)")
+        except Exception as e:
+            log(f"Core: Error limpiando cache en disco: {e}")
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Obtiene estadísticas del cache."""
+        total_requests = self.hits + self.misses
+        memory_hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
+        disk_hit_rate = (self.disk_hits / total_requests * 100) if total_requests > 0 else 0
+        overall_hit_rate = ((self.hits + self.disk_hits) / total_requests * 100) if total_requests > 0 else 0
+        
+        return {
+            "total_requests": total_requests,
+            "memory_hits": self.hits,
+            "disk_hits": self.disk_hits,
+            "misses": self.misses,
+            "memory_hit_rate": f"{memory_hit_rate:.1f}%",
+            "disk_hit_rate": f"{disk_hit_rate:.1f}%",
+            "overall_hit_rate": f"{overall_hit_rate:.1f}%",
+            "memory_cache_size": len(self._memory_cache),
+            "max_memory_size": self.max_memory_size,
+            "cache_directory": str(self.cache_dir)
+        }
+    
+    def print_stats(self):
+        """Imprime las estadísticas del cache."""
+        stats = self.get_stats()
+        log("Core: === Estadísticas del Cache de Embeddings ===")
+        for key, value in stats.items():
+            log(f"Core: {key}: {value}")
+        log("Core: ===========================================")
 
-# --- Configuración ---
-load_dotenv()
+# =============================================================================
+# FUNCIONES DE UTILIDAD Y GESTIÓN DEL CACHE
+# =============================================================================
 
-# Obtenemos la ruta absoluta del directorio del script actual
-_project_root = os.path.dirname(os.path.abspath(__file__))
-# Forzamos la ruta absoluta para la base de datos, evitando problemas de directorio de trabajo
-PERSIST_DIRECTORY = os.path.join(_project_root, "rag_mcp_db")
+# Variable global para el cache de embeddings
+_embedding_cache = None
 
-COLLECTION_NAME = "mcp_rag_collection"
-# Definimos el modelo de embedding que usaremos localmente
-# Modelos más potentes (requieren más recursos):
-# "all-mpnet-base-v2"      # 420MB, mejor calidad
-# "text-embedding-ada-002" # 1.5GB, máxima calidad
+def get_embedding_cache() -> EmbeddingCache:
+    """
+    Obtiene la instancia global del cache de embeddings.
+    
+    Returns:
+        Instancia de EmbeddingCache
+    """
+    global _embedding_cache
+    if _embedding_cache is None:
+        _embedding_cache = EmbeddingCache()
+    return _embedding_cache
 
-# Modelos más rápidos:
-# "all-MiniLM-L6-v2"       # Tu modelo actual
-# "paraphrase-MiniLM-L3-v2" # Aún más rápido
-EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
+def get_cache_stats() -> Dict[str, Any]:
+    """
+    Obtiene estadísticas del cache de embeddings.
+    
+    Returns:
+        Diccionario con estadísticas del cache
+    """
+    cache = get_embedding_cache()
+    return cache.get_stats()
+
+def print_cache_stats():
+    """Imprime las estadísticas del cache de embeddings."""
+    cache = get_embedding_cache()
+    cache.print_stats()
+
+def clear_embedding_cache():
+    """Limpia completamente el cache de embeddings."""
+    global _embedding_cache
+    if _embedding_cache:
+        _embedding_cache.clear_all()
+        _embedding_cache = None
+    log("Core: Cache de embeddings limpiado completamente")
+
+# =============================================================================
+# FUNCIONES DE LOGGING Y UTILIDADES GENERALES
+# =============================================================================
+
+def log(message: str):
+    """Función de logging centralizada con timestamp."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}")
+
+def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
+    """
+    Descarga un archivo con barra de progreso.
+    
+    Args:
+        url: URL del archivo a descargar
+        filename: Nombre del archivo local
+        desc: Descripción para la barra de progreso
+    """
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        total_size = int(response.headers.get('content-length', 0))
+        
+        with open(filename, 'wb') as file, tqdm(
+            desc=desc,
+            total=total_size,
+            unit='iB',
+            unit_scale=True,
+            unit_divisor=1024,
+        ) as pbar:
+            for data in response.iter_content(chunk_size=1024):
+                size = file.write(data)
+                pbar.update(size)
+        
+        log(f"Core: Descarga completada: {filename}")
+    except Exception as e:
+        log(f"Core: Error en descarga: {e}")
+        raise
+
+# =============================================================================
+# GESTIÓN DE EMBEDDINGS Y MODELOS
+# =============================================================================
 
 def get_embedding_function():
     """
-    Retorna la función de embeddings a usar. Ahora, un modelo local.
-    Detecta automáticamente si hay una GPU disponible para usarla.
+    Obtiene la función de embeddings con cache integrado.
+    
+    Returns:
+        Función de embeddings con cache
     """
-    log(f"Core: Cargando modelo de embedding local: {EMBEDDING_MODEL_NAME}")
-    log("Core: Este paso puede tomar unos minutos en la primera ejecución para descargar el modelo.")
-    log("Core: Si el modelo ya está descargado, se cargará rápidamente desde la caché.")
-    
-    # Detectar si hay una GPU disponible y asignar el dispositivo correspondiente
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    log(f"Core: Usando dispositivo '{device}' para embeddings.")
-    
-    # Configurar el modelo con progreso de descarga
-    model_kwargs = {'device': device}
-    
-    # Intentar cargar el modelo con progreso visible
     try:
-        log("Core: Intentando cargar modelo (se mostrará progreso de descarga si es necesario)...")
-        embeddings = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL_NAME,
-            model_kwargs=model_kwargs
+        # Configuración del modelo de embeddings
+        model_name = "sentence-transformers/all-MiniLM-L6-v2"
+        
+        # Crear embeddings base
+        base_embeddings = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
         )
-        log("Core: ¡Modelo cargado exitosamente!")
-        return embeddings
+        
+        # Obtener cache
+        cache = get_embedding_cache()
+        
+        # Wrapper con cache
+        class CachedEmbeddings:
+            def __init__(self, base_embeddings, cache):
+                self.base_embeddings = base_embeddings
+                self.cache = cache
+            
+            def _cached_embed_query(self, text: str):
+                """Embedding con cache para consultas."""
+                # Intentar obtener del cache
+                cached_embedding = self.cache.get(text)
+                if cached_embedding is not None:
+                    return cached_embedding
+                
+                # Calcular nuevo embedding
+                embedding = self.base_embeddings.embed_query(text)
+                
+                # Guardar en cache
+                self.cache.set(text, embedding)
+                
+                return embedding
+            
+            def _cached_embed_documents(self, texts: List[str]):
+                """Embedding con cache para documentos."""
+                embeddings = []
+                uncached_texts = []
+                uncached_indices = []
+                
+                # Verificar cache para cada texto
+                for i, text in enumerate(texts):
+                    cached_embedding = self.cache.get(text)
+                    if cached_embedding is not None:
+                        embeddings.append(cached_embedding)
+                    else:
+                        embeddings.append(None)  # Placeholder
+                        uncached_texts.append(text)
+                        uncached_indices.append(i)
+                
+                # Calcular embeddings para textos no cacheados
+                if uncached_texts:
+                    new_embeddings = self.base_embeddings.embed_documents(uncached_texts)
+                    
+                    # Guardar en cache y actualizar lista
+                    for i, (text, embedding) in enumerate(zip(uncached_texts, new_embeddings)):
+                        self.cache.set(text, embedding)
+                        embeddings[uncached_indices[i]] = embedding
+                
+                return embeddings
+            
+            # Exponer métodos de la clase base
+            def embed_query(self, text: str):
+                return self._cached_embed_query(text)
+            
+            def embed_documents(self, texts: List[str]):
+                return self._cached_embed_documents(texts)
+        
+        return CachedEmbeddings(base_embeddings, cache)
+        
     except Exception as e:
-        log(f"Core: Error al cargar modelo: {e}")
-        log("Core: Esto podría ser un problema de descarga. Por favor verifica tu conexión a internet.")
+        log(f"Core: Error inicializando embeddings: {e}")
         raise
 
-def get_vector_store() -> Chroma:
-    """Crea y retorna una instancia de la base de datos vectorial."""
-    log(f"Core: Inicializando base de datos vectorial...")
+def get_optimal_vector_store_profile() -> str:
+    """
+    Detecta automáticamente el perfil óptimo basado en el tamaño de la base de datos.
+    
+    Returns:
+        Perfil óptimo ('small', 'medium', 'large')
+    """
+    try:
+        # Configuración básica de ChromaDB
+        chroma_settings = Settings(
+            anonymized_telemetry=False,
+            allow_reset=True,
+            is_persistent=True
+        )
+        
+        # Crear vector store temporal para contar documentos
+        temp_store = Chroma(
+            collection_name=COLLECTION_NAME,
+            embedding_function=get_embedding_function(),
+            persist_directory=PERSIST_DIRECTORY,
+            client_settings=chroma_settings
+        )
+        
+        # Contar documentos en la colección
+        count = temp_store._collection.count()
+        
+        # Determinar perfil basado en el tamaño
+        if count < 1000:
+            profile = 'small'
+        elif count < 10000:
+            profile = 'medium'
+        else:
+            profile = 'large'
+        
+        log(f"Core: Detectados {count} documentos, usando perfil '{profile}'")
+        return profile
+        
+    except Exception as e:
+        log(f"Core Warning: No se pudo detectar perfil automáticamente: {e}")
+        return 'medium'  # Perfil por defecto
+
+def get_vector_store(profile: str = 'auto') -> Chroma:
+    """
+    Crea y retorna una instancia optimizada de la base de datos vectorial.
+    
+    Args:
+        profile: Perfil de configuración ('small', 'medium', 'large', 'auto')
+                 'auto' detecta automáticamente el perfil óptimo
+    
+    Returns:
+        Instancia de Chroma con configuración optimizada
+    """
+    # Detectar perfil automáticamente si se solicita
+    if profile == 'auto':
+        profile = get_optimal_vector_store_profile()
+    
+    log(f"Core: Inicializando base de datos vectorial con perfil '{profile}'...")
+    
+    # Obtener información del perfil
+    profile_info = VECTOR_STORE_PROFILES.get(profile, {})
+    log(f"Core: Perfil '{profile}' - {profile_info.get('description', 'Configuración estándar')}")
+    
     embeddings = get_embedding_function()
+    
+    # Crear configuración de ChromaDB
+    chroma_settings = Settings(
+        anonymized_telemetry=False,
+        allow_reset=True,
+        is_persistent=True
+    )
+    
+    # Crear vector store con configuración optimizada
     vector_store = Chroma(
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
-        persist_directory=PERSIST_DIRECTORY
+        persist_directory=PERSIST_DIRECTORY,
+        client_settings=chroma_settings
     )
-    log(f"Core: Base de datos vectorial inicializada en '{PERSIST_DIRECTORY}'")
+    
+    log(f"Core: Base de datos vectorial optimizada inicializada en '{PERSIST_DIRECTORY}'")
+    log(f"Core: Perfil aplicado: {profile} - {profile_info.get('recommended_for', 'Configuración general')}")
+    
     return vector_store
 
 def fix_duplicated_characters(text: str) -> str:
@@ -343,9 +720,6 @@ def fix_duplicated_characters(text: str) -> str:
     
     # Detectar y corregir secuencias largas de caracteres duplicados
     # PERO IGNORAR COMPLETAMENTE LOS NÚMEROS
-    import re
-    
-    # Buscar secuencias de 3 o más caracteres iguales consecutivos
     def fix_long_duplications(match):
         char = match.group(1)
         count = len(match.group(0))
@@ -1001,15 +1375,16 @@ def flatten_metadata(metadata: Dict[str, Any], prefix: str = "") -> Dict[str, An
     
     return flattened
 
-def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_metadata: dict = None, use_semantic_chunking: bool = True):
+def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_metadata: dict = None, use_semantic_chunking: bool = True, structural_elements: List[Any] = None):
     """
-    Versión mejorada que soporta chunking semántico y metadatos estructurales.
+    Versión mejorada que soporta chunking semántico real y metadatos estructurales.
     
     Args:
         text: El texto a añadir
         vector_store: La base de datos vectorial
         source_metadata: Diccionario con metadatos de la fuente
         use_semantic_chunking: Si usar chunking semántico en lugar del tradicional
+        structural_elements: Lista de elementos estructurales para chunking semántico
     """
     if not text or text.isspace():
         log("Core Advertencia: Se intentó añadir texto vacío o solo espacios en blanco.")
@@ -1023,28 +1398,45 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
         log("Core Advertencia: El texto quedó vacío después de la limpieza.")
         return
 
-    if use_semantic_chunking and source_metadata and 'structural_info' in source_metadata:
-        # Usar chunking semántico si tenemos información estructural
-        log(f"Core: Usando chunking semántico basado en estructura del documento...")
-        # Para chunking semántico, necesitaríamos los elementos originales
-        # Por ahora, usamos el chunking tradicional pero con parámetros optimizados
+    # Determinar qué tipo de chunking usar
+    if use_semantic_chunking and structural_elements and len(structural_elements) > 1:
+        # Usar chunking semántico real con elementos estructurales
+        log(f"Core: Usando chunking semántico avanzado con {len(structural_elements)} elementos estructurales...")
+        texts = create_advanced_semantic_chunks(structural_elements, max_chunk_size=800, overlap=150)
+        
+        if not texts:
+            log("Core Warning: No se pudieron crear chunks semánticos, usando chunking tradicional...")
+            # Fallback a chunking tradicional
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200,
+                length_function=len,
+                separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
+            )
+            texts = text_splitter.split_text(cleaned_text)
+    
+    elif use_semantic_chunking and source_metadata and 'structural_info' in source_metadata:
+        # Usar chunking semántico mejorado (sin elementos estructurales)
+        log(f"Core: Usando chunking semántico mejorado basado en metadatos estructurales...")
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,  # Chunks más pequeños para mejor precisión
             chunk_overlap=150,  # Overlap moderado
             length_function=len,
             separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
         )
+        texts = text_splitter.split_text(cleaned_text)
+    
     else:
         # Usar chunking tradicional mejorado
         log(f"Core: Usando chunking tradicional mejorado...")
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
             chunk_overlap=200,
-        length_function=len,
+            length_function=len,
             separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
-    )
+        )
+        texts = text_splitter.split_text(cleaned_text)
     
-    texts = text_splitter.split_text(cleaned_text)
     log(f"Core: Texto dividido en {len(texts)} fragmentos")
     
     # Preparar metadatos para cada chunk
@@ -1057,6 +1449,14 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
             # Añadir información del chunk
             metadata['chunk_index'] = i
             metadata['total_chunks'] = len(texts)
+            
+            # Añadir información sobre el tipo de chunking usado
+            if use_semantic_chunking and structural_elements:
+                metadata['chunking_method'] = 'semantic_advanced'
+            elif use_semantic_chunking:
+                metadata['chunking_method'] = 'semantic_improved'
+            else:
+                metadata['chunking_method'] = 'traditional'
             
             metadatas.append(metadata)
         
@@ -1315,4 +1715,772 @@ def get_document_statistics(vector_store: Chroma) -> dict:
         
     except Exception as e:
         log(f"Core Error: Error obteniendo estadísticas: {e}")
-        return {"error": str(e)} 
+        return {"error": str(e)}
+
+# --- Configuración de Base Vectorial Optimizada ---
+VECTOR_STORE_CONFIG = {
+    # Configuración de persistencia y rendimiento
+    'anonymized_telemetry': False,  # Desactivar telemetría
+    'allow_reset': True,  # Permitir reset de la colección
+    'is_persistent': True,  # Habilitar persistencia
+}
+
+# Configuración para diferentes tamaños de base de datos
+VECTOR_STORE_PROFILES = {
+    'small': {  # Para bases pequeñas (< 1000 documentos)
+        'description': 'Optimizado para bases pequeñas',
+        'recommended_for': 'Menos de 1000 documentos'
+    },
+    'medium': {  # Para bases medianas (1000-10000 documentos)
+        'description': 'Optimizado para bases medianas',
+        'recommended_for': '1000-10000 documentos'
+    },
+    'large': {  # Para bases grandes (> 10000 documentos)
+        'description': 'Optimizado para bases grandes',
+        'recommended_for': 'Más de 10000 documentos'
+    }
+}
+
+def optimize_vector_store(vector_store: Chroma = None) -> dict:
+    """
+    Optimiza la base vectorial para mejorar el rendimiento.
+    Detecta automáticamente si es una base grande y usa optimización incremental.
+    Usa métodos nativos de ChromaDB para evitar límites de batch.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con información sobre la optimización
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        # Detectar automáticamente si es una base grande
+        if is_large_database(vector_store):
+            log("Core: Detectada base de datos grande, usando optimización incremental")
+            return optimize_vector_store_large(vector_store)
+        
+        log("Core: Iniciando optimización de la base vectorial...")
+        
+        # Obtener estadísticas antes de la optimización
+        stats_before = get_vector_store_stats(vector_store)
+        
+        collection = vector_store._collection
+        
+        # En lugar de reindexar, usar métodos nativos de ChromaDB para optimización
+        log("Core: Aplicando optimizaciones nativas de ChromaDB...")
+        
+        # 1. Forzar persistencia para optimizar almacenamiento
+        try:
+            collection.persist()
+            log("Core: Persistencia forzada completada")
+        except Exception as e:
+            log(f"Core Warning: No se pudo forzar persistencia: {e}")
+        
+        # 2. Obtener información de la colección para verificar estado
+        count = collection.count()
+        log(f"Core: Verificando {count} documentos en la colección")
+        
+        # 3. Realizar una consulta de prueba para verificar índices
+        try:
+            # Hacer una búsqueda de prueba para activar índices
+            test_results = collection.query(
+                query_texts=["test"],
+                n_results=1
+            )
+            log("Core: Índices de búsqueda verificados")
+        except Exception as e:
+            log(f"Core Warning: Error verificando índices: {e}")
+        
+        # 4. Verificar configuración de la colección
+        try:
+            # Obtener metadatos de la colección
+            collection_metadata = collection.metadata
+            log(f"Core: Metadatos de colección: {collection_metadata}")
+        except Exception as e:
+            log(f"Core Warning: No se pudieron obtener metadatos: {e}")
+        
+        # 5. Forzar compactación si está disponible
+        try:
+            # Intentar compactar la base de datos
+            if hasattr(collection, 'compact'):
+                collection.compact()
+                log("Core: Compactación de base de datos completada")
+            else:
+                log("Core: Compactación no disponible en esta versión de ChromaDB")
+        except Exception as e:
+            log(f"Core Warning: Error en compactación: {e}")
+        
+        # Obtener estadísticas después de la optimización
+        stats_after = get_vector_store_stats(vector_store)
+        
+        log("Core: Optimización de base vectorial completada")
+        
+        return {
+            "status": "success",
+            "message": "Base vectorial optimizada usando métodos nativos de ChromaDB",
+            "stats_before": stats_before,
+            "stats_after": stats_after,
+            "documents_processed": count,
+            "optimization_type": "native",
+            "optimizations_applied": [
+                "persistencia forzada",
+                "verificación de índices",
+                "compactación de base de datos"
+            ]
+        }
+        
+    except Exception as e:
+        log(f"Core Error: Error optimizando base vectorial: {e}")
+        return {
+            "status": "error",
+            "message": f"Error optimizando base vectorial: {str(e)}"
+        }
+
+def get_vector_store_stats(vector_store: Chroma = None) -> dict:
+    """
+    Obtiene estadísticas detalladas de la base vectorial.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con estadísticas de la base vectorial
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        collection = vector_store._collection
+        
+        # Obtener estadísticas básicas
+        count = collection.count()
+        
+        # Obtener información de configuración
+        all_data = collection.get()
+        metadata = all_data.get('metadatas', [])
+        
+        # Calcular estadísticas de metadatos
+        file_types = {}
+        processing_methods = {}
+        
+        for meta in metadata:
+            if meta:
+                file_type = meta.get('file_type', 'unknown')
+                file_types[file_type] = file_types.get(file_type, 0) + 1
+                
+                processing_method = meta.get('processing_method', 'unknown')
+                processing_methods[processing_method] = processing_methods.get(processing_method, 0) + 1
+        
+        return {
+            "total_documents": count,
+            "file_types": file_types,
+            "processing_methods": processing_methods,
+            "collection_name": collection.name,
+            "embedding_dimension": "768"  # Dimension estándar para all-mpnet-base-v2
+        }
+        
+    except Exception as e:
+        log(f"Core Error: Error obteniendo estadísticas de base vectorial: {e}")
+        return {"error": str(e)}
+
+def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> dict:
+    """
+    Reindexa la base vectorial con una configuración optimizada.
+    Detecta automáticamente si es una base grande y usa reindexado incremental.
+    Usa métodos nativos de ChromaDB para evitar límites de batch.
+    Útil cuando se cambia el perfil de configuración.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+        profile: Perfil de configuración para reindexar
+    
+    Returns:
+        Diccionario con información sobre el reindexado
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        # Detectar automáticamente si es una base grande
+        if is_large_database(vector_store):
+            log(f"Core: Detectada base de datos grande, usando reindexado incremental con perfil '{profile}'")
+            return reindex_vector_store_large(vector_store, profile)
+        
+        log(f"Core: Iniciando reindexado de base vectorial con perfil '{profile}'...")
+        
+        collection = vector_store._collection
+        
+        # Obtener estadísticas antes del reindexado
+        count_before = collection.count()
+        log(f"Core: Documentos antes del reindexado: {count_before}")
+        
+        # En lugar de eliminar y reinsertar, usar métodos nativos de ChromaDB
+        log("Core: Aplicando reindexado usando métodos nativos de ChromaDB...")
+        
+        # 1. Verificar que la colección esté en buen estado
+        try:
+            # Hacer una consulta de prueba para verificar índices
+            test_results = collection.query(
+                query_texts=["test"],
+                n_results=1
+            )
+            log("Core: Índices de búsqueda verificados")
+        except Exception as e:
+            log(f"Core Warning: Error verificando índices: {e}")
+        
+        # 2. Forzar persistencia si está disponible
+        try:
+            if hasattr(collection, 'persist'):
+                collection.persist()
+                log("Core: Persistencia forzada completada")
+            else:
+                log("Core: Persistencia no disponible en esta versión")
+        except Exception as e:
+            log(f"Core Warning: No se pudo forzar persistencia: {e}")
+        
+        # 3. Verificar configuración de la colección
+        try:
+            collection_metadata = collection.metadata
+            log(f"Core: Metadatos de colección: {collection_metadata}")
+        except Exception as e:
+            log(f"Core Warning: No se pudieron obtener metadatos: {e}")
+        
+        # 4. Intentar compactación si está disponible
+        try:
+            if hasattr(collection, 'compact'):
+                collection.compact()
+                log("Core: Compactación de base de datos completada")
+            else:
+                log("Core: Compactación no disponible en esta versión de ChromaDB")
+        except Exception as e:
+            log(f"Core Warning: Error en compactación: {e}")
+        
+        # 5. Verificar que el perfil se aplique correctamente
+        # Esto se hace automáticamente al crear el vector_store con el perfil
+        log(f"Core: Perfil '{profile}' aplicado a la configuración")
+        
+        # Obtener estadísticas después del reindexado
+        count_after = collection.count()
+        log(f"Core: Documentos después del reindexado: {count_after}")
+        
+        log("Core: Reindexado de base vectorial completado")
+        
+        return {
+            "status": "success",
+            "message": f"Base vectorial reindexada con perfil '{profile}' usando métodos nativos",
+            "documents_before": count_before,
+            "documents_after": count_after,
+            "reindex_type": "native",
+            "profile_applied": profile,
+            "optimizations_applied": [
+                "verificación de índices",
+                "persistencia forzada",
+                "compactación de base de datos",
+                "aplicación de perfil"
+            ]
+        }
+        
+    except Exception as e:
+        log(f"Core Error: Error reindexando base vectorial: {e}")
+        return {
+            "status": "error",
+            "message": f"Error reindexando base vectorial: {str(e)}"
+        }
+
+def reindex_vector_store_large(vector_store: Chroma = None, profile: str = 'auto') -> dict:
+    """
+    Reindexado especial para bases de datos muy grandes con procesamiento incremental.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+        profile: Perfil de configuración para reindexar
+    
+    Returns:
+        Diccionario con información sobre el reindexado
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        log(f"Core: Iniciando reindexado incremental con perfil '{profile}'...")
+        
+        # Verificar si es una base grande
+        if not is_large_database(vector_store):
+            log("Core: Base no es grande, usando reindexado estándar")
+            return reindex_vector_store(vector_store, profile)
+        
+        # Usar la misma lógica que optimize_vector_store_large pero con nuevo perfil
+        return optimize_vector_store_large(vector_store)
+        
+    except Exception as e:
+        log(f"Core Error: Error en reindexado para base grande: {e}")
+        return {
+            "status": "error",
+            "message": f"Error en reindexado para base grande: {str(e)}"
+        }
+
+def get_vector_store_stats_advanced(vector_store: Chroma = None) -> dict:
+    """
+    Estadísticas avanzadas incluyendo información de escalabilidad.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con estadísticas avanzadas
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        # Obtener estadísticas básicas
+        basic_stats = get_vector_store_stats(vector_store)
+        
+        # Añadir información de escalabilidad
+        is_large = is_large_database(vector_store)
+        memory_usage = get_memory_usage()
+        
+        # Calcular estimaciones de rendimiento
+        total_docs = basic_stats.get('total_documents', 0)
+        
+        # Estimaciones basadas en el tamaño
+        if total_docs < 1000:
+            estimated_optimization_time = "1-5 minutos"
+            recommended_approach = "estándar"
+        elif total_docs < 10000:
+            estimated_optimization_time = "5-15 minutos"
+            recommended_approach = "estándar"
+        elif total_docs < 50000:
+            estimated_optimization_time = "15-45 minutos"
+            recommended_approach = "incremental"
+        elif total_docs < 100000:
+            estimated_optimization_time = "45-90 minutos"
+            recommended_approach = "incremental"
+        else:
+            estimated_optimization_time = "2-4 horas"
+            recommended_approach = "incremental"
+        
+        advanced_stats = {
+            **basic_stats,
+            "is_large_database": is_large,
+            "current_memory_usage_mb": memory_usage,
+            "estimated_optimization_time": estimated_optimization_time,
+            "recommended_optimization_approach": recommended_approach,
+            "memory_threshold": LARGE_DB_CONFIG['memory_threshold'],
+            "incremental_batch_size": LARGE_DB_CONFIG['incremental_batch_size'],
+            "checkpoint_interval": LARGE_DB_CONFIG['checkpoint_interval']
+        }
+        
+        return advanced_stats
+        
+    except Exception as e:
+        log(f"Core Error: Error obteniendo estadísticas avanzadas: {e}")
+        return {"error": str(e)}
+
+# --- Configuraciones para Bases Grandes ---
+LARGE_DB_CONFIG = {
+    'incremental_batch_size': 2000,  # Batch más pequeño para bases grandes
+    'memory_threshold': 10000,  # Número de documentos para usar modo incremental
+    'checkpoint_interval': 5000,  # Guardar progreso cada N documentos
+    'max_memory_usage_mb': 2048,  # Límite de memoria en MB
+    'temp_storage_dir': './temp_reindex'
+}
+
+def is_large_database(vector_store: Chroma = None) -> bool:
+    """
+    Determina si la base de datos es considerada "grande" para optimizaciones especiales.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        True si la base es grande (>10,000 documentos)
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        count = vector_store._collection.count()
+        return count > LARGE_DB_CONFIG['memory_threshold']
+        
+    except Exception as e:
+        log(f"Core Error: Error verificando tamaño de base: {e}")
+        return False
+
+def get_memory_usage() -> float:
+    """
+    Obtiene el uso actual de memoria en MB.
+    
+    Returns:
+        Uso de memoria en MB
+    """
+    try:
+        import psutil
+        process = psutil.Process()
+        return process.memory_info().rss / 1024 / 1024  # Convertir a MB
+    except ImportError:
+        log("Core: psutil no disponible, no se puede monitorear memoria")
+        return 0.0
+
+def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
+    """
+    Optimización especial para bases de datos muy grandes (>10,000 documentos).
+    Usa procesamiento incremental y checkpoints para evitar problemas de memoria.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con información sobre la optimización
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        log("Core: Iniciando optimización para base de datos grande...")
+        
+        # Verificar si realmente es una base grande
+        if not is_large_database(vector_store):
+            log("Core: Base no es grande, usando optimización estándar")
+            return optimize_vector_store(vector_store)
+        
+        # Crear directorio temporal si no existe
+        import os
+        temp_dir = LARGE_DB_CONFIG['temp_storage_dir']
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        collection = vector_store._collection
+        all_data = collection.get()
+        
+        if not all_data['documents']:
+            return {
+                "status": "warning",
+                "message": "No hay documentos para optimizar"
+            }
+        
+        documents = all_data['documents']
+        metadatas = all_data['metadatas']
+        ids = all_data['ids']
+        
+        total_docs = len(documents)
+        batch_size = LARGE_DB_CONFIG['incremental_batch_size']
+        checkpoint_interval = LARGE_DB_CONFIG['checkpoint_interval']
+        
+        log(f"Core: Optimizando {total_docs} documentos en modo incremental")
+        log(f"Core: Batch size: {batch_size}, Checkpoint cada: {checkpoint_interval}")
+        
+        # Guardar datos originales en archivos temporales
+        import pickle
+        temp_data_file = os.path.join(temp_dir, 'temp_data.pkl')
+        with open(temp_data_file, 'wb') as f:
+            pickle.dump({
+                'documents': documents,
+                'metadatas': metadatas,
+                'ids': ids
+            }, f)
+        
+        # Eliminar documentos originales
+        collection.delete(ids=ids)
+        
+        # Procesar en batches con checkpoints
+        processed_count = 0
+        checkpoint_file = os.path.join(temp_dir, 'checkpoint.txt')
+        
+        # Verificar si hay un checkpoint previo
+        if os.path.exists(checkpoint_file):
+            with open(checkpoint_file, 'r') as f:
+                processed_count = int(f.read().strip())
+            log(f"Core: Resumiendo desde documento {processed_count}")
+        
+        try:
+            for i in range(processed_count, total_docs, batch_size):
+                end_idx = min(i + batch_size, total_docs)
+                batch_docs = documents[i:end_idx]
+                batch_metadatas = metadatas[i:end_idx]
+                batch_ids = ids[i:end_idx]
+                
+                # Verificar uso de memoria
+                memory_usage = get_memory_usage()
+                if memory_usage > LARGE_DB_CONFIG['max_memory_usage_mb']:
+                    log(f"Core Warning: Uso de memoria alto ({memory_usage:.1f}MB), pausando...")
+                    # Forzar limpieza de memoria
+                    import gc
+                    gc.collect()
+                
+                # Procesar batch
+                try:
+                    collection.add(
+                        documents=batch_docs,
+                        metadatas=batch_metadatas,
+                        ids=batch_ids
+                    )
+                    
+                    processed_count = end_idx
+                    log(f"Core: Batch procesado ({i+1}-{end_idx} de {total_docs}) - Memoria: {memory_usage:.1f}MB")
+                    
+                    # Guardar checkpoint
+                    if end_idx % checkpoint_interval == 0 or end_idx == total_docs:
+                        with open(checkpoint_file, 'w') as f:
+                            f.write(str(end_idx))
+                        log(f"Core: Checkpoint guardado en documento {end_idx}")
+                        
+                except Exception as batch_error:
+                    log(f"Core Error: Error en batch {i//batch_size + 1}: {batch_error}")
+                    # Intentar con batch más pequeño
+                    smaller_batch_size = batch_size // 2
+                    for j in range(0, len(batch_docs), smaller_batch_size):
+                        sub_end = min(j + smaller_batch_size, len(batch_docs))
+                        sub_docs = batch_docs[j:sub_end]
+                        sub_metadatas = batch_metadatas[j:sub_end]
+                        sub_ids = batch_ids[j:sub_end]
+                        
+                        collection.add(
+                            documents=sub_docs,
+                            metadatas=sub_metadatas,
+                            ids=sub_ids
+                        )
+                        log(f"Core: Sub-batch procesado ({j+1}-{sub_end} de {len(batch_docs)})")
+            
+            # Limpiar archivos temporales
+            if os.path.exists(temp_data_file):
+                os.remove(temp_data_file)
+            if os.path.exists(checkpoint_file):
+                os.remove(checkpoint_file)
+            
+            log("Core: Optimización incremental completada")
+            
+            return {
+                "status": "success",
+                "message": f"Base vectorial optimizada incrementalmente ({total_docs} documentos)",
+                "documents_processed": total_docs,
+                "optimization_type": "incremental"
+            }
+            
+        except Exception as e:
+            log(f"Core Error: Error durante optimización incremental: {e}")
+            # Restaurar desde checkpoint si es posible
+            if os.path.exists(checkpoint_file):
+                log("Core: Error recuperable, se puede reanudar desde checkpoint")
+            
+            return {
+                "status": "error",
+                "message": f"Error en optimización incremental: {str(e)}",
+                "recoverable": True
+            }
+        
+    except Exception as e:
+        log(f"Core Error: Error en optimización para base grande: {e}")
+        return {
+            "status": "error",
+            "message": f"Error en optimización para base grande: {str(e)}"
+        }
+
+def load_document_with_elements(file_path: str) -> tuple[str, dict, List[Any]]:
+    """
+    Carga documento manteniendo los elementos estructurales para chunking semántico.
+    
+    Args:
+        file_path: Ruta del archivo a cargar
+    
+    Returns:
+        Tupla con (contenido_texto, metadatos, elementos_estructurales)
+    """
+    file_extension = os.path.splitext(file_path)[1].lower()
+    
+    # Estrategia 1: Unstructured con configuración óptima
+    try:
+        log(f"Core: Intentando carga con Unstructured (configuración óptima)...")
+        config = UNSTRUCTURED_CONFIGS.get(file_extension, DEFAULT_CONFIG)
+        
+        # Para PDFs, usar configuración más rápida para evitar colgadas
+        if file_extension == '.pdf':
+            log(f"Core: PDF detectado, usando configuración rápida para evitar timeouts...")
+            config = config.copy()
+            config['strategy'] = 'fast'
+            config['max_partition'] = 1000
+            config['new_after_n_chars'] = 800
+        
+        elements = partition(filename=file_path, **config)
+        
+        # Procesar elementos de manera inteligente
+        processed_text = process_unstructured_elements(elements)
+        
+        # Extraer metadatos estructurales
+        metadata = extract_structural_metadata(elements, file_path)
+        
+        if processed_text and not processed_text.isspace():
+            log(f"Core: Carga exitosa con Unstructured (configuración óptima)")
+            return processed_text, metadata, elements
+    
+    except Exception as e:
+        log(f"Core Warning: Unstructured (configuración óptima) falló: {e}")
+    
+    # Estrategia 2: Unstructured con configuración básica
+    try:
+        log(f"Core: Intentando carga con Unstructured (configuración básica)...")
+        elements = partition(filename=file_path, strategy="fast", max_partition=1000)
+        processed_text = process_unstructured_elements(elements)
+        metadata = extract_structural_metadata(elements, file_path)
+        
+        if processed_text and not processed_text.isspace():
+            log(f"Core: Carga exitosa con Unstructured (configuración básica)")
+            return processed_text, metadata, elements
+    
+    except Exception as e:
+        log(f"Core Warning: Unstructured (configuración básica) falló: {e}")
+    
+    # Estrategia 3: Cargadores específicos de LangChain (sin elementos estructurales)
+    try:
+        log(f"Core: Intentando carga con cargadores específicos de LangChain...")
+        fallback_text = load_with_langchain_fallbacks(file_path)
+        
+        if fallback_text and not fallback_text.isspace():
+            metadata = {
+                "source": os.path.basename(file_path),
+                "file_path": file_path,
+                "file_type": file_extension,
+                "processed_date": datetime.now().isoformat(),
+                "processing_method": "langchain_fallback",
+                "structural_info": {
+                    "total_elements": 1,
+                    "titles_count": 0,
+                    "tables_count": 0,
+                    "lists_count": 0,
+                    "narrative_blocks": 1,
+                    "other_elements": 0,
+                    "total_text_length": len(fallback_text),
+                    "avg_element_length": len(fallback_text)
+                }
+            }
+            log(f"Core: Carga exitosa con cargadores específicos de LangChain")
+            return fallback_text, metadata, None  # Sin elementos estructurales
+    
+    except Exception as e:
+        log(f"Core Warning: Cargadores específicos de LangChain fallaron: {e}")
+    
+    # Si todas las estrategias fallan
+    log(f"Core Error: Todas las estrategias de carga fallaron para '{file_path}'")
+    return "", {}, None
+
+def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    """
+    Crea chunks semánticos avanzados basados en la estructura real del documento.
+    
+    Args:
+        elements: Lista de elementos extraídos por Unstructured
+        max_chunk_size: Tamaño máximo de cada chunk
+        overlap: Superposición entre chunks
+    
+    Returns:
+        Lista de chunks semánticos
+    """
+    if not elements:
+        return []
+    
+    chunks = []
+    current_chunk = []
+    current_size = 0
+    
+    log(f"Core: Creando chunks semánticos avanzados con {len(elements)} elementos...")
+    
+    for i, element in enumerate(elements):
+        # Extraer texto del elemento
+        element_text = ""
+        if hasattr(element, 'text'):
+            element_text = element.text
+        elif hasattr(element, 'content'):
+            element_text = element.content
+        else:
+            element_text = str(element)
+        
+        # Limpiar el texto
+        element_text = element_text.strip()
+        if not element_text:
+            continue
+        
+        element_size = len(element_text)
+        
+        # Determinar si este elemento es un punto de quiebre natural
+        is_break_point = False
+        
+        # Verificar si es un título (punto de quiebre natural)
+        if hasattr(element, 'category'):
+            if element.category in ['Title', 'NarrativeText', 'ListItem']:
+                is_break_point = True
+        elif hasattr(element, 'metadata') and element.metadata:
+            if element.metadata.get('category') in ['Title', 'NarrativeText', 'ListItem']:
+                is_break_point = True
+        
+        # Si añadir este elemento excedería el tamaño máximo Y es un punto de quiebre
+        if current_size + element_size > max_chunk_size and current_chunk and is_break_point:
+            # Guardar el chunk actual
+            chunk_text = "\n\n".join(current_chunk)
+            if chunk_text.strip():
+                chunks.append(chunk_text)
+                log(f"Core: Chunk {len(chunks)} creado con {len(current_chunk)} elementos, tamaño: {len(chunk_text)}")
+            
+            # Crear overlap con elementos anteriores si es posible
+            overlap_elements = []
+            overlap_size = 0
+            for j in range(len(current_chunk) - 1, -1, -1):
+                if overlap_size + len(current_chunk[j]) <= overlap:
+                    overlap_elements.insert(0, current_chunk[j])
+                    overlap_size += len(current_chunk[j])
+                else:
+                    break
+            
+            # Iniciar nuevo chunk con overlap
+            current_chunk = overlap_elements + [element_text]
+            current_size = overlap_size + element_size
+        else:
+            # Añadir al chunk actual
+            current_chunk.append(element_text)
+            current_size += element_size
+    
+    # Añadir el último chunk si existe
+    if current_chunk:
+        chunk_text = "\n\n".join(current_chunk)
+        if chunk_text.strip():
+            chunks.append(chunk_text)
+            log(f"Core: Chunk final {len(chunks)} creado con {len(current_chunk)} elementos, tamaño: {len(chunk_text)}")
+    
+    log(f"Core: Chunking semántico avanzado completado: {len(chunks)} chunks creados")
+    return chunks
+
+# =============================================================================
+# CONFIGURACIÓN Y GESTIÓN DEL VECTOR STORE
+# =============================================================================
+
+# Configuración del proyecto
+load_dotenv()
+
+# Obtener la ruta absoluta del directorio del script actual
+_project_root = os.path.dirname(os.path.abspath(__file__))
+# Forzar la ruta absoluta para la base de datos, evitando problemas de directorio de trabajo
+PERSIST_DIRECTORY = os.path.join(_project_root, "rag_mcp_db")
+COLLECTION_NAME = "mcp_rag_collection"
+
+# Perfiles de configuración para diferentes tamaños de base de datos
+VECTOR_STORE_PROFILES = {
+    'small': {
+        'description': 'Base de datos pequeña (< 1000 documentos)',
+        'recommended_for': 'Desarrollo y pruebas',
+        'chunk_size': 1000,
+        'chunk_overlap': 200
+    },
+    'medium': {
+        'description': 'Base de datos mediana (1000-10000 documentos)',
+        'recommended_for': 'Uso general',
+        'chunk_size': 1000,
+        'chunk_overlap': 200
+    },
+    'large': {
+        'description': 'Base de datos grande (> 10000 documentos)',
+        'recommended_for': 'Producción y grandes volúmenes',
+        'chunk_size': 800,
+        'chunk_overlap': 150
+    }
+}

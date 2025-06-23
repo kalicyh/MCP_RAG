@@ -54,7 +54,7 @@ echo.
 echo [4/4] Iniciando la aplicacion...
 echo =======================================================
 echo.
-python bulk_ingest_gui.py
+python bulk_ingest_GUI/run_gui.py
 
 echo.
 echo La aplicacion se ha cerrado. Pulsa cualquier tecla para salir.
