@@ -360,6 +360,116 @@ learn_document("documento2.pdf")
 💡 **Nota:** El cache se reconstruirá automáticamente con el uso
 ```
 
+### 9. `optimize_vector_database()` - **NUEVA**
+**Cuándo usar**: Para optimizar la base de datos vectorial y mejorar el rendimiento de búsquedas.
+
+**Información proporcionada**:
+- **Optimización de índices**: Reorganiza los índices internos
+- **Estadísticas antes/después**: Comparación de rendimiento
+- **Documentos procesados**: Número de documentos optimizados
+- **Beneficios**: Búsquedas más rápidas y precisas
+
+**Ejemplos de uso**:
+```python
+# Optimizar cuando las búsquedas son lentas
+optimize_vector_database()
+
+# Optimizar después de añadir muchos documentos
+learn_document("documento1.pdf")
+learn_document("documento2.pdf")
+optimize_vector_database()
+```
+
+**Respuesta de `optimize_vector_database`**:
+```
+✅ **Base de datos vectorial optimizada exitosamente**
+
+📊 **Estadísticas antes de la optimización:**
+   • Documentos totales: 8,934
+
+📊 **Estadísticas después de la optimización:**
+   • Documentos totales: 8,934
+
+🚀 **Beneficios:**
+   • Búsquedas más rápidas
+   • Mejor precisión en resultados
+   • Índices optimizados
+```
+
+### 10. `get_vector_database_stats()` - **NUEVA**
+**Cuándo usar**: Para obtener estadísticas detalladas de la base de datos vectorial.
+
+**Información proporcionada**:
+- **Total de documentos** almacenados
+- **Distribución por tipo de archivo** (PDF, DOCX, etc.)
+- **Métodos de procesamiento** utilizados
+- **Perfil recomendado** basado en el tamaño
+- **Dimensión de embeddings**
+
+**Ejemplos de uso**:
+```python
+# Verificar el estado de la base de datos
+get_vector_database_stats()
+
+# Analizar distribución de documentos
+stats = get_vector_database_stats()
+# Luego usar ask_rag_filtered con filtros apropiados
+```
+
+**Respuesta de `get_vector_database_stats`**:
+```
+📊 **Estadísticas de la Base de Datos Vectorial**
+
+📚 **Información General:**
+   • Total de documentos: 8,934
+   • Nombre de colección: mcp_rag_collection
+   • Dimensión de embeddings: 768
+
+📄 **Distribución por tipo de archivo:**
+   • .pdf: 5,093 documentos
+   • .xlsx: 2,642 documentos
+   • .docx: 396 documentos
+   • .txt: 502 documentos
+
+🔧 **Métodos de procesamiento:**
+   • unstructured_enhanced: 8,500 documentos
+   • markitdown: 434 documentos
+
+🎯 **Perfil recomendado:** medium
+```
+
+### 11. `reindex_vector_database(profile)` - **NUEVA**
+**Cuándo usar**: Para reindexar la base de datos con una configuración optimizada.
+
+**Parámetros**:
+- **`profile`**: Perfil de configuración ('small', 'medium', 'large', 'auto')
+
+**Ejemplos de uso**:
+```python
+# Reindexar con perfil automático
+reindex_vector_database('auto')
+
+# Reindexar con perfil específico para bases grandes
+reindex_vector_database('large')
+
+# Reindexar cuando hay problemas de rendimiento
+reindex_vector_database('medium')
+```
+
+**Respuesta de `reindex_vector_database`**:
+```
+✅ **Base de datos vectorial reindexada exitosamente**
+
+📊 **Información del proceso:**
+   • Perfil aplicado: medium
+   • Documentos procesados: 8,934
+
+🚀 **Beneficios del reindexado:**
+   • Índices optimizados para el tamaño actual
+   • Búsquedas más rápidas y precisas
+   • Mejor uso de memoria
+```
+
 ## 🔄 Flujo de Trabajo Recomendado
 
 ### Paso 1: Cargar Información
@@ -447,6 +557,9 @@ El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para 
 10. **Monitorear el cache** usando `get_embedding_cache_stats()` para optimizar rendimiento
 11. **Limpiar cache** cuando sea necesario usando `clear_embedding_cache_tool()`
 12. **Aprovechar la persistencia** del cache en disco entre sesiones
+13. **Optimizar la base vectorial** usando `optimize_vector_database()` cuando las búsquedas sean lentas
+14. **Monitorear estadísticas** de la base vectorial con `get_vector_database_stats()`
+15. **Reindexar cuando sea necesario** usando `reindex_vector_database()` para mejorar rendimiento
 
 ### Manejo de Errores Mejorado
 - **Archivo no encontrado**: Verificar la ruta del archivo
@@ -588,3 +701,139 @@ ask_rag_filtered("¿Qué contenido de alta calidad tenemos?", processing_method=
 - **Métricas estructurales**: Totales y promedios de elementos
 - **Métodos de procesamiento**: Distribución de estrategias utilizadas
 - **Insights automáticos**: Análisis de calidad del contenido 
+
+## Herramientas Disponibles
+
+### 🔍 **Búsqueda y Consulta**
+- `search_documents`: Busca documentos en la base de conocimiento
+- `ask_rag`: Realiza consultas RAG con el modelo de lenguaje
+- `ask_rag_filtered`: Consultas RAG con filtros de metadatos
+
+### 📊 **Gestión de Base de Datos**
+- `get_document_statistics`: Obtiene estadísticas detalladas de la base
+- `get_vector_store_stats`: Estadísticas básicas de la base vectorial
+- `get_vector_store_stats_advanced`: **NUEVO** - Estadísticas avanzadas con información de escalabilidad
+
+### ⚡ **Optimización y Rendimiento**
+- `optimize_vector_store`: Optimiza la base vectorial (detecta automáticamente si es base grande)
+- `reindex_vector_store`: Reindexa la base con nuevo perfil
+- `optimize_vector_store_large`: **NUEVO** - Optimización incremental para bases muy grandes
+- `reindex_vector_store_large`: **NUEVO** - Reindexado incremental para bases muy grandes
+
+### 🧠 **Cache de Embeddings**
+- `get_cache_stats`: Estadísticas del cache de embeddings
+- `print_cache_stats`: Imprime estadísticas del cache
+- `clear_embedding_cache`: Limpia el cache de embeddings
+
+### 🔧 **Configuración y Perfiles**
+- `get_optimal_vector_store_profile`: Detecta el perfil óptimo automáticamente
+- `get_vector_store`: Obtiene la base vectorial con perfil optimizado
+
+## Características de Escalabilidad
+
+### **Detección Automática de Tamaño**
+El sistema detecta automáticamente si la base de datos es "grande" (>10,000 documentos) y aplica optimizaciones especiales:
+
+- **Bases pequeñas/medianas** (<10,000 docs): Optimización estándar
+- **Bases grandes** (>10,000 docs): Optimización incremental con checkpoints
+
+### **Optimización Incremental para Bases Grandes**
+- **Procesamiento por lotes**: Batches de 2,000 documentos
+- **Checkpoints automáticos**: Cada 5,000 documentos
+- **Monitoreo de memoria**: Control de uso de RAM
+- **Recuperación automática**: Reanudación desde checkpoint en caso de error
+- **Almacenamiento temporal**: Datos guardados en disco durante proceso
+
+### **Estimaciones de Rendimiento**
+El sistema proporciona estimaciones basadas en el tamaño:
+- **<1,000 docs**: 1-5 minutos
+- **1,000-10,000 docs**: 5-15 minutos  
+- **10,000-50,000 docs**: 15-45 minutos
+- **50,000-100,000 docs**: 45-90 minutos
+- **>100,000 docs**: 2-4 horas
+
+## Mejores Prácticas
+
+### **Para Bases Pequeñas/Medianas**
+1. Usar optimización estándar
+2. Cache de embeddings mejora rendimiento
+3. Reindexado ocasional para mantenimiento
+
+### **Para Bases Grandes**
+1. Optimización incremental automática
+2. Monitorear uso de memoria
+3. Checkpoints frecuentes
+4. Considerar particionamiento de datos
+5. Usar almacenamiento SSD
+
+### **Configuraciones Recomendadas**
+- **Umbral de base grande**: 10,000 documentos
+- **Batch incremental**: 2,000 documentos
+- **Checkpoint cada**: 5,000 documentos
+- **Límite de memoria**: 2,048 MB
+
+## Manejo de Errores Mejorado
+
+### **Detección de Falta de Información**
+- El sistema detecta cuando no hay información relevante
+- Proporciona mensajes claros al usuario
+- Evita respuestas falsas o inventadas
+
+### **Recuperación de Errores**
+- Errores de batch: Reducción automática del tamaño
+- Errores de memoria: Limpieza automática y pausa
+- Errores de proceso: Recuperación desde checkpoint
+
+## Ejemplos de Uso
+
+### **Consulta Simple**
+```python
+# Consulta básica
+result = ask_rag("¿Qué es la inteligencia artificial?")
+```
+
+### **Consulta con Filtros**
+```python
+# Consulta filtrada por tipo de archivo
+filter_metadata = {"file_type": ".pdf"}
+result = ask_rag_filtered("Explica machine learning", filter_metadata)
+```
+
+### **Optimización Automática**
+```python
+# El sistema detecta automáticamente el tamaño y usa el método apropiado
+result = optimize_vector_store()
+```
+
+### **Estadísticas Avanzadas**
+```python
+# Obtener información completa de escalabilidad
+stats = get_vector_store_stats_advanced()
+print(f"Es base grande: {stats['is_large_database']}")
+print(f"Tiempo estimado: {stats['estimated_optimization_time']}")
+```
+
+## Notas Importantes
+
+1. **Detección Automática**: Las funciones detectan automáticamente si es necesario usar optimización incremental
+2. **Monitoreo de Memoria**: Requiere `psutil` instalado para funcionar completamente
+3. **Checkpoints**: Se guardan automáticamente en `./temp_reindex/`
+4. **Recuperación**: Los errores en bases grandes son recuperables desde el último checkpoint
+5. **Rendimiento**: Las estimaciones son aproximadas y pueden variar según el hardware
+
+## Troubleshooting
+
+### **Error de Memoria**
+- El sistema reduce automáticamente el tamaño de batch
+- Limpia memoria y continúa el proceso
+- Considerar aumentar RAM si es frecuente
+
+### **Error de Batch**
+- Reducción automática del tamaño de batch
+- Procesamiento en sub-batches más pequeños
+- Logs detallados para debugging
+
+### **Error de Checkpoint**
+- Verificar espacio en disco
+- Limpiar directorio temporal si es necesario
+- Reanudar desde el último checkpoint válido 

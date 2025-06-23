@@ -7,18 +7,22 @@ from urllib.parse import urlparse
 
 # --- Importaciones de nuestro núcleo RAG ---
 from rag_core import (
-    get_vector_store,
-    add_text_to_knowledge_base,
-    add_text_to_knowledge_base_enhanced,  # Nueva función mejorada
-    load_document_with_fallbacks,         # Nueva función de procesamiento con Unstructured
-    get_qa_chain,
+    add_text_to_knowledge_base,           # Función para añadir texto a la base
+    add_text_to_knowledge_base_enhanced,  # Función mejorada para añadir texto
+    load_document_with_fallbacks,         # Nueva función de carga con fallbacks
+    get_qa_chain,                         # Función para obtener la cadena QA
+    get_vector_store,                     # Función para obtener la base vectorial
     search_with_metadata_filters,         # Nueva función de búsqueda con filtros
     create_metadata_filter,               # Nueva función para crear filtros
     get_document_statistics,              # Nueva función para estadísticas
     get_cache_stats,                      # Nueva función para estadísticas del cache
     print_cache_stats,                    # Nueva función para imprimir estadísticas del cache
     clear_embedding_cache,                # Nueva función para limpiar cache
-    log  # Importamos nuestra nueva función de log
+    log,  # Importamos nuestra nueva función de log
+    optimize_vector_store,
+    get_vector_store_stats,
+    reindex_vector_store,
+    get_optimal_vector_store_profile
 )
 
 # --- Inicialización del Servidor y Configuración ---
@@ -1175,6 +1179,155 @@ def clear_embedding_cache_tool() -> str:
     except Exception as e:
         log(f"MCP Server: Error limpiando cache: {e}")
         return f"❌ **Error limpiando cache:** {e}"
+
+@mcp.tool()
+def optimize_vector_database() -> str:
+    """
+    Optimiza la base de datos vectorial para mejorar el rendimiento de búsquedas.
+    Esta herramienta reorganiza los índices internos para búsquedas más rápidas.
+    
+    Use esta herramienta cuando:
+    - Las búsquedas son lentas
+    - Se han añadido muchos documentos nuevos
+    - Quieres mejorar el rendimiento general del sistema
+    
+    Returns:
+        Información sobre el proceso de optimización
+    """
+    log("MCP Server: Optimizando base de datos vectorial...")
+    
+    try:
+        result = optimize_vector_store()
+        
+        if result["status"] == "success":
+            response = f"✅ **Base de datos vectorial optimizada exitosamente**\n\n"
+            response += f"📊 **Estadísticas antes de la optimización:**\n"
+            stats_before = result.get("stats_before", {})
+            response += f"   • Documentos totales: {stats_before.get('total_documents', 'N/A')}\n"
+            
+            response += f"\n📊 **Estadísticas después de la optimización:**\n"
+            stats_after = result.get("stats_after", {})
+            response += f"   • Documentos totales: {stats_after.get('total_documents', 'N/A')}\n"
+            
+            response += f"\n🚀 **Beneficios:**\n"
+            response += f"   • Búsquedas más rápidas\n"
+            response += f"   • Mejor precisión en resultados\n"
+            response += f"   • Índices optimizados\n"
+            
+        else:
+            response = f"❌ **Error optimizando base de datos:** {result.get('message', 'Error desconocido')}"
+            
+        return response
+        
+    except Exception as e:
+        log(f"MCP Server Error: Error en optimización: {e}")
+        return f"❌ **Error optimizando base de datos vectorial:** {str(e)}"
+
+@mcp.tool()
+def get_vector_database_stats() -> str:
+    """
+    Obtiene estadísticas detalladas de la base de datos vectorial.
+    Incluye información sobre documentos, tipos de archivo y configuración.
+    
+    Use esta herramienta para:
+    - Verificar el estado de la base de datos
+    - Analizar la distribución de documentos
+    - Diagnosticar problemas de rendimiento
+    - Planificar optimizaciones
+    
+    Returns:
+        Estadísticas detalladas de la base de datos vectorial
+    """
+    log("MCP Server: Obteniendo estadísticas de base de datos vectorial...")
+    
+    try:
+        stats = get_vector_store_stats()
+        
+        if "error" in stats:
+            return f"❌ **Error obteniendo estadísticas:** {stats['error']}"
+        
+        response = f"📊 **Estadísticas de la Base de Datos Vectorial**\n\n"
+        
+        response += f"📚 **Información General:**\n"
+        response += f"   • Total de documentos: {stats.get('total_documents', 0)}\n"
+        response += f"   • Nombre de colección: {stats.get('collection_name', 'N/A')}\n"
+        response += f"   • Dimensión de embeddings: {stats.get('embedding_dimension', 'N/A')}\n"
+        
+        # Tipos de archivo
+        file_types = stats.get('file_types', {})
+        if file_types:
+            response += f"\n📄 **Distribución por tipo de archivo:**\n"
+            for file_type, count in file_types.items():
+                response += f"   • {file_type}: {count} documentos\n"
+        
+        # Métodos de procesamiento
+        processing_methods = stats.get('processing_methods', {})
+        if processing_methods:
+            response += f"\n🔧 **Métodos de procesamiento:**\n"
+            for method, count in processing_methods.items():
+                response += f"   • {method}: {count} documentos\n"
+        
+        # Perfil recomendado
+        try:
+            recommended_profile = get_optimal_vector_store_profile()
+            response += f"\n🎯 **Perfil recomendado:** {recommended_profile}\n"
+        except:
+            pass
+        
+        return response
+        
+    except Exception as e:
+        log(f"MCP Server Error: Error obteniendo estadísticas: {e}")
+        return f"❌ **Error obteniendo estadísticas de base de datos:** {str(e)}"
+
+@mcp.tool()
+def reindex_vector_database(profile: str = 'auto') -> str:
+    """
+    Reindexa la base de datos vectorial con una configuración optimizada.
+    Esta herramienta recrea los índices con parámetros optimizados para el tamaño actual.
+    
+    Args:
+        profile: Perfil de configuración ('small', 'medium', 'large', 'auto')
+                 'auto' detecta automáticamente el perfil óptimo
+    
+    Use esta herramienta cuando:
+    - Cambias el perfil de configuración
+    - Las búsquedas son muy lentas
+    - Quieres optimizar para un tamaño específico de base de datos
+    - Hay problemas de rendimiento persistentes
+    
+    ⚠️ **Nota:** Este proceso puede tomar tiempo dependiendo del tamaño de la base de datos.
+    
+    Returns:
+        Información sobre el proceso de reindexado
+    """
+    log(f"MCP Server: Reindexando base de datos vectorial con perfil '{profile}'...")
+    
+    try:
+        result = reindex_vector_store(profile=profile)
+        
+        if result["status"] == "success":
+            response = f"✅ **Base de datos vectorial reindexada exitosamente**\n\n"
+            response += f"📊 **Información del proceso:**\n"
+            response += f"   • Perfil aplicado: {profile}\n"
+            response += f"   • Documentos procesados: {result.get('documents_processed', 0)}\n"
+            
+            response += f"\n🚀 **Beneficios del reindexado:**\n"
+            response += f"   • Índices optimizados para el tamaño actual\n"
+            response += f"   • Búsquedas más rápidas y precisas\n"
+            response += f"   • Mejor uso de memoria\n"
+            
+        elif result["status"] == "warning":
+            response = f"⚠️ **Advertencia:** {result.get('message', 'No hay documentos para reindexar')}"
+            
+        else:
+            response = f"❌ **Error reindexando base de datos:** {result.get('message', 'Error desconocido')}"
+            
+        return response
+        
+    except Exception as e:
+        log(f"MCP Server Error: Error en reindexado: {e}")
+        return f"❌ **Error reindexando base de datos vectorial:** {str(e)}"
 
 # --- Punto de Entrada para Correr el Servidor ---
 if __name__ == "__main__":

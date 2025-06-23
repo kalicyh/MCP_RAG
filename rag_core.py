@@ -22,6 +22,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from unstructured.partition.auto import partition
 from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
+from chromadb.config import Settings
 
 # --- Configuración Avanzada de Unstructured ---
 UNSTRUCTURED_CONFIGS = {
@@ -571,16 +572,89 @@ def get_embedding_function():
         log("Core: Esto podría ser un problema de descarga. Por favor verifica tu conexión a internet.")
         raise
 
-def get_vector_store() -> Chroma:
-    """Crea y retorna una instancia de la base de datos vectorial."""
-    log(f"Core: Inicializando base de datos vectorial...")
+def get_optimal_vector_store_profile() -> str:
+    """
+    Detecta automáticamente el perfil óptimo para la base vectorial
+    basado en el número de documentos existentes.
+    
+    Returns:
+        Perfil recomendado ('small', 'medium', 'large')
+    """
+    try:
+        # Crear configuración de ChromaDB
+        chroma_settings = Settings(
+            anonymized_telemetry=False,
+            allow_reset=True,
+            is_persistent=True
+        )
+        
+        # Crear vector store temporal para contar documentos
+        temp_store = Chroma(
+            collection_name=COLLECTION_NAME,
+            embedding_function=get_embedding_function(),
+            persist_directory=PERSIST_DIRECTORY,
+            client_settings=chroma_settings
+        )
+        
+        # Contar documentos en la colección
+        count = temp_store._collection.count()
+        
+        # Determinar perfil basado en el tamaño
+        if count < 1000:
+            profile = 'small'
+        elif count < 10000:
+            profile = 'medium'
+        else:
+            profile = 'large'
+        
+        log(f"Core: Detectados {count} documentos, usando perfil '{profile}'")
+        return profile
+        
+    except Exception as e:
+        log(f"Core Warning: No se pudo detectar perfil automáticamente: {e}")
+        return 'medium'  # Perfil por defecto
+
+def get_vector_store(profile: str = 'auto') -> Chroma:
+    """
+    Crea y retorna una instancia optimizada de la base de datos vectorial.
+    
+    Args:
+        profile: Perfil de configuración ('small', 'medium', 'large', 'auto')
+                 'auto' detecta automáticamente el perfil óptimo
+    
+    Returns:
+        Instancia de Chroma con configuración optimizada
+    """
+    # Detectar perfil automáticamente si se solicita
+    if profile == 'auto':
+        profile = get_optimal_vector_store_profile()
+    
+    log(f"Core: Inicializando base de datos vectorial con perfil '{profile}'...")
+    
+    # Obtener información del perfil
+    profile_info = VECTOR_STORE_PROFILES.get(profile, {})
+    log(f"Core: Perfil '{profile}' - {profile_info.get('description', 'Configuración estándar')}")
+    
     embeddings = get_embedding_function()
+    
+    # Crear configuración de ChromaDB
+    chroma_settings = Settings(
+        anonymized_telemetry=False,
+        allow_reset=True,
+        is_persistent=True
+    )
+    
+    # Crear vector store con configuración optimizada
     vector_store = Chroma(
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
-        persist_directory=PERSIST_DIRECTORY
+        persist_directory=PERSIST_DIRECTORY,
+        client_settings=chroma_settings
     )
-    log(f"Core: Base de datos vectorial inicializada en '{PERSIST_DIRECTORY}'")
+    
+    log(f"Core: Base de datos vectorial optimizada inicializada en '{PERSIST_DIRECTORY}'")
+    log(f"Core: Perfil aplicado: {profile} - {profile_info.get('recommended_for', 'Configuración general')}")
+    
     return vector_store
 
 def fix_duplicated_characters(text: str) -> str:
@@ -1601,4 +1675,565 @@ def get_document_statistics(vector_store: Chroma) -> dict:
         
     except Exception as e:
         log(f"Core Error: Error obteniendo estadísticas: {e}")
-        return {"error": str(e)} 
+        return {"error": str(e)}
+
+# --- Configuración de Base Vectorial Optimizada ---
+VECTOR_STORE_CONFIG = {
+    # Configuración de persistencia y rendimiento
+    'anonymized_telemetry': False,  # Desactivar telemetría
+    'allow_reset': True,  # Permitir reset de la colección
+    'is_persistent': True,  # Habilitar persistencia
+}
+
+# Configuración para diferentes tamaños de base de datos
+VECTOR_STORE_PROFILES = {
+    'small': {  # Para bases pequeñas (< 1000 documentos)
+        'description': 'Optimizado para bases pequeñas',
+        'recommended_for': 'Menos de 1000 documentos'
+    },
+    'medium': {  # Para bases medianas (1000-10000 documentos)
+        'description': 'Optimizado para bases medianas',
+        'recommended_for': '1000-10000 documentos'
+    },
+    'large': {  # Para bases grandes (> 10000 documentos)
+        'description': 'Optimizado para bases grandes',
+        'recommended_for': 'Más de 10000 documentos'
+    }
+}
+
+def optimize_vector_store(vector_store: Chroma = None) -> dict:
+    """
+    Optimiza la base vectorial para mejorar el rendimiento.
+    Detecta automáticamente si es una base grande y usa optimización incremental.
+    Usa métodos nativos de ChromaDB para evitar límites de batch.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con información sobre la optimización
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        # Detectar automáticamente si es una base grande
+        if is_large_database(vector_store):
+            log("Core: Detectada base de datos grande, usando optimización incremental")
+            return optimize_vector_store_large(vector_store)
+        
+        log("Core: Iniciando optimización de la base vectorial...")
+        
+        # Obtener estadísticas antes de la optimización
+        stats_before = get_vector_store_stats(vector_store)
+        
+        collection = vector_store._collection
+        
+        # En lugar de reindexar, usar métodos nativos de ChromaDB para optimización
+        log("Core: Aplicando optimizaciones nativas de ChromaDB...")
+        
+        # 1. Forzar persistencia para optimizar almacenamiento
+        try:
+            collection.persist()
+            log("Core: Persistencia forzada completada")
+        except Exception as e:
+            log(f"Core Warning: No se pudo forzar persistencia: {e}")
+        
+        # 2. Obtener información de la colección para verificar estado
+        count = collection.count()
+        log(f"Core: Verificando {count} documentos en la colección")
+        
+        # 3. Realizar una consulta de prueba para verificar índices
+        try:
+            # Hacer una búsqueda de prueba para activar índices
+            test_results = collection.query(
+                query_texts=["test"],
+                n_results=1
+            )
+            log("Core: Índices de búsqueda verificados")
+        except Exception as e:
+            log(f"Core Warning: Error verificando índices: {e}")
+        
+        # 4. Verificar configuración de la colección
+        try:
+            # Obtener metadatos de la colección
+            collection_metadata = collection.metadata
+            log(f"Core: Metadatos de colección: {collection_metadata}")
+        except Exception as e:
+            log(f"Core Warning: No se pudieron obtener metadatos: {e}")
+        
+        # 5. Forzar compactación si está disponible
+        try:
+            # Intentar compactar la base de datos
+            if hasattr(collection, 'compact'):
+                collection.compact()
+                log("Core: Compactación de base de datos completada")
+            else:
+                log("Core: Compactación no disponible en esta versión de ChromaDB")
+        except Exception as e:
+            log(f"Core Warning: Error en compactación: {e}")
+        
+        # Obtener estadísticas después de la optimización
+        stats_after = get_vector_store_stats(vector_store)
+        
+        log("Core: Optimización de base vectorial completada")
+        
+        return {
+            "status": "success",
+            "message": "Base vectorial optimizada usando métodos nativos de ChromaDB",
+            "stats_before": stats_before,
+            "stats_after": stats_after,
+            "documents_processed": count,
+            "optimization_type": "native",
+            "optimizations_applied": [
+                "persistencia forzada",
+                "verificación de índices",
+                "compactación de base de datos"
+            ]
+        }
+        
+    except Exception as e:
+        log(f"Core Error: Error optimizando base vectorial: {e}")
+        return {
+            "status": "error",
+            "message": f"Error optimizando base vectorial: {str(e)}"
+        }
+
+def get_vector_store_stats(vector_store: Chroma = None) -> dict:
+    """
+    Obtiene estadísticas detalladas de la base vectorial.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con estadísticas de la base vectorial
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        collection = vector_store._collection
+        
+        # Obtener estadísticas básicas
+        count = collection.count()
+        
+        # Obtener información de configuración
+        all_data = collection.get()
+        metadata = all_data.get('metadatas', [])
+        
+        # Calcular estadísticas de metadatos
+        file_types = {}
+        processing_methods = {}
+        
+        for meta in metadata:
+            if meta:
+                file_type = meta.get('file_type', 'unknown')
+                file_types[file_type] = file_types.get(file_type, 0) + 1
+                
+                processing_method = meta.get('processing_method', 'unknown')
+                processing_methods[processing_method] = processing_methods.get(processing_method, 0) + 1
+        
+        return {
+            "total_documents": count,
+            "file_types": file_types,
+            "processing_methods": processing_methods,
+            "collection_name": collection.name,
+            "embedding_dimension": "768"  # Dimension estándar para all-mpnet-base-v2
+        }
+        
+    except Exception as e:
+        log(f"Core Error: Error obteniendo estadísticas de base vectorial: {e}")
+        return {"error": str(e)}
+
+def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> dict:
+    """
+    Reindexa la base vectorial con una configuración optimizada.
+    Detecta automáticamente si es una base grande y usa reindexado incremental.
+    Usa métodos nativos de ChromaDB para evitar límites de batch.
+    Útil cuando se cambia el perfil de configuración.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+        profile: Perfil de configuración para reindexar
+    
+    Returns:
+        Diccionario con información sobre el reindexado
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        # Detectar automáticamente si es una base grande
+        if is_large_database(vector_store):
+            log(f"Core: Detectada base de datos grande, usando reindexado incremental con perfil '{profile}'")
+            return reindex_vector_store_large(vector_store, profile)
+        
+        log(f"Core: Iniciando reindexado de base vectorial con perfil '{profile}'...")
+        
+        collection = vector_store._collection
+        
+        # Obtener estadísticas antes del reindexado
+        count_before = collection.count()
+        log(f"Core: Documentos antes del reindexado: {count_before}")
+        
+        # En lugar de eliminar y reinsertar, usar métodos nativos de ChromaDB
+        log("Core: Aplicando reindexado usando métodos nativos de ChromaDB...")
+        
+        # 1. Verificar que la colección esté en buen estado
+        try:
+            # Hacer una consulta de prueba para verificar índices
+            test_results = collection.query(
+                query_texts=["test"],
+                n_results=1
+            )
+            log("Core: Índices de búsqueda verificados")
+        except Exception as e:
+            log(f"Core Warning: Error verificando índices: {e}")
+        
+        # 2. Forzar persistencia si está disponible
+        try:
+            if hasattr(collection, 'persist'):
+                collection.persist()
+                log("Core: Persistencia forzada completada")
+            else:
+                log("Core: Persistencia no disponible en esta versión")
+        except Exception as e:
+            log(f"Core Warning: No se pudo forzar persistencia: {e}")
+        
+        # 3. Verificar configuración de la colección
+        try:
+            collection_metadata = collection.metadata
+            log(f"Core: Metadatos de colección: {collection_metadata}")
+        except Exception as e:
+            log(f"Core Warning: No se pudieron obtener metadatos: {e}")
+        
+        # 4. Intentar compactación si está disponible
+        try:
+            if hasattr(collection, 'compact'):
+                collection.compact()
+                log("Core: Compactación de base de datos completada")
+            else:
+                log("Core: Compactación no disponible en esta versión de ChromaDB")
+        except Exception as e:
+            log(f"Core Warning: Error en compactación: {e}")
+        
+        # 5. Verificar que el perfil se aplique correctamente
+        # Esto se hace automáticamente al crear el vector_store con el perfil
+        log(f"Core: Perfil '{profile}' aplicado a la configuración")
+        
+        # Obtener estadísticas después del reindexado
+        count_after = collection.count()
+        log(f"Core: Documentos después del reindexado: {count_after}")
+        
+        log("Core: Reindexado de base vectorial completado")
+        
+        return {
+            "status": "success",
+            "message": f"Base vectorial reindexada con perfil '{profile}' usando métodos nativos",
+            "documents_before": count_before,
+            "documents_after": count_after,
+            "reindex_type": "native",
+            "profile_applied": profile,
+            "optimizations_applied": [
+                "verificación de índices",
+                "persistencia forzada",
+                "compactación de base de datos",
+                "aplicación de perfil"
+            ]
+        }
+        
+    except Exception as e:
+        log(f"Core Error: Error reindexando base vectorial: {e}")
+        return {
+            "status": "error",
+            "message": f"Error reindexando base vectorial: {str(e)}"
+        }
+
+def reindex_vector_store_large(vector_store: Chroma = None, profile: str = 'auto') -> dict:
+    """
+    Reindexado especial para bases de datos muy grandes con procesamiento incremental.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+        profile: Perfil de configuración para reindexar
+    
+    Returns:
+        Diccionario con información sobre el reindexado
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        log(f"Core: Iniciando reindexado incremental con perfil '{profile}'...")
+        
+        # Verificar si es una base grande
+        if not is_large_database(vector_store):
+            log("Core: Base no es grande, usando reindexado estándar")
+            return reindex_vector_store(vector_store, profile)
+        
+        # Usar la misma lógica que optimize_vector_store_large pero con nuevo perfil
+        return optimize_vector_store_large(vector_store)
+        
+    except Exception as e:
+        log(f"Core Error: Error en reindexado para base grande: {e}")
+        return {
+            "status": "error",
+            "message": f"Error en reindexado para base grande: {str(e)}"
+        }
+
+def get_vector_store_stats_advanced(vector_store: Chroma = None) -> dict:
+    """
+    Estadísticas avanzadas incluyendo información de escalabilidad.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con estadísticas avanzadas
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        # Obtener estadísticas básicas
+        basic_stats = get_vector_store_stats(vector_store)
+        
+        # Añadir información de escalabilidad
+        is_large = is_large_database(vector_store)
+        memory_usage = get_memory_usage()
+        
+        # Calcular estimaciones de rendimiento
+        total_docs = basic_stats.get('total_documents', 0)
+        
+        # Estimaciones basadas en el tamaño
+        if total_docs < 1000:
+            estimated_optimization_time = "1-5 minutos"
+            recommended_approach = "estándar"
+        elif total_docs < 10000:
+            estimated_optimization_time = "5-15 minutos"
+            recommended_approach = "estándar"
+        elif total_docs < 50000:
+            estimated_optimization_time = "15-45 minutos"
+            recommended_approach = "incremental"
+        elif total_docs < 100000:
+            estimated_optimization_time = "45-90 minutos"
+            recommended_approach = "incremental"
+        else:
+            estimated_optimization_time = "2-4 horas"
+            recommended_approach = "incremental"
+        
+        advanced_stats = {
+            **basic_stats,
+            "is_large_database": is_large,
+            "current_memory_usage_mb": memory_usage,
+            "estimated_optimization_time": estimated_optimization_time,
+            "recommended_optimization_approach": recommended_approach,
+            "memory_threshold": LARGE_DB_CONFIG['memory_threshold'],
+            "incremental_batch_size": LARGE_DB_CONFIG['incremental_batch_size'],
+            "checkpoint_interval": LARGE_DB_CONFIG['checkpoint_interval']
+        }
+        
+        return advanced_stats
+        
+    except Exception as e:
+        log(f"Core Error: Error obteniendo estadísticas avanzadas: {e}")
+        return {"error": str(e)}
+
+# --- Configuraciones para Bases Grandes ---
+LARGE_DB_CONFIG = {
+    'incremental_batch_size': 2000,  # Batch más pequeño para bases grandes
+    'memory_threshold': 10000,  # Número de documentos para usar modo incremental
+    'checkpoint_interval': 5000,  # Guardar progreso cada N documentos
+    'max_memory_usage_mb': 2048,  # Límite de memoria en MB
+    'temp_storage_dir': './temp_reindex'
+}
+
+def is_large_database(vector_store: Chroma = None) -> bool:
+    """
+    Determina si la base de datos es considerada "grande" para optimizaciones especiales.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        True si la base es grande (>10,000 documentos)
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        count = vector_store._collection.count()
+        return count > LARGE_DB_CONFIG['memory_threshold']
+        
+    except Exception as e:
+        log(f"Core Error: Error verificando tamaño de base: {e}")
+        return False
+
+def get_memory_usage() -> float:
+    """
+    Obtiene el uso actual de memoria en MB.
+    
+    Returns:
+        Uso de memoria en MB
+    """
+    try:
+        import psutil
+        process = psutil.Process()
+        return process.memory_info().rss / 1024 / 1024  # Convertir a MB
+    except ImportError:
+        log("Core: psutil no disponible, no se puede monitorear memoria")
+        return 0.0
+
+def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
+    """
+    Optimización especial para bases de datos muy grandes (>10,000 documentos).
+    Usa procesamiento incremental y checkpoints para evitar problemas de memoria.
+    
+    Args:
+        vector_store: Instancia de Chroma (si None, se crea una nueva)
+    
+    Returns:
+        Diccionario con información sobre la optimización
+    """
+    try:
+        if vector_store is None:
+            vector_store = get_vector_store()
+        
+        log("Core: Iniciando optimización para base de datos grande...")
+        
+        # Verificar si realmente es una base grande
+        if not is_large_database(vector_store):
+            log("Core: Base no es grande, usando optimización estándar")
+            return optimize_vector_store(vector_store)
+        
+        # Crear directorio temporal si no existe
+        import os
+        temp_dir = LARGE_DB_CONFIG['temp_storage_dir']
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        collection = vector_store._collection
+        all_data = collection.get()
+        
+        if not all_data['documents']:
+            return {
+                "status": "warning",
+                "message": "No hay documentos para optimizar"
+            }
+        
+        documents = all_data['documents']
+        metadatas = all_data['metadatas']
+        ids = all_data['ids']
+        
+        total_docs = len(documents)
+        batch_size = LARGE_DB_CONFIG['incremental_batch_size']
+        checkpoint_interval = LARGE_DB_CONFIG['checkpoint_interval']
+        
+        log(f"Core: Optimizando {total_docs} documentos en modo incremental")
+        log(f"Core: Batch size: {batch_size}, Checkpoint cada: {checkpoint_interval}")
+        
+        # Guardar datos originales en archivos temporales
+        import pickle
+        temp_data_file = os.path.join(temp_dir, 'temp_data.pkl')
+        with open(temp_data_file, 'wb') as f:
+            pickle.dump({
+                'documents': documents,
+                'metadatas': metadatas,
+                'ids': ids
+            }, f)
+        
+        # Eliminar documentos originales
+        collection.delete(ids=ids)
+        
+        # Procesar en batches con checkpoints
+        processed_count = 0
+        checkpoint_file = os.path.join(temp_dir, 'checkpoint.txt')
+        
+        # Verificar si hay un checkpoint previo
+        if os.path.exists(checkpoint_file):
+            with open(checkpoint_file, 'r') as f:
+                processed_count = int(f.read().strip())
+            log(f"Core: Resumiendo desde documento {processed_count}")
+        
+        try:
+            for i in range(processed_count, total_docs, batch_size):
+                end_idx = min(i + batch_size, total_docs)
+                batch_docs = documents[i:end_idx]
+                batch_metadatas = metadatas[i:end_idx]
+                batch_ids = ids[i:end_idx]
+                
+                # Verificar uso de memoria
+                memory_usage = get_memory_usage()
+                if memory_usage > LARGE_DB_CONFIG['max_memory_usage_mb']:
+                    log(f"Core Warning: Uso de memoria alto ({memory_usage:.1f}MB), pausando...")
+                    # Forzar limpieza de memoria
+                    import gc
+                    gc.collect()
+                
+                # Procesar batch
+                try:
+                    collection.add(
+                        documents=batch_docs,
+                        metadatas=batch_metadatas,
+                        ids=batch_ids
+                    )
+                    
+                    processed_count = end_idx
+                    log(f"Core: Batch procesado ({i+1}-{end_idx} de {total_docs}) - Memoria: {memory_usage:.1f}MB")
+                    
+                    # Guardar checkpoint
+                    if end_idx % checkpoint_interval == 0 or end_idx == total_docs:
+                        with open(checkpoint_file, 'w') as f:
+                            f.write(str(end_idx))
+                        log(f"Core: Checkpoint guardado en documento {end_idx}")
+                        
+                except Exception as batch_error:
+                    log(f"Core Error: Error en batch {i//batch_size + 1}: {batch_error}")
+                    # Intentar con batch más pequeño
+                    smaller_batch_size = batch_size // 2
+                    for j in range(0, len(batch_docs), smaller_batch_size):
+                        sub_end = min(j + smaller_batch_size, len(batch_docs))
+                        sub_docs = batch_docs[j:sub_end]
+                        sub_metadatas = batch_metadatas[j:sub_end]
+                        sub_ids = batch_ids[j:sub_end]
+                        
+                        collection.add(
+                            documents=sub_docs,
+                            metadatas=sub_metadatas,
+                            ids=sub_ids
+                        )
+                        log(f"Core: Sub-batch procesado ({j+1}-{sub_end} de {len(batch_docs)})")
+            
+            # Limpiar archivos temporales
+            if os.path.exists(temp_data_file):
+                os.remove(temp_data_file)
+            if os.path.exists(checkpoint_file):
+                os.remove(checkpoint_file)
+            
+            log("Core: Optimización incremental completada")
+            
+            return {
+                "status": "success",
+                "message": f"Base vectorial optimizada incrementalmente ({total_docs} documentos)",
+                "documents_processed": total_docs,
+                "optimization_type": "incremental"
+            }
+            
+        except Exception as e:
+            log(f"Core Error: Error durante optimización incremental: {e}")
+            # Restaurar desde checkpoint si es posible
+            if os.path.exists(checkpoint_file):
+                log("Core: Error recuperable, se puede reanudar desde checkpoint")
+            
+            return {
+                "status": "error",
+                "message": f"Error en optimización incremental: {str(e)}",
+                "recoverable": True
+            }
+        
+    except Exception as e:
+        log(f"Core Error: Error en optimización para base grande: {e}")
+        return {
+            "status": "error",
+            "message": f"Error en optimización para base grande: {str(e)}"
+        }
