@@ -361,13 +361,13 @@ def test_metadata_handling():
     print("\n🧪 **Prueba 6: Manejo de Metadatos**")
     
     try:
-        from rag_core import add_text_to_knowledge_base_enhanced, get_vector_store, get_qa_chain
+        from rag_core import add_text_to_knowledge_base_enhanced, get_vector_store, get_qa_chain, flatten_metadata
         
         vector_store = get_vector_store()
         
         # Crear metadatos complejos para probar el aplanamiento
         complex_metadata = {
-            "source": "test_metadata",
+            "source": "test_metadata_handling",
             "file_type": ".txt",
             "processing_method": "unstructured_enhanced",
             "structural_info": {
@@ -386,6 +386,21 @@ def test_metadata_handling():
                 }
             }
         }
+        
+        # Probar el aplanamiento directamente
+        print("🔍 Probando aplanamiento de metadatos...")
+        flattened = flatten_metadata(complex_metadata)
+        
+        print("📊 Metadatos aplanados:")
+        structural_keys = [k for k in flattened.keys() if k.startswith('structural_info_')]
+        for key in structural_keys:
+            print(f"   • {key}: {flattened[key]}")
+        
+        if len(structural_keys) > 0:
+            print(f"✅ Metadatos estructurales aplanados correctamente ({len(structural_keys)} campos)")
+        else:
+            print("❌ Metadatos estructurales no se aplanaron")
+            return False
         
         test_text = """
 # Prueba de Metadatos
@@ -411,37 +426,54 @@ Los metadatos deben ser aplanados correctamente para ChromaDB.
             use_semantic_chunking=True
         )
         
-        print("🔍 Probando recuperación de metadatos...")
+        print("🔍 Probando recuperación de metadatos específicos...")
         qa_chain = get_qa_chain(vector_store)
-        response = qa_chain.invoke({"query": "¿Qué información contiene sobre metadatos?"})
+        
+        # Hacer una búsqueda muy específica para obtener nuestro documento
+        response = qa_chain.invoke({"query": "valor_personalizado valor_anidado elementos estructurales"})
         
         source_docs = response.get("source_documents", [])
         if source_docs:
-            doc = source_docs[0]
-            metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+            # Buscar nuestro documento específico
+            our_doc = None
+            for doc in source_docs:
+                if hasattr(doc, 'metadata'):
+                    metadata = doc.metadata
+                    if metadata.get("source") == "test_metadata_handling":
+                        our_doc = doc
+                        break
             
-            print("📊 Metadatos recuperados:")
-            print(f"   • Source: {metadata.get('source', 'N/A')}")
-            print(f"   • Processing method: {metadata.get('processing_method', 'N/A')}")
-            print(f"   • Structural total elements: {metadata.get('structural_total_elements', 'N/A')}")
-            print(f"   • Structural titles count: {metadata.get('structural_titles_count', 'N/A')}")
-            print(f"   • Custom field: {metadata.get('custom_field', 'N/A')}")
-            
-            # Mostrar TODOS los metadatos para verificar el aplanamiento
-            print("\n🔍 Todos los metadatos disponibles:")
-            for key, value in metadata.items():
-                print(f"   • {key}: {value}")
-            
-            # Verificar que los metadatos estructurales se aplanaron correctamente
-            structural_keys = [k for k in metadata.keys() if k.startswith('structural_')]
-            if structural_keys:
-                print(f"\n✅ Metadatos estructurales aplanados correctamente ({len(structural_keys)} campos):")
-                for key in structural_keys:
-                    print(f"   • {key}: {metadata[key]}")
+            if our_doc:
+                metadata = our_doc.metadata
+                print("📊 Metadatos recuperados de nuestro documento:")
+                print(f"   • Source: {metadata.get('source', 'N/A')}")
+                print(f"   • Processing method: {metadata.get('processing_method', 'N/A')}")
+                print(f"   • Custom field: {metadata.get('custom_field', 'N/A')}")
+                print(f"   • Structural total elements: {metadata.get('structural_info_total_elements', 'N/A')}")
+                print(f"   • Structural titles count: {metadata.get('structural_info_titles_count', 'N/A')}")
+                print(f"   • Structural tables count: {metadata.get('structural_info_tables_count', 'N/A')}")
+                print(f"   • Nested data: {metadata.get('nested_data_level1_level2', 'N/A')}")
+                
+                # Verificar que los metadatos estructurales se aplanaron correctamente
+                structural_keys_found = [k for k in metadata.keys() if k.startswith('structural_info_')]
+                if structural_keys_found:
+                    print(f"\n✅ Metadatos estructurales recuperados correctamente ({len(structural_keys_found)} campos):")
+                    for key in structural_keys_found:
+                        print(f"   • {key}: {metadata[key]}")
+                    return True
+                else:
+                    print("\n❌ Metadatos estructurales no se recuperaron")
+                    return False
             else:
-                print("\n❌ Metadatos estructurales no se aplanaron")
-        
-        return True
+                print("❌ No se encontró nuestro documento en los resultados")
+                print("📋 Documentos encontrados:")
+                for i, doc in enumerate(source_docs):
+                    if hasattr(doc, 'metadata'):
+                        print(f"   {i+1}. {doc.metadata.get('source', 'unknown')}")
+                return False
+        else:
+            print("❌ No se encontraron documentos en la búsqueda")
+            return False
         
     except Exception as e:
         print(f"❌ Error en prueba de metadatos: {e}")

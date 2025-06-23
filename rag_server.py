@@ -15,6 +15,9 @@ from rag_core import (
     search_with_metadata_filters,         # Nueva función de búsqueda con filtros
     create_metadata_filter,               # Nueva función para crear filtros
     get_document_statistics,              # Nueva función para estadísticas
+    get_cache_stats,                      # Nueva función para estadísticas del cache
+    print_cache_stats,                    # Nueva función para imprimir estadísticas del cache
+    clear_embedding_cache,                # Nueva función para limpiar cache
     log  # Importamos nuestra nueva función de log
 )
 
@@ -705,10 +708,37 @@ def ask_rag(query: str) -> str:
         qa_chain = get_qa_chain(rag_state["vector_store"])
         response = qa_chain.invoke({"query": query})
         
-        answer = response.get("result", "No se encontró información relevante para responder tu pregunta.")
+        answer = response.get("result", "")
         source_documents = response.get("source_documents", [])
         
-        # Construir respuesta mejorada con información de fuentes
+        # Verificar si realmente tenemos información relevante
+        if not source_documents:
+            # No hay fuentes - el LLM probablemente está alucinando
+            enhanced_answer = f"🤖 **Respuesta:**\n\n❌ **No se encontró información relevante en la base de conocimientos para responder tu pregunta.**\n\n"
+            enhanced_answer += "💡 **Sugerencias:**\n"
+            enhanced_answer += "• Verifica que hayas cargado documentos relacionados con tu pregunta\n"
+            enhanced_answer += "• Intenta reformular tu pregunta con términos más específicos\n"
+            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué información está disponible\n"
+            enhanced_answer += "• Considera cargar más documentos sobre el tema que te interesa\n\n"
+            enhanced_answer += "⚠️ **Nota:** El sistema solo puede responder basándose en la información que ha sido previamente cargada en la base de conocimientos."
+            
+            log(f"MCP Server: No se encontraron fuentes relevantes para la pregunta")
+            return enhanced_answer
+        
+        # Verificar si la respuesta parece ser una alucinación
+        # Si no hay fuentes pero hay respuesta, es probable una alucinación
+        if len(source_documents) == 0 and answer.strip():
+            enhanced_answer = f"🤖 **Respuesta:**\n\n❌ **No se encontró información específica en la base de conocimientos para responder tu pregunta.**\n\n"
+            enhanced_answer += "💡 **Sugerencias:**\n"
+            enhanced_answer += "• Verifica que hayas cargado documentos relacionados con tu pregunta\n"
+            enhanced_answer += "• Intenta reformular tu pregunta con términos más específicos\n"
+            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué información está disponible\n\n"
+            enhanced_answer += "⚠️ **Nota:** El sistema solo puede responder basándose en la información que ha sido previamente cargada en la base de conocimientos."
+            
+            log(f"MCP Server: Respuesta detectada como posible alucinación (sin fuentes)")
+            return enhanced_answer
+        
+        # Si tenemos fuentes, construir respuesta normal
         enhanced_answer = f"🤖 **Respuesta:**\n\n{answer}\n"
         
         # Añadir información de fuentes con más detalles
@@ -774,8 +804,6 @@ def ask_rag(query: str) -> str:
                         source_info += f"\n      - **Estructura:** {', '.join(structural_details)}"
                 
                 enhanced_answer += source_info + "\n\n"
-        else:
-            enhanced_answer += "\n⚠️ **No se encontraron fuentes específicas para esta respuesta.**\n"
         
         # Añadir información sobre la calidad de la respuesta
         num_sources = len(source_documents)
@@ -836,10 +864,66 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
         qa_chain = get_qa_chain(rag_state["vector_store"], metadata_filter)
         response = qa_chain.invoke({"query": query})
         
-        answer = response.get("result", "No se encontró información relevante con los filtros especificados.")
+        answer = response.get("result", "")
         source_documents = response.get("source_documents", [])
         
-        # Construir respuesta mejorada
+        # Verificar si realmente tenemos información relevante con los filtros
+        if not source_documents:
+            # No hay fuentes que cumplan con los filtros
+            enhanced_answer = f"🔍 **Respuesta (con filtros aplicados):**\n\n❌ **No se encontró información relevante en la base de conocimientos que cumpla con los filtros especificados.**\n\n"
+            
+            # Mostrar filtros aplicados
+            if metadata_filter:
+                enhanced_answer += "📋 **Filtros aplicados:**\n"
+                for key, value in metadata_filter.items():
+                    if key == "file_type":
+                        enhanced_answer += f"   • Tipo de archivo: {value}\n"
+                    elif key == "processing_method":
+                        enhanced_answer += f"   • Método de procesamiento: {value.replace('_', ' ').title()}\n"
+                    elif key == "structural_tables_count":
+                        enhanced_answer += f"   • Mínimo de tablas: {value['$gte']}\n"
+                    elif key == "structural_titles_count":
+                        enhanced_answer += f"   • Mínimo de títulos: {value['$gte']}\n"
+                enhanced_answer += "\n"
+            
+            enhanced_answer += "💡 **Sugerencias:**\n"
+            enhanced_answer += "• Intenta relajar los filtros para obtener más resultados\n"
+            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué tipos de documentos están disponibles\n"
+            enhanced_answer += "• Considera usar `ask_rag()` sin filtros para buscar en toda la base de conocimientos\n"
+            enhanced_answer += "• Verifica que hayas cargado documentos que cumplan con los criterios especificados\n\n"
+            enhanced_answer += "⚠️ **Nota:** Los filtros pueden ser muy restrictivos. Intenta con filtros más amplios."
+            
+            log(f"MCP Server: No se encontraron fuentes que cumplan con los filtros especificados")
+            return enhanced_answer
+        
+        # Verificar si la respuesta parece ser una alucinación
+        if len(source_documents) == 0 and answer.strip():
+            enhanced_answer = f"🔍 **Respuesta (con filtros aplicados):**\n\n❌ **No se encontró información específica que cumpla con los filtros especificados.**\n\n"
+            
+            # Mostrar filtros aplicados
+            if metadata_filter:
+                enhanced_answer += "📋 **Filtros aplicados:**\n"
+                for key, value in metadata_filter.items():
+                    if key == "file_type":
+                        enhanced_answer += f"   • Tipo de archivo: {value}\n"
+                    elif key == "processing_method":
+                        enhanced_answer += f"   • Método de procesamiento: {value.replace('_', ' ').title()}\n"
+                    elif key == "structural_tables_count":
+                        enhanced_answer += f"   • Mínimo de tablas: {value['$gte']}\n"
+                    elif key == "structural_titles_count":
+                        enhanced_answer += f"   • Mínimo de títulos: {value['$gte']}\n"
+                enhanced_answer += "\n"
+            
+            enhanced_answer += "💡 **Sugerencias:**\n"
+            enhanced_answer += "• Intenta relajar los filtros para obtener más resultados\n"
+            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué tipos de documentos están disponibles\n"
+            enhanced_answer += "• Considera usar `ask_rag()` sin filtros para buscar en toda la base de conocimientos\n\n"
+            enhanced_answer += "⚠️ **Nota:** Los filtros pueden ser muy restrictivos. Intenta con filtros más amplios."
+            
+            log(f"MCP Server: Respuesta filtrada detectada como posible alucinación (sin fuentes)")
+            return enhanced_answer
+        
+        # Si tenemos fuentes, construir respuesta normal
         enhanced_answer = f"🔍 **Respuesta (con filtros aplicados):**\n\n{answer}\n"
         
         # Mostrar filtros aplicados
@@ -882,8 +966,6 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
                     source_info += f" [{file_type.upper()}]"
                 
                 enhanced_answer += source_info + "\n"
-        else:
-            enhanced_answer += "\n⚠️ **No se encontraron documentos que cumplan con los filtros especificados.**\n"
         
         # Información sobre la búsqueda filtrada
         enhanced_answer += f"\n🎯 **Búsqueda filtrada:** Los resultados se limitaron a documentos que cumplen con los criterios especificados."
@@ -970,6 +1052,129 @@ def get_knowledge_base_stats() -> str:
     except Exception as e:
         log(f"MCP Server: Error obteniendo estadísticas: {e}")
         return f"❌ **Error obteniendo estadísticas:** {e}"
+
+@mcp.tool()
+def get_embedding_cache_stats() -> str:
+    """
+    Gets detailed statistics about the embedding cache performance.
+    Use this to monitor cache efficiency and understand how the system is performing.
+    
+    Examples of when to use:
+    - Checking cache hit rates to see if the system is working efficiently
+    - Monitoring memory usage of the cache
+    - Understanding how often embeddings are being reused
+    - Debugging performance issues
+    
+    This helps you optimize the system and understand its behavior.
+
+    Returns:
+        Detailed statistics about the embedding cache performance.
+    """
+    log(f"MCP Server: Obteniendo estadísticas del cache de embeddings...")
+    
+    try:
+        stats = get_cache_stats()
+        
+        if not stats:
+            return "📊 **Cache de embeddings no disponible**\n\nEl cache de embeddings no está inicializado."
+        
+        # Construir respuesta detallada
+        response = f"📊 **Estadísticas del Cache de Embeddings**\n\n"
+        
+        # Métricas principales
+        response += f"🔄 **Actividad del cache:**\n"
+        response += f"   • Total de solicitudes: {stats['total_requests']}\n"
+        response += f"   • Hits en memoria: {stats['memory_hits']}\n"
+        response += f"   • Hits en disco: {stats['disk_hits']}\n"
+        response += f"   • Misses (no encontrados): {stats['misses']}\n\n"
+        
+        # Tasas de éxito
+        response += f"📈 **Tasas de éxito:**\n"
+        response += f"   • Tasa de hits en memoria: {stats['memory_hit_rate']}\n"
+        response += f"   • Tasa de hits en disco: {stats['disk_hit_rate']}\n"
+        response += f"   • Tasa de hits total: {stats['overall_hit_rate']}\n\n"
+        
+        # Uso de memoria
+        response += f"💾 **Uso de memoria:**\n"
+        response += f"   • Embeddings en memoria: {stats['memory_cache_size']}\n"
+        response += f"   • Tamaño máximo: {stats['max_memory_size']}\n"
+        response += f"   • Directorio de cache: {stats['cache_directory']}\n\n"
+        
+        # Análisis de rendimiento
+        total_requests = stats['total_requests']
+        if total_requests > 0:
+            memory_hit_rate = float(stats['memory_hit_rate'].rstrip('%'))
+            overall_hit_rate = float(stats['overall_hit_rate'].rstrip('%'))
+            
+            response += f"🎯 **Análisis de rendimiento:**\n"
+            
+            if overall_hit_rate > 70:
+                response += f"   • ✅ Excelente rendimiento: {overall_hit_rate:.1f}% de hits\n"
+            elif overall_hit_rate > 50:
+                response += f"   • ⚠️ Rendimiento moderado: {overall_hit_rate:.1f}% de hits\n"
+            else:
+                response += f"   • ❌ Rendimiento bajo: {overall_hit_rate:.1f}% de hits\n"
+            
+            if memory_hit_rate > 50:
+                response += f"   • 🚀 Cache en memoria efectivo: {memory_hit_rate:.1f}% de hits en memoria\n"
+            else:
+                response += f"   • 💾 Dependencia del disco: {memory_hit_rate:.1f}% de hits en memoria\n"
+            
+            # Sugerencias de optimización
+            response += f"\n💡 **Sugerencias de optimización:**\n"
+            if overall_hit_rate < 30:
+                response += f"   • Considera procesar documentos similares juntos\n"
+                response += f"   • Revisa si hay muchos textos únicos que no se repiten\n"
+            
+            if memory_hit_rate < 30 and total_requests > 100:
+                response += f"   • Considera aumentar el tamaño del cache en memoria\n"
+                response += f"   • Los hits en disco son más lentos que en memoria\n"
+            
+            if stats['memory_cache_size'] >= stats['max_memory_size'] * 0.9:
+                response += f"   • El cache en memoria está casi lleno\n"
+                response += f"   • Considera aumentar max_memory_size si tienes RAM disponible\n"
+        
+        log(f"MCP Server: Estadísticas del cache obtenidas exitosamente")
+        return response
+        
+    except Exception as e:
+        log(f"MCP Server: Error obteniendo estadísticas del cache: {e}")
+        return f"❌ **Error obteniendo estadísticas del cache:** {e}"
+
+@mcp.tool()
+def clear_embedding_cache_tool() -> str:
+    """
+    Clears the embedding cache to free up memory and disk space.
+    Use this when you want to reset the cache or free up resources.
+    
+    Examples of when to use:
+    - Freeing up memory when the system is running low on RAM
+    - Resetting the cache after making changes to the embedding model
+    - Clearing old cached embeddings that are no longer needed
+    - Troubleshooting cache-related issues
+    
+    Warning: This will remove all cached embeddings and they will need to be recalculated.
+
+    Returns:
+        Confirmation message about the cache clearing operation.
+    """
+    log(f"MCP Server: Limpiando cache de embeddings...")
+    
+    try:
+        clear_embedding_cache()
+        
+        response = "🧹 **Cache de embeddings limpiado exitosamente**\n\n"
+        response += "✅ Se han eliminado todos los embeddings almacenados en cache.\n"
+        response += "📝 Los próximos embeddings se calcularán desde cero.\n"
+        response += "💾 Se ha liberado memoria y espacio en disco.\n\n"
+        response += "⚠️ **Nota:** Los embeddings se recalcularán automáticamente cuando sea necesario."
+        
+        log(f"MCP Server: Cache de embeddings limpiado exitosamente")
+        return response
+        
+    except Exception as e:
+        log(f"MCP Server: Error limpiando cache: {e}")
+        return f"❌ **Error limpiando cache:** {e}"
 
 # --- Punto de Entrada para Correr el Servidor ---
 if __name__ == "__main__":

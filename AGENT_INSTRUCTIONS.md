@@ -137,6 +137,8 @@ learn_from_url("https://example.com/manual.docx")
 - **Información de Chunks**: Número de fragmento y total
 - **Método de Procesamiento**: Tipo de procesamiento usado
 - **Información de Confianza**: Nivel de confianza basado en número de fuentes
+- **Detección de Alucinaciones**: Previene respuestas falsas cuando no hay información
+- **Sugerencias Útiles**: Guía cuando no hay información disponible
 
 **Ejemplos de uso**:
 ```python
@@ -148,6 +150,50 @@ ask_rag("¿Qué dice el informe trimestral sobre las ventas?")
 
 # Buscar contexto sobre un tema
 ask_rag("¿Qué información tenemos sobre inteligencia artificial?")
+```
+
+**Respuesta mejorada de `ask_rag`**:
+```
+🤖 **Respuesta:**
+El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para aplicaciones aeroespaciales donde se requieren materiales resistentes a altas temperaturas.
+
+📚 **Fuentes de información utilizadas:**
+
+   1. **material_properties**
+      - **Tipo:** MANUAL_INPUT
+      - **Procesamiento:** Manual Text
+      - **Procesado:** 21/06/2025 17:30
+      - **Fragmento:** 1 de 1
+      - **Fragmento Relevante:**
+        > _La temperatura de fusión del titanio es 1,668°C._
+
+   2. **datasheet_titanium.pdf**
+      - **Ruta:** `D:\Docs\datasheet_titanium.pdf`
+      - **Tipo:** PDF
+      - **Procesamiento:** Unstructured Enhanced
+      - **Estructura:** 12 elementos (2 títulos, 1 tabla, 3 listas)
+      - **Fragmento:** 3 de 5
+      - **Procesado:** 21/06/2025 17:32
+      - **Fragmento Relevante:**
+        > _...el titanio puro tiene un punto de fusión de 1,668 grados Celsius, lo que lo hace ideal para aplicaciones aeroespaciales..._
+
+✅ **Alta confianza:** Respuesta basada en múltiples fuentes
+🧠 **Procesamiento inteligente:** 1 fuentes procesadas con Unstructured (preservación de estructura)
+```
+
+**Manejo de errores mejorado**:
+```
+🤖 **Respuesta:**
+
+❌ **No se encontró información relevante en la base de conocimientos para responder tu pregunta.**
+
+💡 **Sugerencias:**
+• Verifica que hayas cargado documentos relacionados con tu pregunta
+• Intenta reformular tu pregunta con términos más específicos
+• Usa `get_knowledge_base_stats()` para ver qué información está disponible
+• Considera cargar más documentos sobre el tema que te interesa
+
+⚠️ **Nota:** El sistema solo puede responder basándose en la información que ha sido previamente cargada en la base de conocimientos.
 ```
 
 ### 5. `ask_rag_filtered(query, file_type, min_tables, min_titles, processing_method)` - **NUEVA**
@@ -237,6 +283,83 @@ stats = get_knowledge_base_stats()
    • Contenido rico en estructura semántica
 ```
 
+### 7. `get_embedding_cache_stats()` - **NUEVA**
+**Cuándo usar**: Para monitorear el rendimiento del cache de embeddings y optimizar el sistema.
+
+**Información proporcionada**:
+- **Total de requests** al cache
+- **Hits en memoria** (muy rápidos)
+- **Hits en disco** (rápidos, persistentes)
+- **Misses** (requieren cálculo nuevo)
+- **Tasas de éxito** (porcentajes)
+- **Tamaño del cache** en memoria
+- **Ubicación** del cache en disco
+
+**Ejemplos de uso**:
+```python
+# Verificar rendimiento del cache
+get_embedding_cache_stats()
+
+# Monitorear antes y después de procesar documentos
+stats_before = get_embedding_cache_stats()
+learn_document("documento.pdf")
+stats_after = get_embedding_cache_stats()
+```
+
+**Respuesta de `get_embedding_cache_stats`**:
+```
+📊 **Estadísticas del Cache de Embeddings**
+
+🔄 **Total de requests:** 150
+⚡ **Memory hits:** 45 (30.0%)
+💾 **Disk hits:** 85 (56.7%)
+❌ **Misses:** 20 (13.3%)
+📈 **Overall hit rate:** 86.7%
+
+💾 **Cache en memoria:** 45 embeddings
+📁 **Cache en disco:** 130 embeddings
+📂 **Ubicación:** ./embedding_cache/
+
+🚀 **Rendimiento:** Cache funcionando de manera óptima
+```
+
+### 8. `clear_embedding_cache_tool()` - **NUEVA**
+**Cuándo usar**: Para limpiar el cache de embeddings cuando sea necesario.
+
+**Opciones de limpieza**:
+- **Limpieza completa**: Elimina cache en memoria y disco
+- **Liberación de recursos**: Útil cuando hay problemas de memoria
+- **Reinicio limpio**: Para empezar desde cero
+
+**Ejemplos de uso**:
+```python
+# Limpiar cache cuando hay problemas
+clear_embedding_cache_tool()
+
+# Limpiar antes de procesar muchos documentos nuevos
+clear_embedding_cache_tool()
+learn_document("documento1.pdf")
+learn_document("documento2.pdf")
+```
+
+**Respuesta de `clear_embedding_cache_tool`**:
+```
+🧹 **Cache de Embeddings Limpiado**
+
+✅ **Acciones realizadas:**
+   • Cache en memoria limpiado
+   • Cache en disco limpiado
+   • Estadísticas reiniciadas
+
+📊 **Estado actual:**
+   • Memory hits: 0
+   • Disk hits: 0
+   • Misses: 0
+   • Total requests: 0
+
+💡 **Nota:** El cache se reconstruirá automáticamente con el uso
+```
+
 ## 🔄 Flujo de Trabajo Recomendado
 
 ### Paso 1: Cargar Información
@@ -321,6 +444,9 @@ El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para 
 7. **Explorar estadísticas** antes de hacer búsquedas filtradas
 8. **Combinar filtros** para búsquedas más precisas
 9. **Verificar resultados** de búsquedas filtradas para confirmar relevancia
+10. **Monitorear el cache** usando `get_embedding_cache_stats()` para optimizar rendimiento
+11. **Limpiar cache** cuando sea necesario usando `clear_embedding_cache_tool()`
+12. **Aprovechar la persistencia** del cache en disco entre sesiones
 
 ### Manejo de Errores Mejorado
 - **Archivo no encontrado**: Verificar la ruta del archivo
@@ -330,6 +456,8 @@ El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para 
 - **Sin información**: Asegurarse de que se haya cargado información relevante
 - **Filtros sin resultados**: Usar filtros menos restrictivos o verificar estadísticas
 - **Error en filtros**: Verificar formato de parámetros de filtrado
+- **Cache corrupto**: Usar `clear_embedding_cache_tool()` para limpiar
+- **Baja tasa de aciertos**: Revisar patrones de consulta y optimizar
 
 ## 📝 Ejemplos de Casos de Uso Mejorados
 

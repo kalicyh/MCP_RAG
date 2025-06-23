@@ -8,6 +8,10 @@ import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import unicodedata
+import hashlib
+import pickle
+from pathlib import Path
+from functools import lru_cache
 
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models import ChatOllama
@@ -213,6 +217,209 @@ DEFAULT_CONFIG = {
     'new_after_n_chars': 1500
 }
 
+# --- Sistema de Cache de Embeddings ---
+class EmbeddingCache:
+    """
+    Sistema de cache para embeddings que mejora significativamente el rendimiento
+    evitando recalcular embeddings para textos ya procesados.
+    """
+    
+    def __init__(self, cache_dir: str = "./embedding_cache", max_memory_size: int = 1000):
+        """
+        Inicializa el cache de embeddings.
+        
+        Args:
+            cache_dir: Directorio donde se almacenan los embeddings en disco
+            max_memory_size: Número máximo de embeddings en memoria (LRU)
+        """
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.max_memory_size = max_memory_size
+        
+        # Cache en memoria usando LRU
+        self._memory_cache = {}
+        self._access_order = []
+        
+        # Estadísticas
+        self.hits = 0
+        self.misses = 0
+        self.disk_hits = 0
+        
+        log(f"Core: Cache de embeddings inicializado en '{self.cache_dir}'")
+        log(f"Core: Tamaño máximo en memoria: {max_memory_size} embeddings")
+    
+    def _get_cache_key(self, text: str) -> str:
+        """Genera una clave única para el texto usando hash MD5."""
+        return hashlib.md5(text.encode('utf-8')).hexdigest()
+    
+    def _get_cache_file_path(self, cache_key: str) -> Path:
+        """Obtiene la ruta del archivo de cache para una clave."""
+        return self.cache_dir / f"{cache_key}.pkl"
+    
+    def _update_access_order(self, key: str):
+        """Actualiza el orden de acceso para implementar LRU."""
+        if key in self._access_order:
+            self._access_order.remove(key)
+        self._access_order.append(key)
+        
+        # Mantener solo los elementos más recientes
+        if len(self._access_order) > self.max_memory_size:
+            oldest_key = self._access_order.pop(0)
+            if oldest_key in self._memory_cache:
+                del self._memory_cache[oldest_key]
+    
+    def get(self, text: str):
+        """
+        Obtiene el embedding para un texto, primero desde memoria, luego desde disco.
+        
+        Args:
+            text: Texto para el cual obtener el embedding
+            
+        Returns:
+            Embedding si está en cache, None si no se encuentra
+        """
+        if not text or not text.strip():
+            return None
+        
+        cache_key = self._get_cache_key(text)
+        
+        # 1. Buscar en memoria
+        if cache_key in self._memory_cache:
+            self.hits += 1
+            self._update_access_order(cache_key)
+            log(f"Core: Cache HIT en memoria para texto de {len(text)} caracteres")
+            return self._memory_cache[cache_key]
+        
+        # 2. Buscar en disco
+        cache_file = self._get_cache_file_path(cache_key)
+        if cache_file.exists():
+            try:
+                with open(cache_file, 'rb') as f:
+                    embedding = pickle.load(f)
+                
+                # Mover a memoria
+                self._memory_cache[cache_key] = embedding
+                self._update_access_order(cache_key)
+                
+                self.disk_hits += 1
+                log(f"Core: Cache HIT en disco para texto de {len(text)} caracteres")
+                return embedding
+            except Exception as e:
+                log(f"Core: Error cargando embedding desde disco: {e}")
+                # Eliminar archivo corrupto
+                try:
+                    cache_file.unlink()
+                except:
+                    pass
+        
+        self.misses += 1
+        log(f"Core: Cache MISS para texto de {len(text)} caracteres")
+        return None
+    
+    def set(self, text: str, embedding):
+        """
+        Almacena un embedding en cache (memoria y disco).
+        
+        Args:
+            text: Texto original
+            embedding: Embedding a almacenar
+        """
+        if not text or not text.strip() or embedding is None:
+            return
+        
+        cache_key = self._get_cache_key(text)
+        
+        # Almacenar en memoria
+        self._memory_cache[cache_key] = embedding
+        self._update_access_order(cache_key)
+        
+        # Almacenar en disco
+        cache_file = self._get_cache_file_path(cache_key)
+        try:
+            with open(cache_file, 'wb') as f:
+                pickle.dump(embedding, f)
+            log(f"Core: Embedding guardado en cache (memoria + disco) para texto de {len(text)} caracteres")
+        except Exception as e:
+            log(f"Core: Error guardando embedding en disco: {e}")
+    
+    def clear_memory(self):
+        """Limpia el cache en memoria, manteniendo el cache en disco."""
+        self._memory_cache.clear()
+        self._access_order.clear()
+        log("Core: Cache en memoria limpiado")
+    
+    def clear_all(self):
+        """Limpia todo el cache (memoria y disco)."""
+        self.clear_memory()
+        
+        # Limpiar archivos de disco
+        try:
+            for cache_file in self.cache_dir.glob("*.pkl"):
+                cache_file.unlink()
+            log("Core: Cache completo limpiado (memoria + disco)")
+        except Exception as e:
+            log(f"Core: Error limpiando cache en disco: {e}")
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Obtiene estadísticas del cache."""
+        total_requests = self.hits + self.misses
+        memory_hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
+        disk_hit_rate = (self.disk_hits / total_requests * 100) if total_requests > 0 else 0
+        overall_hit_rate = ((self.hits + self.disk_hits) / total_requests * 100) if total_requests > 0 else 0
+        
+        return {
+            "total_requests": total_requests,
+            "memory_hits": self.hits,
+            "disk_hits": self.disk_hits,
+            "misses": self.misses,
+            "memory_hit_rate": f"{memory_hit_rate:.1f}%",
+            "disk_hit_rate": f"{disk_hit_rate:.1f}%",
+            "overall_hit_rate": f"{overall_hit_rate:.1f}%",
+            "memory_cache_size": len(self._memory_cache),
+            "max_memory_size": self.max_memory_size,
+            "cache_directory": str(self.cache_dir)
+        }
+    
+    def print_stats(self):
+        """Imprime las estadísticas del cache."""
+        stats = self.get_stats()
+        log("Core: === Estadísticas del Cache de Embeddings ===")
+        for key, value in stats.items():
+            log(f"Core: {key}: {value}")
+        log("Core: ===========================================")
+
+# Instancia global del cache
+_embedding_cache = None
+
+def get_embedding_cache() -> EmbeddingCache:
+    """Obtiene la instancia global del cache de embeddings."""
+    global _embedding_cache
+    if _embedding_cache is None:
+        _embedding_cache = EmbeddingCache()
+    return _embedding_cache
+
+def get_cache_stats() -> Dict[str, Any]:
+    """
+    Obtiene estadísticas del cache de embeddings.
+    Útil para monitoreo y debugging.
+    
+    Returns:
+        Diccionario con estadísticas del cache
+    """
+    cache = get_embedding_cache()
+    return cache.get_stats()
+
+def print_cache_stats():
+    """Imprime las estadísticas del cache de embeddings."""
+    cache = get_embedding_cache()
+    cache.print_stats()
+
+def clear_embedding_cache():
+    """Limpia todo el cache de embeddings."""
+    cache = get_embedding_cache()
+    cache.clear_all()
+    log("Core: Cache de embeddings limpiado manualmente")
+
 # --- Utilidad de Logging ---
 def log(message: str):
     """Imprime un mensaje en stderr para que aparezca en los logs del cliente MCP."""
@@ -257,7 +464,7 @@ EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
 
 def get_embedding_function():
     """
-    Retorna la función de embeddings a usar. Ahora, un modelo local.
+    Retorna la función de embeddings a usar con cache integrado.
     Detecta automáticamente si hay una GPU disponible para usarla.
     """
     log(f"Core: Cargando modelo de embedding local: {EMBEDDING_MODEL_NAME}")
@@ -274,12 +481,91 @@ def get_embedding_function():
     # Intentar cargar el modelo con progreso visible
     try:
         log("Core: Intentando cargar modelo (se mostrará progreso de descarga si es necesario)...")
-        embeddings = HuggingFaceEmbeddings(
+        base_embeddings = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL_NAME,
             model_kwargs=model_kwargs
         )
         log("Core: ¡Modelo cargado exitosamente!")
-        return embeddings
+        
+        # Obtener la instancia del cache
+        cache = get_embedding_cache()
+        
+        # Crear una clase wrapper simple con composición
+        class CachedEmbeddings:
+            def __init__(self, base_embeddings, cache):
+                self.base_embeddings = base_embeddings
+                self.cache = cache
+                # Copiar métodos necesarios del modelo base
+                self.embed_query = self._cached_embed_query
+                self.embed_documents = self._cached_embed_documents
+            
+            def _cached_embed_query(self, text: str):
+                """
+                Genera embedding para un texto con cache integrado.
+                
+                Args:
+                    text: Texto para generar embedding
+                    
+                Returns:
+                    Embedding del texto
+                """
+                # Verificar cache primero
+                cached_embedding = self.cache.get(text)
+                
+                if cached_embedding is not None:
+                    # Cache hit - usar embedding almacenado
+                    log(f"Core: Cache HIT para texto de {len(text)} caracteres")
+                    return cached_embedding
+                else:
+                    # Cache miss - calcular nuevo embedding
+                    log(f"Core: Cache MISS para texto de {len(text)} caracteres")
+                    embedding = self.base_embeddings.embed_query(text)
+                    self.cache.set(text, embedding)  # Guardar en cache
+                    return embedding
+            
+            def _cached_embed_documents(self, texts: List[str]):
+                """
+                Genera embeddings para una lista de textos con cache integrado.
+                
+                Args:
+                    texts: Lista de textos para generar embeddings
+                    
+                Returns:
+                    Lista de embeddings
+                """
+                results = []
+                cache_hits = 0
+                cache_misses = 0
+                
+                for text in texts:
+                    # Verificar cache primero
+                    cached_embedding = self.cache.get(text)
+                    
+                    if cached_embedding is not None:
+                        # Cache hit - usar embedding almacenado
+                        results.append(cached_embedding)
+                        cache_hits += 1
+                    else:
+                        # Cache miss - calcular nuevo embedding
+                        embedding = self.base_embeddings.embed_query(text)
+                        self.cache.set(text, embedding)  # Guardar en cache
+                        results.append(embedding)
+                        cache_misses += 1
+                
+                # Log de rendimiento para lotes
+                if cache_hits > 0 or cache_misses > 0:
+                    total = cache_hits + cache_misses
+                    hit_rate = (cache_hits / total * 100) if total > 0 else 0
+                    log(f"Core: Lote procesado: {total} textos, Cache hits: {cache_hits} ({hit_rate:.1f}%)")
+                
+                return results
+        
+        # Crear instancia del wrapper con cache
+        cached_embeddings = CachedEmbeddings(base_embeddings, cache)
+        
+        log("Core: Cache de embeddings integrado exitosamente")
+        return cached_embeddings
+        
     except Exception as e:
         log(f"Core: Error al cargar modelo: {e}")
         log("Core: Esto podría ser un problema de descarga. Por favor verifica tu conexión a internet.")
@@ -1037,12 +1323,12 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
     else:
         # Usar chunking tradicional mejorado
         log(f"Core: Usando chunking tradicional mejorado...")
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
             chunk_overlap=200,
-        length_function=len,
+            length_function=len,
             separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
-    )
+        )
     
     texts = text_splitter.split_text(cleaned_text)
     log(f"Core: Texto dividido en {len(texts)} fragmentos")
