@@ -4,6 +4,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 from datetime import datetime
 import queue
+import json
+import pickle
 from rag_core import get_vector_store, add_text_to_knowledge_base_enhanced, log, load_document_with_elements
 
 # Lista de extensiones de archivo que queremos procesar
@@ -63,6 +65,11 @@ class BulkIngestAdvancedGUI:
         self.processed_documents = [] # Almacena tuplas (path, markdown_content, size)
         self.documents_to_store = {} # Diccionario {path: BooleanVar}
         
+        # --- Mejoras de rendimiento ---
+        self.max_preview_length = 50000  # Límite de caracteres para previsualización
+        self.batch_size = 10  # Procesar documentos en lotes
+        self.memory_limit = 100 * 1024 * 1024  # 100MB límite de memoria
+        
         # --- Configuración e inicialización de la UI ---
         self.setup_styles()
         self.create_widgets()
@@ -70,6 +77,9 @@ class BulkIngestAdvancedGUI:
         # Iniciar el procesamiento de colas de logs
         self.process_log_queue()
         self.process_storage_log_queue()
+        
+        # Configurar limpieza automática de memoria
+        self.setup_memory_cleanup()
     
     def setup_styles(self):
         """Configurar estilos para la interfaz con tema 'Terminal Refinada'."""
@@ -238,6 +248,26 @@ class BulkIngestAdvancedGUI:
         left_panel = ttk.LabelFrame(content_frame, text="📋 Documentos Procesados", padding="10")
         left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         
+        # Frame de búsqueda y filtros
+        search_frame = ttk.Frame(left_panel)
+        search_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Campo de búsqueda
+        ttk.Label(search_frame, text="🔍 Buscar:").pack(side=tk.LEFT)
+        self.search_var = tk.StringVar()
+        self.search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
+        self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 10))
+        self.search_var.trace('w', self.filter_documents)
+        
+        # Filtro por tipo de archivo
+        ttk.Label(search_frame, text="📁 Tipo:").pack(side=tk.LEFT)
+        self.file_type_filter = tk.StringVar(value="Todos")
+        self.type_combo = ttk.Combobox(search_frame, textvariable=self.file_type_filter, 
+                                      values=["Todos", ".pdf", ".docx", ".txt", ".md"], 
+                                      state="readonly", width=10)
+        self.type_combo.pack(side=tk.LEFT, padx=(5, 0))
+        self.type_combo.bind('<<ComboboxSelected>>', self.filter_documents)
+        
         # Lista de documentos
         self.documents_listbox = tk.Listbox(left_panel, selectmode=tk.SINGLE, bg="#1a1a1a", fg="#33ff33", selectbackground="#33ff33", selectforeground="#000000", borderwidth=0, highlightthickness=1, highlightbackground="#33ff33")
         self.documents_listbox.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
@@ -250,7 +280,13 @@ class BulkIngestAdvancedGUI:
         ttk.Button(list_buttons_frame, text="✅ Seleccionar Todos", 
                   command=self.select_all_documents).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(list_buttons_frame, text="❌ Deseleccionar Todos", 
-                  command=self.deselect_all_documents).pack(side=tk.LEFT)
+                  command=self.deselect_all_documents).pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Botones de exportar/importar
+        ttk.Button(list_buttons_frame, text="📤 Exportar", 
+                  command=self.export_selection).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(list_buttons_frame, text="📥 Importar", 
+                  command=self.import_selection).pack(side=tk.LEFT)
         
         # Panel derecho: Previsualización
         right_panel = ttk.LabelFrame(content_frame, text="📄 Previsualización Markdown", padding="10")
@@ -761,12 +797,21 @@ class BulkIngestAdvancedGUI:
         # Actualizar checkbox de selección
         self.doc_select_var.set(doc.selected.get())
         
+        # Optimizar previsualización para documentos grandes
+        preview_content = doc.markdown_content
+        if len(preview_content) > self.max_preview_length:
+            preview_content = preview_content[:self.max_preview_length] + "\n\n... [CONTENIDO TRUNCADO PARA PREVISUALIZACIÓN] ..."
+            self.doc_size_label.config(text=f"📏 Tamaño: {len(doc.markdown_content)} caracteres (previsualización limitada)")
+        
         # Actualizar previsualización
         self.preview_text.delete(1.0, tk.END)
-        self.preview_text.insert(1.0, doc.markdown_content)
+        self.preview_text.insert(1.0, preview_content)
         
         # Actualizar contador
         self.doc_counter_label.config(text=f"{self.current_preview_index + 1} de {len(self.processed_documents)}")
+        
+        # Forzar actualización de la interfaz
+        self.root.update_idletasks()
     
     def on_document_selection_change(self):
         """Manejar cambio en la selección del documento"""
@@ -1013,6 +1058,146 @@ class BulkIngestAdvancedGUI:
         
         # El thread se detendrá automáticamente en la siguiente iteración
     
+    def setup_memory_cleanup(self):
+        """Configurar limpieza automática de memoria"""
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        
+        # Cargar configuración guardada
+        self.load_configuration()
+    
+    def on_close(self):
+        """Manejar evento de cierre de la ventana"""
+        # Detener procesos en ejecución
+        self.processing_running = False
+        self.stop_requested = True
+        self.storage_running = False
+        self.stop_storage_requested = True
+        
+        # Guardar configuración antes de cerrar
+        self.save_configuration()
+        
+        self.log_message("Proceso de ingesta detenido por el usuario.")
+        self.finish_processing()
+        self.root.destroy()
+
+    def filter_documents(self, *args):
+        """Filtrar la lista de documentos"""
+        search_text = self.search_var.get().lower()
+        file_type_filter = self.file_type_filter.get()
+        
+        self.documents_listbox.delete(0, tk.END)
+        for doc in self.processed_documents:
+            if search_text in doc.original_name.lower() and (file_type_filter == "Todos" or doc.file_type == file_type_filter):
+                self.documents_listbox.insert(tk.END, f"{doc.selected.get()} {doc.original_name}")
+        
+        # Seleccionar el primer documento si existe
+        if self.processed_documents:
+            self.documents_listbox.selection_set(0)
+            self.current_preview_index = 0
+            self.update_preview()
+
+    def save_configuration(self):
+        """Guardar configuración de la aplicación"""
+        config = {
+            'save_markdown': self.save_markdown.get(),
+            'max_preview_length': self.max_preview_length,
+            'batch_size': self.batch_size,
+            'last_directory': self.selected_directory.get(),
+            'window_geometry': self.root.geometry()
+        }
+        
+        try:
+            with open('bulk_ingest_config.json', 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.log_message(f"⚠️ No se pudo guardar configuración: {e}")
+    
+    def load_configuration(self):
+        """Cargar configuración de la aplicación"""
+        try:
+            with open('bulk_ingest_config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                
+            self.save_markdown.set(config.get('save_markdown', True))
+            self.max_preview_length = config.get('max_preview_length', 50000)
+            self.batch_size = config.get('batch_size', 10)
+            self.selected_directory.set(config.get('last_directory', ''))
+            
+            # Restaurar geometría de ventana
+            geometry = config.get('window_geometry', '1100x850')
+            self.root.geometry(geometry)
+            
+        except FileNotFoundError:
+            # Configuración por defecto si no existe archivo
+            pass
+        except Exception as e:
+            self.log_message(f"⚠️ Error cargando configuración: {e}")
+    
+    def export_selection(self):
+        """Exportar lista de documentos seleccionados"""
+        selected_docs = [doc for doc in self.processed_documents if doc.selected.get()]
+        if not selected_docs:
+            messagebox.showwarning("Sin Documentos", "No hay documentos seleccionados para exportar.")
+            return
+        
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Guardar lista de documentos seleccionados"
+        )
+        
+        if filename:
+            try:
+                export_data = []
+                for doc in selected_docs:
+                    export_data.append({
+                        'original_name': doc.original_name,
+                        'file_path': doc.file_path,
+                        'file_type': doc.file_type,
+                        'size': len(doc.markdown_content),
+                        'metadata': doc.metadata
+                    })
+                
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(export_data, f, indent=2, ensure_ascii=False)
+                
+                messagebox.showinfo("Éxito", f"Lista exportada exitosamente a {filename}")
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"Error exportando lista: {e}")
+    
+    def import_selection(self):
+        """Importar lista de documentos desde archivo"""
+        filename = filedialog.askopenfilename(
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Cargar lista de documentos"
+        )
+        
+        if filename:
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    import_data = json.load(f)
+                
+                # Crear documentos desde datos importados
+                for item in import_data:
+                    # Verificar que el archivo existe
+                    if os.path.exists(item['file_path']):
+                        # Crear preview con datos importados
+                        preview = DocumentPreview(
+                            item['file_path'],
+                            "",  # Contenido vacío, se cargará si es necesario
+                            item['file_type'],
+                            item['original_name'],
+                            item.get('metadata', {})
+                        )
+                        self.processed_documents.append(preview)
+                
+                self.update_documents_list()
+                messagebox.showinfo("Éxito", f"Lista importada: {len(import_data)} documentos")
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"Error importando lista: {e}")
+
 def main():
     """Función principal para ejecutar la aplicación."""
     root = tk.Tk()
