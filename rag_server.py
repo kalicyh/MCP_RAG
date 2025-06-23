@@ -22,7 +22,8 @@ from rag_core import (
     optimize_vector_store,
     get_vector_store_stats,
     reindex_vector_store,
-    get_optimal_vector_store_profile
+    get_optimal_vector_store_profile,
+    load_document_with_elements
 )
 
 # --- Inicialización del Servidor y Configuración ---
@@ -151,18 +152,19 @@ def learn_text(text: str, source_name: str = "manual_input") -> str:
 @mcp.tool()
 def learn_document(file_path: str) -> str:
     """
-    Reads and processes a document file using advanced Unstructured processing, and adds it to the knowledge base.
+    Reads and processes a document file using advanced Unstructured processing with real semantic chunking, and adds it to the knowledge base.
     Use this when you want to teach the AI from document files with intelligent processing.
     
     Supported file types: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, ODT, ODP, ODS, RTF, 
     images (PNG, JPG, TIFF, BMP with OCR), emails (EML, MSG), and more than 25 formats total.
     
     Advanced features:
+    - REAL semantic chunking based on document structure (titles, sections, lists)
     - Intelligent document structure preservation (titles, lists, tables)
     - Automatic noise removal (headers, footers, irrelevant content)
-    - Semantic chunking for better context
-    - Robust fallback system for any document type
     - Structural metadata extraction
+    - Robust fallback system for any document type
+    - Enhanced context preservation through semantic boundaries
     
     Examples of when to use:
     - Processing research papers or articles with complex layouts
@@ -171,7 +173,7 @@ def learn_document(file_path: str) -> str:
     - Converting presentations to searchable knowledge
     - Processing scanned documents with OCR
     
-    The document will be intelligently processed and stored with enhanced metadata.
+    The document will be intelligently processed with REAL semantic chunking and stored with enhanced metadata.
     A copy of the processed document is saved for verification.
 
     Args:
@@ -189,8 +191,8 @@ def learn_document(file_path: str) -> str:
 
         log(f"MCP Server: Procesando documento con sistema Unstructured avanzado...")
         
-        # Usar el nuevo sistema de procesamiento con Unstructured y fallbacks
-        processed_content, metadata = load_document_with_fallbacks(file_path)
+        # Usar el nuevo sistema de procesamiento con elementos estructurales
+        processed_content, metadata, structural_elements = load_document_with_elements(file_path)
 
         if not processed_content or processed_content.isspace():
             log(f"MCP Server: Advertencia: Documento procesado pero no se pudo extraer contenido: {file_path}")
@@ -200,76 +202,48 @@ def learn_document(file_path: str) -> str:
         
         # Guardar copia procesada
         log(f"MCP Server: Guardando copia procesada...")
-        processing_method = metadata.get("processing_method", "unstructured_enhanced")
-        processed_copy_path = save_processed_copy(file_path, processed_content, processing_method)
+        processing_method = metadata.get("processing_method", "unknown")
+        saved_copy_path = save_processed_copy(file_path, processed_content, processing_method)
         
-        # Añadir contenido a la base de conocimientos con metadatos estructurales
+        # Añadir contenido a la base de conocimientos con chunking semántico real
         log(f"MCP Server: Añadiendo contenido a la base de conocimientos con metadatos estructurales...")
         
-        # Enriquecer metadatos con información del servidor
-        enhanced_metadata = metadata.copy()
-        enhanced_metadata.update({
-            "input_type": "document",
-            "converted_to_md": processed_copy_path if processed_copy_path else "No",
-            "server_processed_date": datetime.now().isoformat()
-        })
-        
-        # Usar la función mejorada que soporta chunking semántico
+        # Usar la función mejorada con elementos estructurales para chunking semántico real
         add_text_to_knowledge_base_enhanced(
             processed_content, 
             rag_state["vector_store"], 
-            enhanced_metadata, 
-            use_semantic_chunking=True
+            metadata, 
+            use_semantic_chunking=True,
+            structural_elements=structural_elements
         )
         
-        # Construir respuesta informativa
-        file_type = enhanced_metadata.get("file_type", "desconocido")
-        structural_info = enhanced_metadata.get("structural_info", {})
-        
-        response_parts = [
-            f"✅ **Documento procesado exitosamente**",
-            f"📄 **Archivo:** {os.path.basename(file_path)}",
-            f"📋 **Tipo:** {file_type.upper()}",
-            f"🔧 **Método:** {processing_method.replace('_', ' ').title()}"
-        ]
-        
-        # Añadir información estructural si está disponible
-        if structural_info:
-            response_parts.extend([
-                f"📊 **Estructura del documento:**",
-                f"   • Elementos totales: {structural_info.get('total_elements', 'N/A')}",
-                f"   • Títulos: {structural_info.get('titles_count', 'N/A')}",
-                f"   • Tablas: {structural_info.get('tables_count', 'N/A')}",
-                f"   • Listas: {structural_info.get('lists_count', 'N/A')}",
-                f"   • Bloques narrativos: {structural_info.get('narrative_blocks', 'N/A')}"
-            ])
-        
-        # Añadir información sobre la copia guardada
-        if processed_copy_path:
-            response_parts.append(f"💾 **Copia guardada:** {processed_copy_path}")
-        
-        response_parts.append(f"📚 **Estado:** Añadido a la base de conocimientos con chunking semántico")
-        
         log(f"MCP Server: Proceso completado - Documento procesado con éxito")
-        return "\n".join(response_parts)
+        
+        # Preparar respuesta informativa
+        file_name = os.path.basename(file_path)
+        file_type = metadata.get("file_type", "unknown")
+        processing_method = metadata.get("processing_method", "unknown")
+        
+        # Información sobre el chunking usado
+        chunking_info = ""
+        if structural_elements and len(structural_elements) > 1:
+            chunking_info = f"🧠 **Chunking Semántico Avanzado** con {len(structural_elements)} elementos estructurales"
+        elif metadata.get("structural_info", {}).get("total_elements", 0) > 1:
+            chunking_info = f"📊 **Chunking Semántico Mejorado** basado en metadatos estructurales"
+        else:
+            chunking_info = f"📝 **Chunking Tradicional** optimizado"
+        
+        return f"""✅ **Documento procesado exitosamente**
+📄 **Archivo:** {file_name}
+📋 **Tipo:** {file_type.upper()}
+🔧 **Método:** {processing_method}
+{chunking_info}
+📊 **Caracteres procesados:** {len(processed_content):,}
+💾 **Copia guardada:** {saved_copy_path if saved_copy_path else "No disponible"}"""
 
     except Exception as e:
         log(f"MCP Server: Error procesando documento '{file_path}': {e}")
-        error_msg = f"❌ **Error procesando documento '{file_path}':** {e}"
-        
-        # Proporcionar información más útil para el agente
-        if "File not found" in str(e):
-            error_msg += "\n\n💡 **Consejo:** Asegúrate de que la ruta del archivo sea correcta y que el archivo exista."
-        elif "UnsupportedFormatException" in str(e):
-            error_msg += "\n\n💡 **Consejo:** Este formato de archivo no es compatible. El sistema soporta más de 25 formatos incluyendo PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, imágenes con OCR, y más."
-        elif "permission" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** Verifica si tienes permisos para acceder a este archivo."
-        elif "tesseract" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** Para procesar imágenes con texto, instala Tesseract OCR: `choco install tesseract` (Windows) o desde GitHub."
-        elif "unstructured" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** Verifica que Unstructured esté instalado correctamente: `pip install 'unstructured[local-inference,all-docs]'`"
-        
-        return error_msg
+        return f"Error procesando documento: {e}"
 
 @mcp.tool()
 def learn_from_url(url: str) -> str:

@@ -1361,15 +1361,16 @@ def flatten_metadata(metadata: Dict[str, Any], prefix: str = "") -> Dict[str, An
     
     return flattened
 
-def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_metadata: dict = None, use_semantic_chunking: bool = True):
+def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_metadata: dict = None, use_semantic_chunking: bool = True, structural_elements: List[Any] = None):
     """
-    Versión mejorada que soporta chunking semántico y metadatos estructurales.
+    Versión mejorada que soporta chunking semántico real y metadatos estructurales.
     
     Args:
         text: El texto a añadir
         vector_store: La base de datos vectorial
         source_metadata: Diccionario con metadatos de la fuente
         use_semantic_chunking: Si usar chunking semántico en lugar del tradicional
+        structural_elements: Lista de elementos estructurales para chunking semántico
     """
     if not text or text.isspace():
         log("Core Advertencia: Se intentó añadir texto vacío o solo espacios en blanco.")
@@ -1383,17 +1384,34 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
         log("Core Advertencia: El texto quedó vacío después de la limpieza.")
         return
 
-    if use_semantic_chunking and source_metadata and 'structural_info' in source_metadata:
-        # Usar chunking semántico si tenemos información estructural
-        log(f"Core: Usando chunking semántico basado en estructura del documento...")
-        # Para chunking semántico, necesitaríamos los elementos originales
-        # Por ahora, usamos el chunking tradicional pero con parámetros optimizados
+    # Determinar qué tipo de chunking usar
+    if use_semantic_chunking and structural_elements and len(structural_elements) > 1:
+        # Usar chunking semántico real con elementos estructurales
+        log(f"Core: Usando chunking semántico avanzado con {len(structural_elements)} elementos estructurales...")
+        texts = create_advanced_semantic_chunks(structural_elements, max_chunk_size=800, overlap=150)
+        
+        if not texts:
+            log("Core Warning: No se pudieron crear chunks semánticos, usando chunking tradicional...")
+            # Fallback a chunking tradicional
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200,
+                length_function=len,
+                separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
+            )
+            texts = text_splitter.split_text(cleaned_text)
+    
+    elif use_semantic_chunking and source_metadata and 'structural_info' in source_metadata:
+        # Usar chunking semántico mejorado (sin elementos estructurales)
+        log(f"Core: Usando chunking semántico mejorado basado en metadatos estructurales...")
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,  # Chunks más pequeños para mejor precisión
             chunk_overlap=150,  # Overlap moderado
             length_function=len,
             separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
         )
+        texts = text_splitter.split_text(cleaned_text)
+    
     else:
         # Usar chunking tradicional mejorado
         log(f"Core: Usando chunking tradicional mejorado...")
@@ -1403,8 +1421,8 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
             length_function=len,
             separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
         )
+        texts = text_splitter.split_text(cleaned_text)
     
-    texts = text_splitter.split_text(cleaned_text)
     log(f"Core: Texto dividido en {len(texts)} fragmentos")
     
     # Preparar metadatos para cada chunk
@@ -1417,6 +1435,14 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
             # Añadir información del chunk
             metadata['chunk_index'] = i
             metadata['total_chunks'] = len(texts)
+            
+            # Añadir información sobre el tipo de chunking usado
+            if use_semantic_chunking and structural_elements:
+                metadata['chunking_method'] = 'semantic_advanced'
+            elif use_semantic_chunking:
+                metadata['chunking_method'] = 'semantic_improved'
+            else:
+                metadata['chunking_method'] = 'traditional'
             
             metadatas.append(metadata)
         
@@ -2237,3 +2263,175 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
             "status": "error",
             "message": f"Error en optimización para base grande: {str(e)}"
         }
+
+def load_document_with_elements(file_path: str) -> tuple[str, dict, List[Any]]:
+    """
+    Carga documento manteniendo los elementos estructurales para chunking semántico.
+    
+    Args:
+        file_path: Ruta del archivo a cargar
+    
+    Returns:
+        Tupla con (contenido_texto, metadatos, elementos_estructurales)
+    """
+    file_extension = os.path.splitext(file_path)[1].lower()
+    
+    # Estrategia 1: Unstructured con configuración óptima
+    try:
+        log(f"Core: Intentando carga con Unstructured (configuración óptima)...")
+        config = UNSTRUCTURED_CONFIGS.get(file_extension, DEFAULT_CONFIG)
+        
+        # Para PDFs, usar configuración más rápida para evitar colgadas
+        if file_extension == '.pdf':
+            log(f"Core: PDF detectado, usando configuración rápida para evitar timeouts...")
+            config = config.copy()
+            config['strategy'] = 'fast'
+            config['max_partition'] = 1000
+            config['new_after_n_chars'] = 800
+        
+        elements = partition(filename=file_path, **config)
+        
+        # Procesar elementos de manera inteligente
+        processed_text = process_unstructured_elements(elements)
+        
+        # Extraer metadatos estructurales
+        metadata = extract_structural_metadata(elements, file_path)
+        
+        if processed_text and not processed_text.isspace():
+            log(f"Core: Carga exitosa con Unstructured (configuración óptima)")
+            return processed_text, metadata, elements
+    
+    except Exception as e:
+        log(f"Core Warning: Unstructured (configuración óptima) falló: {e}")
+    
+    # Estrategia 2: Unstructured con configuración básica
+    try:
+        log(f"Core: Intentando carga con Unstructured (configuración básica)...")
+        elements = partition(filename=file_path, strategy="fast", max_partition=1000)
+        processed_text = process_unstructured_elements(elements)
+        metadata = extract_structural_metadata(elements, file_path)
+        
+        if processed_text and not processed_text.isspace():
+            log(f"Core: Carga exitosa con Unstructured (configuración básica)")
+            return processed_text, metadata, elements
+    
+    except Exception as e:
+        log(f"Core Warning: Unstructured (configuración básica) falló: {e}")
+    
+    # Estrategia 3: Cargadores específicos de LangChain (sin elementos estructurales)
+    try:
+        log(f"Core: Intentando carga con cargadores específicos de LangChain...")
+        fallback_text = load_with_langchain_fallbacks(file_path)
+        
+        if fallback_text and not fallback_text.isspace():
+            metadata = {
+                "source": os.path.basename(file_path),
+                "file_path": file_path,
+                "file_type": file_extension,
+                "processed_date": datetime.now().isoformat(),
+                "processing_method": "langchain_fallback",
+                "structural_info": {
+                    "total_elements": 1,
+                    "titles_count": 0,
+                    "tables_count": 0,
+                    "lists_count": 0,
+                    "narrative_blocks": 1,
+                    "other_elements": 0,
+                    "total_text_length": len(fallback_text),
+                    "avg_element_length": len(fallback_text)
+                }
+            }
+            log(f"Core: Carga exitosa con cargadores específicos de LangChain")
+            return fallback_text, metadata, None  # Sin elementos estructurales
+    
+    except Exception as e:
+        log(f"Core Warning: Cargadores específicos de LangChain fallaron: {e}")
+    
+    # Si todas las estrategias fallan
+    log(f"Core Error: Todas las estrategias de carga fallaron para '{file_path}'")
+    return "", {}, None
+
+def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    """
+    Crea chunks semánticos avanzados basados en la estructura real del documento.
+    
+    Args:
+        elements: Lista de elementos extraídos por Unstructured
+        max_chunk_size: Tamaño máximo de cada chunk
+        overlap: Superposición entre chunks
+    
+    Returns:
+        Lista de chunks semánticos
+    """
+    if not elements:
+        return []
+    
+    chunks = []
+    current_chunk = []
+    current_size = 0
+    
+    log(f"Core: Creando chunks semánticos avanzados con {len(elements)} elementos...")
+    
+    for i, element in enumerate(elements):
+        # Extraer texto del elemento
+        element_text = ""
+        if hasattr(element, 'text'):
+            element_text = element.text
+        elif hasattr(element, 'content'):
+            element_text = element.content
+        else:
+            element_text = str(element)
+        
+        # Limpiar el texto
+        element_text = element_text.strip()
+        if not element_text:
+            continue
+        
+        element_size = len(element_text)
+        
+        # Determinar si este elemento es un punto de quiebre natural
+        is_break_point = False
+        
+        # Verificar si es un título (punto de quiebre natural)
+        if hasattr(element, 'category'):
+            if element.category in ['Title', 'NarrativeText', 'ListItem']:
+                is_break_point = True
+        elif hasattr(element, 'metadata') and element.metadata:
+            if element.metadata.get('category') in ['Title', 'NarrativeText', 'ListItem']:
+                is_break_point = True
+        
+        # Si añadir este elemento excedería el tamaño máximo Y es un punto de quiebre
+        if current_size + element_size > max_chunk_size and current_chunk and is_break_point:
+            # Guardar el chunk actual
+            chunk_text = "\n\n".join(current_chunk)
+            if chunk_text.strip():
+                chunks.append(chunk_text)
+                log(f"Core: Chunk {len(chunks)} creado con {len(current_chunk)} elementos, tamaño: {len(chunk_text)}")
+            
+            # Crear overlap con elementos anteriores si es posible
+            overlap_elements = []
+            overlap_size = 0
+            for j in range(len(current_chunk) - 1, -1, -1):
+                if overlap_size + len(current_chunk[j]) <= overlap:
+                    overlap_elements.insert(0, current_chunk[j])
+                    overlap_size += len(current_chunk[j])
+                else:
+                    break
+            
+            # Iniciar nuevo chunk con overlap
+            current_chunk = overlap_elements + [element_text]
+            current_size = overlap_size + element_size
+        else:
+            # Añadir al chunk actual
+            current_chunk.append(element_text)
+            current_size += element_size
+    
+    # Añadir el último chunk si existe
+    if current_chunk:
+        chunk_text = "\n\n".join(current_chunk)
+        if chunk_text.strip():
+            chunks.append(chunk_text)
+            log(f"Core: Chunk final {len(chunks)} creado con {len(current_chunk)} elementos, tamaño: {len(chunk_text)}")
+    
+    log(f"Core: Chunking semántico avanzado completado: {len(chunks)} chunks creados")
+    return chunks

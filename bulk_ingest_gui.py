@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 from datetime import datetime
 import queue
-from rag_core import get_vector_store, add_text_to_knowledge_base, log, load_document_with_fallbacks
+from rag_core import get_vector_store, add_text_to_knowledge_base_enhanced, log, load_document_with_elements
 
 # Lista de extensiones de archivo que queremos procesar
 SUPPORTED_EXTENSIONS = [
@@ -663,9 +663,9 @@ class BulkIngestAdvancedGUI:
                 self.update_progress(processed_count, total_files, original_filename)
                 
                 try:
-                    # Usar el sistema mejorado de Unstructured
+                    # Usar el sistema mejorado de Unstructured con elementos estructurales
                     self.log_message(f"   - Cargando con sistema mejorado de Unstructured...")
-                    markdown_content, metadata = load_document_with_fallbacks(file_path)
+                    markdown_content, metadata, structural_elements = load_document_with_elements(file_path)
                     
                     if not markdown_content or markdown_content.isspace():
                         self.log_message(f"   - Advertencia: El documento resultó vacío tras el procesamiento. Omitiendo.")
@@ -679,6 +679,10 @@ class BulkIngestAdvancedGUI:
                         struct_info = metadata['structural_info']
                         self.log_message(f"   - Estructura: {struct_info['titles_count']} títulos, {struct_info['tables_count']} tablas, {struct_info['lists_count']} listas")
                     
+                    # Mostrar información de elementos estructurales
+                    if structural_elements:
+                        self.log_message(f"   - Elementos estructurales: {len(structural_elements)} elementos para chunking semántico")
+                    
                     # Guardar copia en Markdown si la opción está seleccionada
                     if self.save_markdown.get():
                         self.log_message(f"   - Guardando copia Markdown...")
@@ -691,6 +695,8 @@ class BulkIngestAdvancedGUI:
                     
                     # Guardar el resultado en la lista para la pestaña de revisión
                     preview = DocumentPreview(file_path, markdown_content, file_type, original_filename, metadata)
+                    # Añadir elementos estructurales al preview
+                    preview.structural_elements = structural_elements
                     self.processed_documents.append(preview)
                     
                 except Exception as e:
@@ -914,8 +920,14 @@ class BulkIngestAdvancedGUI:
                         "converted_to_md": "Yes"
                     }
                     
-                    # Añadir a la base de conocimiento
-                    add_text_to_knowledge_base(doc.markdown_content, vector_store, source_metadata)
+                    # Añadir a la base de conocimiento con chunking semántico real
+                    add_text_to_knowledge_base_enhanced(
+                        doc.markdown_content, 
+                        vector_store, 
+                        source_metadata,
+                        use_semantic_chunking=True,
+                        structural_elements=getattr(doc, 'structural_elements', None)
+                    )
                     
                     self.log_storage_message(f"✅ {doc.original_name} almacenado exitosamente")
                     
