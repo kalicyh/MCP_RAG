@@ -711,6 +711,9 @@ class BulkIngestAdvancedGUI:
     def save_markdown_copy(self, file_path: str, markdown_content: str) -> str:
         """Guardar copia en Markdown"""
         try:
+            # Crear la carpeta converted_docs si no existe
+            os.makedirs(CONVERTED_DOCS_DIR, exist_ok=True)
+            
             original_filename = os.path.basename(file_path)
             name_without_ext = os.path.splitext(original_filename)[0]
             md_filename = f"{name_without_ext}.md"

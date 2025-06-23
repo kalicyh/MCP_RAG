@@ -1,3 +1,25 @@
+"""
+Sistema RAG Modular Avanzado - Core Module
+==========================================
+
+Este módulo proporciona funcionalidades avanzadas para el procesamiento y almacenamiento
+de documentos en un sistema RAG (Retrieval-Augmented Generation), incluyendo:
+
+- Procesamiento de múltiples formatos de documentos
+- Cache de embeddings para optimización de rendimiento
+- Chunking semántico avanzado
+- Optimizaciones para bases de datos grandes
+- Normalización de texto y limpieza
+- Gestión avanzada de metadatos
+
+Autor: Sistema RAG Modular
+Versión: 2.0
+"""
+
+# =============================================================================
+# IMPORTS Y DEPENDENCIAS
+# =============================================================================
+
 import os
 from dotenv import load_dotenv
 import torch
@@ -13,18 +35,26 @@ import pickle
 from pathlib import Path
 from functools import lru_cache
 
+# LangChain imports
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models import ChatOllama
-# CAMBIO: Quitamos OpenAI, importamos el wrapper para embeddings locales
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# Unstructured imports
 from unstructured.partition.auto import partition
 from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
+
+# ChromaDB imports
 from chromadb.config import Settings
 
-# --- Configuración Avanzada de Unstructured ---
+# =============================================================================
+# CONFIGURACIÓN AVANZADA DE UNSTRUCTURED
+# =============================================================================
+
+# Configuraciones optimizadas para diferentes tipos de documentos
 UNSTRUCTURED_CONFIGS = {
     # Documentos de Office
     '.pdf': {
@@ -389,11 +419,20 @@ class EmbeddingCache:
             log(f"Core: {key}: {value}")
         log("Core: ===========================================")
 
-# Instancia global del cache
+# =============================================================================
+# FUNCIONES DE UTILIDAD Y GESTIÓN DEL CACHE
+# =============================================================================
+
+# Variable global para el cache de embeddings
 _embedding_cache = None
 
 def get_embedding_cache() -> EmbeddingCache:
-    """Obtiene la instancia global del cache de embeddings."""
+    """
+    Obtiene la instancia global del cache de embeddings.
+    
+    Returns:
+        Instancia de EmbeddingCache
+    """
     global _embedding_cache
     if _embedding_cache is None:
         _embedding_cache = EmbeddingCache()
@@ -402,7 +441,6 @@ def get_embedding_cache() -> EmbeddingCache:
 def get_cache_stats() -> Dict[str, Any]:
     """
     Obtiene estadísticas del cache de embeddings.
-    Útil para monitoreo y debugging.
     
     Returns:
         Diccionario con estadísticas del cache
@@ -416,172 +454,148 @@ def print_cache_stats():
     cache.print_stats()
 
 def clear_embedding_cache():
-    """Limpia todo el cache de embeddings."""
-    cache = get_embedding_cache()
-    cache.clear_all()
-    log("Core: Cache de embeddings limpiado manualmente")
+    """Limpia completamente el cache de embeddings."""
+    global _embedding_cache
+    if _embedding_cache:
+        _embedding_cache.clear_all()
+        _embedding_cache = None
+    log("Core: Cache de embeddings limpiado completamente")
 
-# --- Utilidad de Logging ---
+# =============================================================================
+# FUNCIONES DE LOGGING Y UTILIDADES GENERALES
+# =============================================================================
+
 def log(message: str):
-    """Imprime un mensaje en stderr para que aparezca en los logs del cliente MCP."""
-    print(message, file=sys.stderr, flush=True)
+    """Función de logging centralizada con timestamp."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
-# --- Utilidad de Progreso de Descarga ---
 def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
-    """Descarga un archivo mostrando una barra de progreso."""
-    response = requests.get(url, stream=True)
-    total_size = int(response.headers.get('content-length', 0))
+    """
+    Descarga un archivo con barra de progreso.
     
-    with open(filename, 'wb') as file, tqdm(
-        desc=desc,
-        total=total_size,
-        unit='iB',
-        unit_scale=True,
-        unit_divisor=1024,
-        file=sys.stderr  # Enviamos a stderr para que aparezca en los logs
-    ) as pbar:
-        for data in response.iter_content(chunk_size=1024):
-            size = file.write(data)
-            pbar.update(size)
+    Args:
+        url: URL del archivo a descargar
+        filename: Nombre del archivo local
+        desc: Descripción para la barra de progreso
+    """
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        total_size = int(response.headers.get('content-length', 0))
+        
+        with open(filename, 'wb') as file, tqdm(
+            desc=desc,
+            total=total_size,
+            unit='iB',
+            unit_scale=True,
+            unit_divisor=1024,
+        ) as pbar:
+            for data in response.iter_content(chunk_size=1024):
+                size = file.write(data)
+                pbar.update(size)
+        
+        log(f"Core: Descarga completada: {filename}")
+    except Exception as e:
+        log(f"Core: Error en descarga: {e}")
+        raise
 
-# --- Configuración ---
-load_dotenv()
-
-# Obtenemos la ruta absoluta del directorio del script actual
-_project_root = os.path.dirname(os.path.abspath(__file__))
-# Forzamos la ruta absoluta para la base de datos, evitando problemas de directorio de trabajo
-PERSIST_DIRECTORY = os.path.join(_project_root, "rag_mcp_db")
-
-COLLECTION_NAME = "mcp_rag_collection"
-# Definimos el modelo de embedding que usaremos localmente
-# Modelos más potentes (requieren más recursos):
-# "all-mpnet-base-v2"      # 420MB, mejor calidad
-# "text-embedding-ada-002" # 1.5GB, máxima calidad
-
-# Modelos más rápidos:
-# "all-MiniLM-L6-v2"       # Tu modelo actual
-# "paraphrase-MiniLM-L3-v2" # Aún más rápido
-EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
+# =============================================================================
+# GESTIÓN DE EMBEDDINGS Y MODELOS
+# =============================================================================
 
 def get_embedding_function():
     """
-    Retorna la función de embeddings a usar con cache integrado.
-    Detecta automáticamente si hay una GPU disponible para usarla.
+    Obtiene la función de embeddings con cache integrado.
+    
+    Returns:
+        Función de embeddings con cache
     """
-    log(f"Core: Cargando modelo de embedding local: {EMBEDDING_MODEL_NAME}")
-    log("Core: Este paso puede tomar unos minutos en la primera ejecución para descargar el modelo.")
-    log("Core: Si el modelo ya está descargado, se cargará rápidamente desde la caché.")
-    
-    # Detectar si hay una GPU disponible y asignar el dispositivo correspondiente
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    log(f"Core: Usando dispositivo '{device}' para embeddings.")
-    
-    # Configurar el modelo con progreso de descarga
-    model_kwargs = {'device': device}
-    
-    # Intentar cargar el modelo con progreso visible
     try:
-        log("Core: Intentando cargar modelo (se mostrará progreso de descarga si es necesario)...")
-        base_embeddings = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL_NAME,
-            model_kwargs=model_kwargs
-        )
-        log("Core: ¡Modelo cargado exitosamente!")
+        # Configuración del modelo de embeddings
+        model_name = "sentence-transformers/all-MiniLM-L6-v2"
         
-        # Obtener la instancia del cache
+        # Crear embeddings base
+        base_embeddings = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+        
+        # Obtener cache
         cache = get_embedding_cache()
         
-        # Crear una clase wrapper simple con composición
+        # Wrapper con cache
         class CachedEmbeddings:
             def __init__(self, base_embeddings, cache):
                 self.base_embeddings = base_embeddings
                 self.cache = cache
-                # Copiar métodos necesarios del modelo base
-                self.embed_query = self._cached_embed_query
-                self.embed_documents = self._cached_embed_documents
             
             def _cached_embed_query(self, text: str):
-                """
-                Genera embedding para un texto con cache integrado.
-                
-                Args:
-                    text: Texto para generar embedding
-                    
-                Returns:
-                    Embedding del texto
-                """
-                # Verificar cache primero
+                """Embedding con cache para consultas."""
+                # Intentar obtener del cache
                 cached_embedding = self.cache.get(text)
-                
                 if cached_embedding is not None:
-                    # Cache hit - usar embedding almacenado
-                    log(f"Core: Cache HIT para texto de {len(text)} caracteres")
                     return cached_embedding
-                else:
-                    # Cache miss - calcular nuevo embedding
-                    log(f"Core: Cache MISS para texto de {len(text)} caracteres")
-                    embedding = self.base_embeddings.embed_query(text)
-                    self.cache.set(text, embedding)  # Guardar en cache
-                    return embedding
+                
+                # Calcular nuevo embedding
+                embedding = self.base_embeddings.embed_query(text)
+                
+                # Guardar en cache
+                self.cache.set(text, embedding)
+                
+                return embedding
             
             def _cached_embed_documents(self, texts: List[str]):
-                """
-                Genera embeddings para una lista de textos con cache integrado.
+                """Embedding con cache para documentos."""
+                embeddings = []
+                uncached_texts = []
+                uncached_indices = []
                 
-                Args:
-                    texts: Lista de textos para generar embeddings
-                    
-                Returns:
-                    Lista de embeddings
-                """
-                results = []
-                cache_hits = 0
-                cache_misses = 0
-                
-                for text in texts:
-                    # Verificar cache primero
+                # Verificar cache para cada texto
+                for i, text in enumerate(texts):
                     cached_embedding = self.cache.get(text)
-                    
                     if cached_embedding is not None:
-                        # Cache hit - usar embedding almacenado
-                        results.append(cached_embedding)
-                        cache_hits += 1
+                        embeddings.append(cached_embedding)
                     else:
-                        # Cache miss - calcular nuevo embedding
-                        embedding = self.base_embeddings.embed_query(text)
-                        self.cache.set(text, embedding)  # Guardar en cache
-                        results.append(embedding)
-                        cache_misses += 1
+                        embeddings.append(None)  # Placeholder
+                        uncached_texts.append(text)
+                        uncached_indices.append(i)
                 
-                # Log de rendimiento para lotes
-                if cache_hits > 0 or cache_misses > 0:
-                    total = cache_hits + cache_misses
-                    hit_rate = (cache_hits / total * 100) if total > 0 else 0
-                    log(f"Core: Lote procesado: {total} textos, Cache hits: {cache_hits} ({hit_rate:.1f}%)")
+                # Calcular embeddings para textos no cacheados
+                if uncached_texts:
+                    new_embeddings = self.base_embeddings.embed_documents(uncached_texts)
+                    
+                    # Guardar en cache y actualizar lista
+                    for i, (text, embedding) in enumerate(zip(uncached_texts, new_embeddings)):
+                        self.cache.set(text, embedding)
+                        embeddings[uncached_indices[i]] = embedding
                 
-                return results
+                return embeddings
+            
+            # Exponer métodos de la clase base
+            def embed_query(self, text: str):
+                return self._cached_embed_query(text)
+            
+            def embed_documents(self, texts: List[str]):
+                return self._cached_embed_documents(texts)
         
-        # Crear instancia del wrapper con cache
-        cached_embeddings = CachedEmbeddings(base_embeddings, cache)
-        
-        log("Core: Cache de embeddings integrado exitosamente")
-        return cached_embeddings
+        return CachedEmbeddings(base_embeddings, cache)
         
     except Exception as e:
-        log(f"Core: Error al cargar modelo: {e}")
-        log("Core: Esto podría ser un problema de descarga. Por favor verifica tu conexión a internet.")
+        log(f"Core: Error inicializando embeddings: {e}")
         raise
 
 def get_optimal_vector_store_profile() -> str:
     """
-    Detecta automáticamente el perfil óptimo para la base vectorial
-    basado en el número de documentos existentes.
+    Detecta automáticamente el perfil óptimo basado en el tamaño de la base de datos.
     
     Returns:
-        Perfil recomendado ('small', 'medium', 'large')
+        Perfil óptimo ('small', 'medium', 'large')
     """
     try:
-        # Crear configuración de ChromaDB
+        # Configuración básica de ChromaDB
         chroma_settings = Settings(
             anonymized_telemetry=False,
             allow_reset=True,
@@ -703,9 +717,6 @@ def fix_duplicated_characters(text: str) -> str:
     
     # Detectar y corregir secuencias largas de caracteres duplicados
     # PERO IGNORAR COMPLETAMENTE LOS NÚMEROS
-    import re
-    
-    # Buscar secuencias de 3 o más caracteres iguales consecutivos
     def fix_long_duplications(match):
         char = match.group(1)
         count = len(match.group(0))
@@ -2435,3 +2446,38 @@ def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1
     
     log(f"Core: Chunking semántico avanzado completado: {len(chunks)} chunks creados")
     return chunks
+
+# =============================================================================
+# CONFIGURACIÓN Y GESTIÓN DEL VECTOR STORE
+# =============================================================================
+
+# Configuración del proyecto
+load_dotenv()
+
+# Obtener la ruta absoluta del directorio del script actual
+_project_root = os.path.dirname(os.path.abspath(__file__))
+# Forzar la ruta absoluta para la base de datos, evitando problemas de directorio de trabajo
+PERSIST_DIRECTORY = os.path.join(_project_root, "rag_mcp_db")
+COLLECTION_NAME = "mcp_rag_collection"
+
+# Perfiles de configuración para diferentes tamaños de base de datos
+VECTOR_STORE_PROFILES = {
+    'small': {
+        'description': 'Base de datos pequeña (< 1000 documentos)',
+        'recommended_for': 'Desarrollo y pruebas',
+        'chunk_size': 1000,
+        'chunk_overlap': 200
+    },
+    'medium': {
+        'description': 'Base de datos mediana (1000-10000 documentos)',
+        'recommended_for': 'Uso general',
+        'chunk_size': 1000,
+        'chunk_overlap': 200
+    },
+    'large': {
+        'description': 'Base de datos grande (> 10000 documentos)',
+        'recommended_for': 'Producción y grandes volúmenes',
+        'chunk_size': 800,
+        'chunk_overlap': 150
+    }
+}
