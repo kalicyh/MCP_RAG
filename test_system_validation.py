@@ -16,27 +16,28 @@ import time
 import requests
 from datetime import datetime
 from unittest.mock import patch, MagicMock
+# Importar Rich para mejorar la salida en consola
+from rich import print as rich_print
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+console = Console()
 
 # Añadir el directorio actual al path para importar nuestros módulos
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def print_header(title):
-    """Imprime un encabezado formateado."""
-    print("\n" + "="*60)
-    print(f"🧪 {title}")
-    print("="*60)
+    console.print(Panel(f"[bold blue]{title}[/bold blue]", title="[cyan]Prueba[/cyan]"))
 
 def print_section(title):
-    """Imprime una sección formateada."""
-    print(f"\n📊 {title}")
-    print("-" * 40)
+    console.print(f"\n[bold magenta]{title}[/bold magenta]")
+    console.print("[magenta]" + "-" * 40 + "[/magenta]")
 
 def print_result(test_name, success, details=""):
-    """Imprime el resultado de una prueba."""
-    status = "✅ PASÓ" if success else "❌ FALLÓ"
-    print(f"{status} {test_name}")
+    status = "[bold green]✅ PASÓ[/bold green]" if success else "[bold red]❌ FALLÓ[/bold red]"
+    console.print(f"{status} [bold]{test_name}[/bold]")
     if details:
-        print(f"   {details}")
+        console.print(f"   [yellow]{details}[/yellow]")
 
 def test_system_initialization():
     """Prueba la inicialización completa del sistema."""
@@ -482,87 +483,66 @@ def test_metadata_filtering():
         return False, error_msg
 
 def generate_test_report(results, test_details):
-    """Genera un reporte detallado de las pruebas en formato tabla."""
+    """Genera un reporte detallado de las pruebas en formato tabla usando Rich."""
     print_header("REPORTE FINAL DE PRUEBAS")
     
     total_tests = len(results)
     passed_tests = sum(1 for success in results.values() if success)
     failed_tests = total_tests - passed_tests
-    
-    print(f"📊 **Resumen General:**")
-    print(f"   • Total de pruebas: {total_tests}")
-    print(f"   • Pruebas exitosas: {passed_tests}")
-    print(f"   • Pruebas fallidas: {failed_tests}")
-    print(f"   • Tasa de éxito: {(passed_tests/total_tests)*100:.1f}%")
-    
+
+    # Resumen general en panel
+    console.print(Panel(f"[bold]Total de pruebas:[/bold] [cyan]{total_tests}[/cyan]\n"
+                       f"[bold]Pruebas exitosas:[/bold] [green]{passed_tests}[/green]\n"
+                       f"[bold]Pruebas fallidas:[/bold] [red]{failed_tests}[/red]\n"
+                       f"[bold]Tasa de éxito:[/bold] [bold yellow]{(passed_tests/total_tests)*100:.1f}%[/bold yellow]",
+                       title="[bold magenta]Resumen General[/bold magenta]", border_style="magenta"))
+
     # Tabla de resultados detallada
-    print(f"\n📋 **TABLA DE RESULTADOS DETALLADA:**")
-    print("=" * 130)
-    print(f"{'PRUEBA':<35} {'DESCRIPCIÓN':<45} {'ESTADO':<10} {'RESULTADO/DETALLES':<40}")
-    print("=" * 130)
-    
+    table = Table(title="Resultados Detallados de Pruebas", show_lines=True, header_style="bold blue")
+    table.add_column("PRUEBA", style="cyan", no_wrap=True)
+    table.add_column("DESCRIPCIÓN", style="white")
+    table.add_column("ESTADO", style="bold")
+    table.add_column("RESULTADO/DETALLES", style="yellow")
+
     for test_name, success in results.items():
         test_info = test_details.get(test_name, {})
         description = test_info.get('description', 'Sin descripción')
         result_details = test_info.get('error', '✅ Exitoso') if not success else test_info.get('error', '✅ Exitoso')
-        status = "✅ PASÓ" if success else "❌ FALLÓ"
-        
-        # Truncar descripción si es muy larga
+        status = "[green]✅ PASÓ[/green]" if success else "[red]❌ FALLÓ[/red]"
+        # Truncar descripción y resultado si son muy largos
         if len(description) > 42:
             description = description[:39] + "..."
-        
-        # Truncar resultado si es muy largo
         if len(result_details) > 37:
             result_details = result_details[:34] + "..."
-        
-        print(f"{test_name:<35} {description:<45} {status:<10} {result_details:<40}")
-    
-    print("=" * 130)
-    
-    # Resumen por estado
-    print(f"\n✅ **PRUEBAS EXITOSAS ({passed_tests}):**")
-    for test_name, success in results.items():
-        if success:
-            test_info = test_details.get(test_name, {})
-            description = test_info.get('description', 'Sin descripción')
-            result = test_info.get('error', '✅ Exitoso')
-            print(f"   • {test_name}: {description}")
-            print(f"     Resultado: {result}")
-    
+        table.add_row(test_name, description, status, result_details)
+    console.print(table)
+
+    # Resumen por estado en paneles
+    if passed_tests > 0:
+        exitosas = [name for name, ok in results.items() if ok]
+        console.print(Panel("\n".join(f"[green]• {name}[/green]" for name in exitosas), title=f"[bold green]PRUEBAS EXITOSAS ({passed_tests})[/bold green]", border_style="green"))
     if failed_tests > 0:
-        print(f"\n❌ **PRUEBAS FALLIDAS ({failed_tests}):**")
-        for test_name, success in results.items():
-            if not success:
-                test_info = test_details.get(test_name, {})
-                description = test_info.get('description', 'Sin descripción')
-                error = test_info.get('error', 'Error desconocido')
-                print(f"   • {test_name}: {description}")
-                print(f"     Error: {error}")
-    
-    print(f"\n🎯 **ESTADO DEL SISTEMA:**")
+        fallidas = [name for name, ok in results.items() if not ok]
+        console.print(Panel("\n".join(f"[red]• {name}[/red]" for name in fallidas), title=f"[bold red]PRUEBAS FALLIDAS ({failed_tests})[/bold red]", border_style="red"))
+
+    # Estado del sistema
     if passed_tests == total_tests:
-        print("🚀 **SISTEMA COMPLETAMENTE OPERATIVO**")
-        print("   • Todas las funcionalidades funcionando correctamente")
-        print("   • Listo para uso en producción")
+        console.print(Panel("[bold green]🚀 SISTEMA COMPLETAMENTE OPERATIVO[/bold green]\n• Todas las funcionalidades funcionando correctamente\n• Listo para uso en producción", title="[green]ESTADO DEL SISTEMA[/green]", border_style="green"))
     elif passed_tests >= total_tests * 0.8:
-        print("✅ **SISTEMA MAYORMENTE OPERATIVO**")
-        print("   • La mayoría de funcionalidades funcionando")
-        print("   • Revisar pruebas fallidas para optimización")
+        console.print(Panel("[bold yellow]✅ SISTEMA MAYORMENTE OPERATIVO[/bold yellow]\n• La mayoría de funcionalidades funcionando\n• Revisar pruebas fallidas para optimización", title="[yellow]ESTADO DEL SISTEMA[/yellow]", border_style="yellow"))
     else:
-        print("⚠️ **SISTEMA CON PROBLEMAS**")
-        print("   • Múltiples funcionalidades con errores")
-        print("   • Requiere revisión y corrección")
-    
+        console.print(Panel("[bold red]⚠️ SISTEMA CON PROBLEMAS[/bold red]\n• Múltiples funcionalidades con errores\n• Requiere revisión y corrección", title="[red]ESTADO DEL SISTEMA[/red]", border_style="red"))
+
     # Información adicional del cache si está disponible
     try:
         from rag_core import get_cache_stats
         cache_stats = get_cache_stats()
         if cache_stats.get('total_requests', 0) > 0:
-            print(f"\n🧠 **INFORMACIÓN ADICIONAL DEL CACHE:**")
-            print(f"   • Solicitudes totales: {cache_stats.get('total_requests', 0)}")
-            print(f"   • Tasa de hits: {cache_stats.get('overall_hit_rate', 'N/A')}")
-            print(f"   • Cache en memoria: {cache_stats.get('memory_cache_size', 0)} elementos")
-            print(f"   • Cache en disco: {cache_stats.get('disk_cache_size', 0)} elementos")
+            console.print(Panel(f"[bold]Solicitudes totales:[/bold] {cache_stats.get('total_requests', 0)}\n"
+                               f"[bold]Tasa de hits:[/bold] {cache_stats.get('overall_hit_rate', 'N/A')}\n"
+                               f"[bold]Cache en memoria:[/bold] {cache_stats.get('memory_cache_size', 0)} elementos\n"
+                               f"[bold]Cache en disco:[/bold] {cache_stats.get('disk_cache_size', 0)} elementos",
+                               title="[blue]INFORMACIÓN ADICIONAL DEL CACHE[/blue]", border_style="blue"))
     except:
         pass
 

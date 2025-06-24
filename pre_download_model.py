@@ -1,10 +1,18 @@
 # pre_download_model.py
 import sys
 from sentence_transformers import SentenceTransformer
+# Importar Rich para mejorar la salida en consola
+from rich import print as rich_print
+from rich.panel import Panel
 
 def log(message: str):
-    """Imprime un mensaje en la consola."""
-    print(message, file=sys.stderr, flush=True)
+    """Imprime un mensaje en la consola usando Rich."""
+    if any(word in message.lower() for word in ["error", "falló", "fatal", "excepción"]):
+        rich_print(Panel(f"{message}", title="[red]Error[/red]", style="bold red"))
+    elif any(word in message.lower() for word in ["éxito", "exitosamente", "completado", "ok"]):
+        rich_print(f"[bold green]{message}[/bold green]")
+    else:
+        rich_print(message)
 
 # El modelo de embedding que usa nuestro sistema
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
