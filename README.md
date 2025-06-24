@@ -303,7 +303,7 @@ Para que tu editor de IA pueda usar el servidor, debes configurarlo.
     ```json
     {
       "mcpServers": {
-        "rag_server_knowledge": {
+        "ragmcp": {
           "command": "D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG\\run_server.bat",
           "args": [],
           "workingDirectory": "D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG"
@@ -322,7 +322,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **1. `learn_text(text, source_name)` - Añadir información textual**
 ```
-@rag_server_knowledge learn_text("El punto de fusión del titanio es 1,668 °C.", "material_properties")
+@ragmcp learn_text("El punto de fusión del titanio es 1,668 °C.", "material_properties")
 ```
 - **Cuándo usar**: Para añadir hechos, definiciones, notas de conversación, etc.
 - **Parámetros**: 
@@ -331,7 +331,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **2. `learn_document(file_path)` - Procesar documentos**
 ```
-@rag_server_knowledge learn_document("C:\\Reportes\\informe_q3.pdf")
+@ragmcp learn_document("C:\\Reportes\\informe_q3.pdf")
 ```
 - **Cuándo usar**: Para procesar archivos PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, imágenes, correos electrónicos y más de 25 formatos
 - **Características Mejoradas**: 
@@ -343,7 +343,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **3. `ask_rag(query)` - Consultar información**
 ```
-@rag_server_knowledge ask_rag("¿Cuál es el punto de fusión del titanio?")
+@ragmcp ask_rag("¿Cuál es el punto de fusión del titanio?")
 ```
 - **Cuándo usar**: Para buscar información previamente almacenada
 - **Respuesta incluye**: 
@@ -353,7 +353,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **4. `ask_rag_filtered(query, file_type, min_tables, min_titles, processing_method)` - Búsquedas con filtros**
 ```
-@rag_server_knowledge ask_rag_filtered("¿Qué tablas de datos tenemos?", file_type=".pdf", min_tables=1)
+@ragmcp ask_rag_filtered("¿Qué tablas de datos tenemos?", file_type=".pdf", min_tables=1)
 ```
 - **Cuándo usar**: Para búsquedas más precisas usando filtros de metadatos
 - **Filtros disponibles**:
@@ -365,7 +365,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **5. `get_knowledge_base_stats()` - Estadísticas de la base de conocimientos**
 ```
-@rag_server_knowledge get_knowledge_base_stats()
+@ragmcp get_knowledge_base_stats()
 ```
 - **Cuándo usar**: Para obtener información sobre el contenido almacenado
 - **Información proporcionada**:
@@ -378,19 +378,19 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 ```bash
 # 1. Añadir información
-@rag_server_knowledge learn_text("La temperatura de fusión del titanio es 1,668°C.", "material_properties")
+@ragmcp learn_text("La temperatura de fusión del titanio es 1,668°C.", "material_properties")
 
 # 2. Procesar un documento complejo (ahora con procesamiento mejorado)
-@rag_server_knowledge learn_document("C:\\Documents\\manual_titanio.pdf")
+@ragmcp learn_document("C:\\Documents\\manual_titanio.pdf")
 
 # 3. Hacer preguntas (con respuestas mejoradas)
-@rag_server_knowledge ask_rag("¿Cuál es la temperatura de fusión del titanio?")
+@ragmcp ask_rag("¿Cuál es la temperatura de fusión del titanio?")
 
 # 4. Búsqueda filtrada por documentos con tablas
-@rag_server_knowledge ask_rag_filtered("¿Qué datos tabulares tenemos?", min_tables=1)
+@ragmcp ask_rag_filtered("¿Qué datos tabulares tenemos?", min_tables=1)
 
 # 5. Ver estadísticas de la base de conocimientos
-@rag_server_knowledge get_knowledge_base_stats()
+@ragmcp get_knowledge_base_stats()
 ```
 
 **Respuesta esperada:**
@@ -814,74 +814,3 @@ Las nuevas herramientas están optimizadas para uso por agentes de IA con:
 - **Respuestas estructuradas** con información de metadatos
 
 ---
-
-## 🌍 Soporte para Idiomas - Español
-
-### **Soporte Completo para Español**
-
-El sistema RAG está optimizado para trabajar con documentos en español, incluyendo el manejo correcto de caracteres especiales y acentos.
-
-#### **Características de Soporte para Español:**
-
-- **Normalización de Caracteres**: Corrección automática de acentos mal codificados
-- **Ligaduras Tipográficas**: Conversión de caracteres especiales a texto normal
-- **Normalización Unicode**: Manejo correcto de caracteres combinados
-- **Búsquedas Inteligentes**: Funcionamiento correcto con caracteres acentuados
-
-#### **Problemas Resueltos:**
-
-**Antes (caracteres mal codificados):**
-```
-M´etodo de punto ﬁjo
-An´alisis del error
-Bisecci´on ﬁnanciera
-```
-
-**Después (caracteres normalizados):**
-```
-Método de punto fijo
-Análisis del error
-Bisección financiera
-```
-
-#### **Tipos de Caracteres Corregidos:**
-
-1. **Acentos Mal Codificados:**
-   - `M´etodo` → `Método`
-   - `An´alisis` → `Análisis`
-   - `Bisecci´on` → `Bisección`
-
-2. **Ligaduras Tipográficas:**
-   - `ﬁnal` → `final`
-   - `ﬂujo` → `flujo`
-   - `oﬃcial` → `official`
-
-3. **Caracteres Especiales:**
-   - `…` → `...`
-   - `–` → `-`
-   - `—` → `-`
-
-4. **Normalización Unicode:**
-   - `a\u0301` → `á`
-   - `espa\u0303a` → `españa`
-
-#### **Impacto en las Búsquedas:**
-
-El sistema de normalización asegura que:
-- **Las búsquedas funcionen correctamente** con caracteres acentuados
-- **Los documentos se almacenen** con caracteres normalizados
-- **Las respuestas sean legibles** y sin caracteres extraños
-- **La compatibilidad sea total** con diferentes codificaciones
-
-#### **Ejemplo de Uso:**
-
-```python
-# El sistema procesa automáticamente caracteres problemáticos
-learn_document("documento_con_acentos.pdf")
-
-# Las búsquedas funcionan con caracteres normales
-ask_rag("¿Qué es el método de punto fijo?")
-
-# Las respuestas son legibles y correctas
-ask_rag_filtered("¿Qué análisis tenemos?", min_titles=1)
-```
