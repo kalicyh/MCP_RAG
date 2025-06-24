@@ -106,7 +106,7 @@ ollama list
 
 #### Descargar Modelos de Lenguaje
 
-El sistema RAG necesita un modelo de lenguaje para generar respuestas. Recomendamos:
+El sistema RAG necesita un modelo de lenguaje para generar respuestas. Se utiliza Ollama por ser gratis:
 
 ```bash
 # Modelo recomendado (equilibrio entre velocidad y calidad)
@@ -885,74 +885,3 @@ ask_rag("¿Qué es el método de punto fijo?")
 # Las respuestas son legibles y correctas
 ask_rag_filtered("¿Qué análisis tenemos?", min_titles=1)
 ```
-
-#### **Verificación del Sistema:**
-
-Para verificar que el sistema maneja correctamente los caracteres españoles:
-
-```bash
-# Ejecutar pruebas específicas de caracteres españoles
-python test_spanish_characters.py
-```
-
-Este script verifica:
-- ✅ Normalización de acentos mal codificados
-- ✅ Corrección de ligaduras tipográficas
-- ✅ Manejo de caracteres especiales
-- ✅ Normalización Unicode
-- ✅ Búsquedas con caracteres españoles
-
----
-
-## 🚀 Rendimiento y Escalabilidad
-
-### **Mejoras de Rendimiento:**
-
-- **Procesamiento Paralelo**: Múltiples estrategias de fallback
-- **Caché Inteligente**: Reutilización de elementos procesados
-- **Configuración Adaptativa**: Optimización por tipo de archivo
-- **Limpieza Eficiente**: Procesamiento optimizado de texto
-
-### **Escalabilidad:**
-
-- **Arquitectura Modular**: Componentes independientes y reutilizables
-- **Metadatos Estructurales**: Información para optimizaciones futuras
-- **Sistema de Fallbacks**: Garantiza funcionamiento con cualquier documento
-- **Configuración Flexible**: Fácil adaptación a nuevos formatos
-
----
-
-## 📞 Soporte y Contribuciones
-
-### **Reportar Problemas:**
-
-Si encuentras algún problema o tienes sugerencias:
-
-1. **Revisa los logs**: El sistema proporciona información detallada sobre errores
-2. **Verifica dependencias**: Asegúrate de tener todas las dependencias instaladas
-3. **Consulta la documentación**: Revisa las guías específicas para cada componente
-
-### **Contribuir:**
-
-Las contribuciones son bienvenidas. Áreas de mejora:
-
-- **Nuevos formatos de archivo**: Soporte para formatos adicionales
-- **Optimizaciones de rendimiento**: Mejoras en velocidad y eficiencia
-- **Interfaz de usuario**: Mejoras en la GUI
-- **Documentación**: Mejoras en guías y ejemplos
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
-
----
-
-## 🙏 Agradecimientos
-
-- **Unstructured.io**: Por la excelente librería de procesamiento de documentos
-- **LangChain**: Por el framework de RAG
-- **ChromaDB**: Por la base de datos vectorial
-- **Ollama**: Por los modelos de lenguaje locales
-- **Comunidad de IA**: Por el continuo desarrollo de herramientas de IA
