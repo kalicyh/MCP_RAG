@@ -28,7 +28,7 @@ from rag_core import (
 
 # --- Inicialización del Servidor y Configuración ---
 load_dotenv()
-mcp = FastMCP("rag_server_knowledge")
+mcp = FastMCP("ragmcp")
 
 # El estado ahora solo guarda los componentes listos para usar
 rag_state = {}
