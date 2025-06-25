@@ -5,57 +5,59 @@ setlocal
 set VENV_DIR=.venv
 
 echo =======================================================
-echo  Asistente de Arranque - Bulk Ingest GUI
+echo  Ejecutor de Aplicacion - Bulk Ingest GUI
 echo =======================================================
 echo.
 
-:: 1. Comprobar si el entorno virtual existe
-echo [1/4] Verificando entorno virtual...
+:: 1. Verificar si el entorno virtual existe
+echo [1/3] Verificando entorno virtual...
 if not exist "%VENV_DIR%\Scripts\activate.bat" (
-    echo      - Entorno no encontrado. Creando uno nuevo...
-    
-    :: Intenta crear el entorno con 'python', si falla, prueba con 'py'
-    python -m venv %VENV_DIR% >nul 2>&1
-    if errorlevel 1 (
-        py -m venv %VENV_DIR% >nul 2>&1
-        if errorlevel 1 (
-            echo.
-            echo ERROR: No se pudo crear el entorno virtual.
-            echo Por favor, asegurate de que Python este instalado y anadido al PATH.
-            pause
-            exit /b 1
-        )
-    )
-    echo      - Entorno virtual creado en la carpeta '%VENV_DIR%'.
+    echo.
+    echo ❌ ERROR: Entorno virtual no encontrado
+    echo.
+    echo El entorno virtual no existe o esta corrupto.
+    echo Por favor, ejecuta primero install_requirements.bat
+    echo para crear e instalar todas las dependencias.
+    echo.
+    pause
+    exit /b 1
 ) else (
-    echo      - Entorno virtual encontrado.
+    echo ✅ Entorno virtual encontrado
 )
 
 :: 2. Activar el entorno virtual
 echo.
-echo [2/4] Activando entorno virtual...
+echo [2/3] Activando entorno virtual...
 call "%VENV_DIR%\Scripts\activate.bat"
-echo      - Entorno activado.
-
-:: 3. Instalar/actualizar dependencias
-echo.
-echo [3/4] Instalando/actualizando dependencias desde requirements.txt...
-pip install -r requirements.txt
 if errorlevel 1 (
     echo.
-    echo ERROR: Fallo la instalacion de dependencias.
+    echo ❌ ERROR: No se pudo activar el entorno virtual
+    echo.
+    echo El entorno virtual puede estar corrupto.
+    echo Por favor, ejecuta install_requirements.bat para recrearlo.
+    echo.
     pause
     exit /b 1
 )
-echo      - Dependencias instaladas correctamente.
+echo ✅ Entorno virtual activado
 
-:: 4. Iniciar la aplicacion
+:: 3. Ejecutar la aplicación
 echo.
-echo [4/4] Iniciando la aplicacion...
+echo [3/3] Iniciando la aplicacion...
 echo =======================================================
 echo.
+
 python bulk_ingest_GUI/run_gui.py
 
 echo.
-echo La aplicacion se ha cerrado. Pulsa cualquier tecla para salir.
+echo =======================================================
+echo La aplicacion se ha cerrado.
+echo =======================================================
+echo.
+echo Si hubo un error, verifica que:
+echo 1. Todas las dependencias esten instaladas (install_requirements.bat)
+echo 2. El entorno virtual este activado correctamente
+echo 3. No haya otros procesos usando los archivos
+echo.
+pause 
 pause 

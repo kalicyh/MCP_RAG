@@ -5,7 +5,7 @@ Este proyecto implementa un servidor compatible con el Protocolo de Contexto de 
 ## ✨ Características
 
 - **Memoria Persistente para tu IA:** "Enseña" a tu IA nueva información que recordará entre sesiones.
-- **🆕 Interfaz Gráfica de Usuario (GUI):** Una aplicación de escritorio intuitiva (`run_gui.bat`) para procesar documentos, previsualizarlos y seleccionarlos antes de añadirlos a la base de conocimiento.
+- **🆕 Interfaz Gráfica de Usuario (GUI):** Una aplicación de escritorio intuitiva con sistema de scripts organizados para facilitar la instalación y ejecución.
 - **🚀 Procesamiento Avanzado de Documentos:** Alimenta la base de conocimiento con **más de 25 formatos de archivo** incluyendo PDF, DOCX, PPTX, XLSX, imágenes (con OCR), correos electrónicos, y más.
 - **🧠 Procesamiento Inteligente con Unstructured:** Sistema de procesamiento de documentos de nivel empresarial que preserva la estructura semántica, elimina ruido automáticamente y maneja formatos complejos.
 - **🔄 Sistema de Fallbacks Robusto:** Múltiples estrategias de procesamiento garantizan que cualquier documento sea procesado exitosamente.
@@ -19,20 +19,116 @@ Este proyecto implementa un servidor compatible con el Protocolo de Contexto de 
 - **Copias en Markdown:** Cada documento procesado se guarda automáticamente en formato Markdown para verificación y reutilización.
 - **🆕 Metadatos de Fuente:** Rastreabilidad completa de información con atribución de fuentes en cada respuesta.
 - **🆕 Optimizado para Agentes de IA:** Descripciones detalladas y manejo de errores inteligente para uso efectivo por agentes de IA.
+- **🆕 Sistema de Scripts Organizado:** Estructura modular de scripts que separa instalación, ejecución y diagnóstico.
 
 ---
 
 ## 🏗️ Arquitectura
 
-El proyecto está dividido en tres componentes principales:
+El proyecto está organizado en una estructura modular que separa claramente los componentes del servidor MCP y la interfaz gráfica de usuario (GUI). Esta organización facilita el mantenimiento, desarrollo y uso independiente de cada componente.
 
-1.  `rag_core.py`: El corazón del sistema. Contiene toda la lógica reutilizable para manejar la base de datos vectorial (ChromaDB), procesar texto y crear la cadena de preguntas y respuestas con LangChain. **Incluye procesamiento avanzado con Unstructured, metadatos estructurales, sistema de fallbacks robusto, y sistema de filtrado de metadatos.**
-2.  `rag_server.py`: El servidor MCP. Expone las herramientas (`learn_text`, `learn_document`, `ask_rag`, `ask_rag_filtered`, `get_knowledge_base_stats`) que el cliente de IA puede invocar. Se comunica a través de `stdio`. **Optimizado con descripciones detalladas para agentes de IA y herramientas de búsqueda avanzada.**
-3.  `bulk_ingest.py`: Un script de línea de comandos para procesar una carpeta llena de documentos y añadirlos a la base de conocimiento de forma masiva. **Incluye procesamiento mejorado con Unstructured y metadatos estructurales automáticos.**
+### **Estructura del Proyecto:**
 
-### Archivos de Documentación:
+```
+MCP_RAG/
+├── 📁 mcp_server_organized/          # Servidor MCP principal
+│   ├── 📄 server.py                  # Servidor MCP con herramientas RAG
+│   ├── 📄 run_server_organized.bat   # Script para ejecutar el servidor
+│   ├── 📁 src/                       # Código fuente del servidor
+│   │   ├── 📄 rag_core.py            # Lógica principal del RAG
+│   │   ├── 📄 rag_server_bk.py       # Servidor MCP (backup)
+│   │   ├── 📁 models/                # Modelos de datos
+│   │   ├── 📁 services/              # Servicios del servidor
+│   │   ├── 📁 tools/                 # Herramientas MCP
+│   │   └── 📁 utils/                 # Utilidades
+│   ├── 📁 tests/                     # Pruebas del servidor
+│   ├── 📁 data/                      # Datos del servidor
+│   │   ├── 📁 documents/             # Documentos procesados
+│   │   └── 📁 vector_store/          # Base de datos vectorial
+│   └── 📁 embedding_cache/           # Cache de embeddings
+│
+├── 📁 bulk_ingest_GUI/               # Interfaz gráfica de usuario
+│   ├── 📄 main.py                    # Punto de entrada principal
+│   ├── 📄 launch.py                  # Lanzador de la aplicación
+│   ├── 📄 start_app.py               # Inicialización de la app
+│   ├── 📄 rag_core_wrapper.py        # Wrapper para rag_core
+│   ├── 📁 views/                     # Vistas de la interfaz
+│   │   └── 📄 main_view.py           # Vista principal
+│   ├── 📁 controllers/               # Controladores
+│   │   └── 📄 main_controller.py     # Controlador principal
+│   ├── 📁 services/                  # Servicios de la GUI
+│   │   ├── 📄 document_service.py    # Servicio de documentos
+│   │   └── 📄 configuration_service.py # Servicio de configuración
+│   ├── 📁 models/                    # Modelos de la GUI
+│   ├── 📁 widgets/                   # Widgets personalizados
+│   ├── 📁 gui_utils/                 # Utilidades de la GUI
+│   ├── 📁 data/                      # Datos de la GUI
+│   │   ├── 📁 documents/             # Documentos procesados
+│   │   └── 📁 vector_store/          # Base de datos vectorial
+│   └── 📁 embedding_cache/           # Cache de embeddings
+│
+├── 📄 start.bat                      # Script principal de arranque
+├── 📄 run_gui.bat                    # Script para ejecutar la GUI
+├── 📄 install_requirements.bat       # Instalación de dependencias
+├── 📄 requirements.txt               # Dependencias del proyecto
+├── 📄 README.md                      # Documentación principal
+├── 📄 SCRIPTS_README.md              # Guía de scripts
+├── 📄 GUI_ADVANCED_README.md         # Guía de la GUI para ingesta de documentos masivo
+└── 📄 AGENT_INSTRUCTIONS.md          # Instrucciones para agentes IA
+```
+
+### **Componentes Principales:**
+
+#### **1. Servidor MCP (`mcp_server_organized/`)**
+- **`server.py`**: Servidor MCP principal que expone las herramientas RAG
+- **`src/rag_core.py`**: El corazón del sistema RAG con toda la lógica de procesamiento
+- **`src/tools/`**: Herramientas MCP (`learn_text`, `learn_document`, `ask_rag`, etc.)
+- **`src/services/`**: Servicios del servidor (configuración, logging, etc.)
+- **`src/models/`**: Modelos de datos para el servidor
+- **`src/utils/`**: Utilidades compartidas
+
+#### **2. Interfaz Gráfica (`bulk_ingest_GUI/`)**
+- **`main.py`**: Punto de entrada principal de la aplicación GUI
+- **`views/main_view.py`**: Interfaz de usuario principal con pestañas
+- **`controllers/main_controller.py`**: Lógica de control de la interfaz
+- **`services/document_service.py`**: Servicio para procesamiento de documentos
+- **`services/configuration_service.py`**: Gestión de configuración
+- **`widgets/`**: Componentes personalizados de la interfaz
+- **`gui_utils/`**: Utilidades específicas de la GUI
+
+#### **3. Scripts de Sistema**
+- **`start.bat`**: Script principal que guía al usuario
+- **`run_gui.bat`**: Ejecuta directamente la aplicación GUI
+- **`install_requirements.bat`**: Instalación completa de dependencias
+- **`check_system.bat`**: Diagnóstico del sistema
+- **`fix_dependencies.bat`**: Reparación de dependencias
+
+### **Flujo de Datos:**
+
+1. **Ingesta de Documentos**: La GUI procesa documentos usando `rag_core_wrapper.py`
+2. **Almacenamiento**: Los documentos se guardan en la base de datos vectorial
+3. **Consulta**: El servidor MCP accede a la misma base de datos para responder consultas
+4. **Respuesta**: Las herramientas MCP devuelven respuestas con fuentes
+
+### **Separación de Responsabilidades:**
+
+- **Servidor MCP**: Se enfoca en exponer herramientas para clientes de IA
+- **GUI**: Se enfoca en la experiencia de usuario para ingesta de documentos
+- **RAG Core**: Lógica compartida entre ambos componentes
+- **Scripts**: Automatización y gestión del entorno
+
+Esta arquitectura modular permite:
+- ✅ Desarrollo independiente de cada componente
+- ✅ Reutilización de código entre servidor y GUI
+- ✅ Fácil mantenimiento y debugging
+- ✅ Escalabilidad para nuevas características
+- ✅ Uso independiente del servidor o la GUI
+
+### **Archivos de Documentación:**
 - [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md): Guía completa para agentes de IA sobre cómo usar el sistema
-- [`GUI_ADVANCED_README.md`](./GUI_ADVANCED_README.md): Guía detallada para la interfaz gráfica avanzada
+- [`GUI_ADVANCED_README.md`](./GUI_ADVANCED_README.md): Guía detallada para la interfaz gráfica para ingesta de documentos masivo
+- [`SCRIPTS_README.md`](./SCRIPTS_README.md): Guía completa del sistema de scripts organizados
+- [`STORAGE_PROGRESS_README.md`](./STORAGE_PROGRESS_README.md): Documentación del sistema de progreso de almacenamiento
 - `test_enhanced_rag.py`: Script de prueba para verificar el funcionamiento del sistema
 
 ---
@@ -49,17 +145,26 @@ Sigue estos pasos para poner en marcha el sistema.
 
 ### 1. Instalación (¡Automática!)
 
-Gracias a los scripts de arranque, la instalación es increíblemente sencilla.
+Gracias al sistema de scripts organizados, la instalación es increíblemente sencilla.
 
-1.  **Para el Servidor RAG:** Simplemente ejecuta `run_server.bat`.
-2.  **Para la Ingesta de Documentos:** Simplemente ejecuta `run_gui.bat`.
+#### **Para Usuarios (Recomendado):**
+1. **Ejecuta el script principal:** `start.bat`
+2. **Selecciona "1"** para instalar dependencias
+3. **Espera** a que termine la instalación automática
+4. **La aplicación se iniciará** automáticamente
 
-La primera vez que ejecutes cualquiera de estos archivos, el script hará todo por ti:
-- ✅ Creará un entorno virtual de Python en una carpeta `.venv`.
-- ✅ Activará el entorno.
-- ✅ Instalará todas las dependencias necesarias desde `requirements.txt`.
-- ✅ Instalará Unstructured con capacidades avanzadas.
-- ✅ Lanzará la aplicación.
+#### **Para Desarrolladores:**
+- **Instalación completa:** `install_requirements.bat`
+- **Ejecución:** `run_gui.bat`
+- **Diagnóstico:** `check_system.bat`
+
+El sistema de scripts hace todo por ti:
+- ✅ Crea un entorno virtual de Python en una carpeta `.venv`
+- ✅ Activa el entorno automáticamente
+- ✅ Instala todas las dependencias necesarias desde `requirements.txt`
+- ✅ Detecta automáticamente si tienes GPU NVIDIA y instala PyTorch apropiadamente
+- ✅ Instala Unstructured con capacidades avanzadas
+- ✅ Lanza la aplicación
 
 En ejecuciones posteriores, el script simplemente activará el entorno y lanzará la aplicación directamente.
 
@@ -247,18 +352,19 @@ El sistema soporta **más de 25 formatos de archivo** con procesamiento optimiza
 
 La forma más fácil e intuitiva de añadir documentos es usando la interfaz gráfica.
 
-1.  Haz doble clic en `run_gui.bat`.
-2.  La aplicación se iniciará (la primera vez puede tardar mientras instala las dependencias).
-3.  Usa el botón "Explorar..." para seleccionar la carpeta con tus documentos.
-4.  Haz clic en "Iniciar Procesamiento". Los archivos se procesarán con el sistema avanzado de Unstructured.
-5.  Ve a la pestaña "Revisión", selecciona los archivos que quieres guardar y previsualiza su contenido.
-6.  Ve a la pestaña "Almacenamiento" y haz clic en "Iniciar Almacenamiento" para guardar los documentos seleccionados en la base de datos.
+1. **Ejecuta el script principal:** `start.bat`
+2. **Selecciona "1"** para ejecutar la aplicación
+3. **La aplicación se iniciará** (la primera vez puede tardar mientras instala las dependencias)
+4. **Usa el botón "Explorar..."** para seleccionar la carpeta con tus documentos
+5. **Haz clic en "Iniciar Procesamiento"**. Los archivos se procesarán con el sistema avanzado de Unstructured
+6. **Ve a la pestaña "Revisión"**, selecciona los archivos que quieres guardar y previsualiza su contenido
+7. **Ve a la pestaña "Almacenamiento"** y haz clic en "Iniciar Almacenamiento" para guardar los documentos seleccionados en la base de datos
 
-#### ✨ **GUI Avanzada con Previsualización y Selección**
+#### ✨ **GUI para ingesta de documentos masivo con Previsualización y Selección**
 
-Para un control total sobre el proceso de ingesta, hemos añadido una **GUI avanzada**. Esta versión te permite **previsualizar** el contenido de cada documento procesado y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
+Para un control total sobre el proceso de ingesta, hemos añadido una **GUI**. Esta versión te permite **previsualizar** el contenido de cada documento procesado y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
 
-**Características de la GUI Avanzada:**
+**Características de la GUI:**
 - **Procesamiento Inteligente:** Usa Unstructured para limpiar ruido y preservar estructura
 - **Previsualización en Tiempo Real:** Ve el contenido procesado antes de almacenar
 - **Selección Granular:** Marca/desmarca documentos individualmente
@@ -266,7 +372,7 @@ Para un control total sobre el proceso de ingesta, hemos añadido una **GUI avan
 - **Sistema de Fallbacks:** Múltiples estrategias garantizan que todo documento se procese
 - **Sistema de Progreso:** Seguimiento detallado del proceso de almacenamiento
 
-![Pestaña de Procesamiento de la GUI Avanzada](src/images/gui_procesamiento.png)
+![Pestaña de Procesamiento de la GUI](src/images/gui_procesamiento.png)
 
 ➡️ **Para una guía completa sobre cómo usarla, consulta el [Guia de Carga Masiva](./GUI_ADVANCED_README.md).**
 
@@ -274,9 +380,9 @@ Para un control total sobre el proceso de ingesta, hemos añadido una **GUI avan
 
 Si prefieres usar la línea de comandos o necesitas automatizar la ingesta.
 
-1.  Abre una terminal.
-2.  Activa el entorno virtual: `.\.venv\Scripts\activate`.
-3.  Ejecuta el script `bulk_ingest.py` apuntando a tu carpeta de documentos:
+1. **Abre una terminal**
+2. **Activa el entorno virtual:** `.\.venv\Scripts\activate`
+3. **Ejecuta el script `bulk_ingest.py`** apuntando a tu carpeta de documentos:
     ```bash
     python bulk_ingest.py --directory "C:\Ruta\A\Tus\Documentos"
     ```
@@ -292,19 +398,19 @@ Si prefieres usar la línea de comandos o necesitas automatizar la ingesta.
 
 Para que tu editor de IA pueda usar el servidor, debes configurarlo.
 
-1.  **Encuentra el archivo de configuración de servidores MCP de tu editor.** Para Cursor, busca un archivo como `mcp_servers.json` en su directorio de configuración (`%APPDATA%\cursor` en Windows). Si no existe, puedes crearlo.
+1. **Encuentra el archivo de configuración de servidores MCP de tu editor.** Para Cursor, busca un archivo como `mcp_servers.json` en su directorio de configuración (`%APPDATA%\cursor` en Windows). Si no existe, puedes crearlo.
 
-2.  **Añade la siguiente configuración al archivo JSON.**
+2. **Añade la siguiente configuración al archivo JSON.**
     
-    Este método utiliza un script de arranque (`run_server.bat`) para asegurar que la codificación de caracteres sea UTF-8, previniendo errores en Windows.
+    Este método utiliza el script del servidor MCP (`run_server_organized.bat`) para ejecutar el servidor RAG.
 
     **¡IMPORTANTE!** Debes reemplazar `"D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG"` con la ruta absoluta real a la carpeta de este proyecto en tu máquina.
 
     ```json
     {
       "mcpServers": {
-        "ragmcp": {
-          "command": "D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG\\run_server.bat",
+        "rag": {
+          "command": "D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG\\mcp_server_organized\\run_server_organized.bat",
           "args": [],
           "workingDirectory": "D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG"
         }
@@ -312,7 +418,7 @@ Para que tu editor de IA pueda usar el servidor, debes configurarlo.
     }
     ```
 
-3.  **Reinicia tu editor.** Al arrancar, debería detectar y lanzar tu `run_server.bat`, que a su vez ejecutará `rag_server.py` en segundo plano con el entorno correcto.
+3. **Reinicia tu editor.** Al arrancar, debería detectar y lanzar el servidor MCP, que expondrá las herramientas RAG para uso en el chat.
 
 ### Uso 4: Interactuando con las Herramientas
 
@@ -322,7 +428,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **1. `learn_text(text, source_name)` - Añadir información textual**
 ```
-@ragmcp learn_text("El punto de fusión del titanio es 1,668 °C.", "material_properties")
+@rag learn_text("El punto de fusión del titanio es 1,668 °C.", "material_properties")
 ```
 - **Cuándo usar**: Para añadir hechos, definiciones, notas de conversación, etc.
 - **Parámetros**: 
@@ -331,7 +437,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **2. `learn_document(file_path)` - Procesar documentos**
 ```
-@ragmcp learn_document("C:\\Reportes\\informe_q3.pdf")
+@rag learn_document("C:\\Reportes\\informe_q3.pdf")
 ```
 - **Cuándo usar**: Para procesar archivos PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, imágenes, correos electrónicos y más de 25 formatos
 - **Características Mejoradas**: 
@@ -343,7 +449,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **3. `ask_rag(query)` - Consultar información**
 ```
-@ragmcp ask_rag("¿Cuál es el punto de fusión del titanio?")
+@rag ask_rag("¿Cuál es el punto de fusión del titanio?")
 ```
 - **Cuándo usar**: Para buscar información previamente almacenada
 - **Respuesta incluye**: 
@@ -353,7 +459,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **4. `ask_rag_filtered(query, file_type, min_tables, min_titles, processing_method)` - Búsquedas con filtros**
 ```
-@ragmcp ask_rag_filtered("¿Qué tablas de datos tenemos?", file_type=".pdf", min_tables=1)
+@rag ask_rag_filtered("¿Qué tablas de datos tenemos?", file_type=".pdf", min_tables=1)
 ```
 - **Cuándo usar**: Para búsquedas más precisas usando filtros de metadatos
 - **Filtros disponibles**:
@@ -365,7 +471,7 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 **5. `get_knowledge_base_stats()` - Estadísticas de la base de conocimientos**
 ```
-@ragmcp get_knowledge_base_stats()
+@rag get_knowledge_base_stats()
 ```
 - **Cuándo usar**: Para obtener información sobre el contenido almacenado
 - **Información proporcionada**:
@@ -378,19 +484,19 @@ Una vez configurado, puedes usar las herramientas directamente en el chat de tu 
 
 ```bash
 # 1. Añadir información
-@ragmcp learn_text("La temperatura de fusión del titanio es 1,668°C.", "material_properties")
+@rag learn_text("La temperatura de fusión del titanio es 1,668°C.", "material_properties")
 
 # 2. Procesar un documento complejo (ahora con procesamiento mejorado)
-@ragmcp learn_document("C:\\Documents\\manual_titanio.pdf")
+@rag learn_document("C:\\Documents\\manual_titanio.pdf")
 
 # 3. Hacer preguntas (con respuestas mejoradas)
-@ragmcp ask_rag("¿Cuál es la temperatura de fusión del titanio?")
+@rag ask_rag("¿Cuál es la temperatura de fusión del titanio?")
 
 # 4. Búsqueda filtrada por documentos con tablas
-@ragmcp ask_rag_filtered("¿Qué datos tabulares tenemos?", min_tables=1)
+@rag ask_rag_filtered("¿Qué datos tabulares tenemos?", min_tables=1)
 
 # 5. Ver estadísticas de la base de conocimientos
-@ragmcp get_knowledge_base_stats()
+@rag get_knowledge_base_stats()
 ```
 
 **Respuesta esperada:**
