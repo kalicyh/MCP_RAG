@@ -512,4 +512,15 @@ class MainController:
             try:
                 self.storage_log_queue.get_nowait()
             except queue.Empty:
-                break 
+                break
+    
+    def optimize_database(self) -> Dict[str, Any]:
+        print(">>> [Controller] Llamando a optimize_database")
+        try:
+            import bulk_ingest_GUI.rag_core_wrapper as rag_core_wrapper
+            result = rag_core_wrapper.optimize_vector_store()
+            print(f">>> [Controller] Resultado de optimize_vector_store: {result}")
+            return result
+        except Exception as e:
+            print(f">>> [Controller] Error en optimize_database: {e}")
+            return {"status": "error", "message": f"Error optimizando base de datos: {str(e)}"} 

@@ -1,6 +1,9 @@
 """
 Servicio de documentos para Bulk Ingest GUI
 Integra con la nueva estructura modular del servidor MCP
+
+Este servicio usa la misma base de datos que el servidor MCP para mantener
+consistencia de datos entre la GUI y el servidor.
 """
 
 import os
@@ -17,46 +20,11 @@ project_root = current_dir.parent.parent.resolve()
 sys.path.insert(0, str(current_dir.parent))
 sys.path.insert(0, str(project_root))
 
-# Configurar path para el servidor MCP ANTES de importar rag_core
-mcp_src_dir = project_root / "mcp_server_organized" / "src"
-if mcp_src_dir.exists():
-    # Asegurar que el directorio del servidor MCP esté en el path
-    if str(mcp_src_dir) not in sys.path:
-        sys.path.insert(0, str(mcp_src_dir))
-    print(f"✅ Path del servidor MCP configurado en document_service: {mcp_src_dir}")
-
-# Importar funciones de rag_core directamente
-try:
-    # Intentar importar desde la estructura modular
-    from rag_core import (
-        load_document_with_elements,
-        add_text_to_knowledge_base_enhanced,
-        get_vector_store,
-        log,
-        clear_embedding_cache,
-        get_cache_stats,
-        get_vector_store_stats_advanced
-    )
-    print("✅ Funciones de rag_core importadas directamente")
-except ImportError as e:
-    print(f"❌ Error importando rag_core: {e}")
-    # Crear funciones dummy para evitar errores
-    def dummy_function(*args, **kwargs):
-        raise ImportError("rag_core no está disponible")
-    
-    load_document_with_elements = dummy_function
-    add_text_to_knowledge_base_enhanced = dummy_function
-    get_vector_store = dummy_function
-    log = dummy_function
-    clear_embedding_cache = dummy_function
-    get_cache_stats = dummy_function
-    get_vector_store_stats_advanced = dummy_function
-
-# Reemplazar la importación anterior por el wrapper
+# Importar el wrapper de rag_core que maneja la configuración del servidor MCP
 import bulk_ingest_GUI.rag_core_wrapper as rag_core_wrapper
 
 from models.document_model import DocumentPreview, DocumentMetadata
-from gui_utils.constants import SUPPORTED_EXTENSIONS, CONVERTED_DOCS_DIR, is_supported_file
+from gui_utils.constants import SUPPORTED_EXTENSIONS, is_supported_file
 from gui_utils.exceptions import (
     ProcessingError, FileProcessingError, DirectoryNotFoundError,
     UnsupportedFileTypeError, ValidationError
@@ -66,6 +34,7 @@ from gui_utils.exceptions import (
 class DocumentService:
     """
     Servicio para manejo de documentos que integra con rag_core.py
+    Usa la misma base de datos que el servidor MCP para consistencia
     """
     
     def __init__(self, config_service):
@@ -82,6 +51,14 @@ class DocumentService:
             'skipped': 0,
             'total_size': 0
         }
+        
+        # Verificar que rag_core esté disponible
+        try:
+            rag_core_wrapper.get_rag_functions()
+            print("✅ DocumentService: rag_core configurado correctamente")
+        except ImportError as e:
+            print(f"❌ DocumentService: Error configurando rag_core: {e}")
+            raise
     
     def process_directory(self, directory_path: str, save_markdown: bool = True, 
                          progress_callback=None, log_callback=None) -> List[DocumentPreview]:
@@ -247,25 +224,30 @@ class DocumentService:
         return enhanced_metadata
     
     def _save_markdown_copy(self, file_path: str, content: str) -> Optional[str]:
-        """Guarda una copia del documento en formato Markdown"""
+        """Guarda una copia del documento en formato Markdown usando la configuración del servidor MCP"""
         try:
+            # Obtener la configuración del servidor MCP
+            current_dir = Path(__file__).parent.resolve()
+            project_root = current_dir.parent.parent.resolve()
+            mcp_data_dir = project_root / "mcp_server_organized" / "data" / "documents"
+            
             # Crear directorio si no existe
-            os.makedirs(CONVERTED_DOCS_DIR, exist_ok=True)
+            mcp_data_dir.mkdir(parents=True, exist_ok=True)
             
             # Generar nombre del archivo Markdown
             original_name = os.path.basename(file_path)
             name_without_ext = os.path.splitext(original_name)[0]
             md_filename = f"{name_without_ext}.md"
-            md_filepath = os.path.join(CONVERTED_DOCS_DIR, md_filename)
+            md_filepath = mcp_data_dir / md_filename
             
             # Guardar archivo
             with open(md_filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             
-            return md_filepath
+            return str(md_filepath)
             
         except Exception as e:
-            log(f"Error guardando copia Markdown: {e}")
+            rag_core_wrapper.log(f"Error guardando copia Markdown: {e}")
             return None
     
     def store_documents(self, documents: List[DocumentPreview], 

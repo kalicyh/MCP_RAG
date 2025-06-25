@@ -1,6 +1,9 @@
 """
 Wrapper para rag_core que maneja las importaciones correctamente
 para la integración con Bulk Ingest GUI
+
+Este wrapper asegura que la GUI use la misma base de datos que el servidor MCP
+para mantener consistencia de datos entre ambos componentes.
 """
 
 import sys
@@ -57,6 +60,18 @@ def import_rag_core_functions():
         os.chdir(mcp_src_dir)
         
         try:
+            # Importar configuración del servidor MCP
+            from utils.config import Config
+            
+            # Configurar variables de entorno para usar la misma base de datos
+            os.environ['RAG_DATA_DIR'] = str(project_root / "mcp_server_organized" / "data")
+            os.environ['RAG_VECTOR_STORE_DIR'] = str(project_root / "mcp_server_organized" / "data" / "vector_store")
+            os.environ['RAG_EMBEDDING_CACHE_DIR'] = str(project_root / "mcp_server_organized" / "embedding_cache")
+            
+            # NO llamar a Config.ensure_directories() desde la GUI
+            # Los directorios ya deben existir en el servidor MCP
+            # Config.ensure_directories()
+            
             # Intentar importar desde la estructura modular
             from rag_core import (
                 load_document_with_elements,
@@ -69,6 +84,7 @@ def import_rag_core_functions():
             )
             
             print("✅ Funciones de rag_core importadas desde estructura modular")
+            print(f"✅ Usando base de datos del servidor MCP: {Config.VECTOR_STORE_DIR}")
             return {
                 'load_document_with_elements': load_document_with_elements,
                 'add_text_to_knowledge_base_enhanced': add_text_to_knowledge_base_enhanced,
@@ -147,7 +163,7 @@ def add_text_to_knowledge_base_enhanced(*args, **kwargs):
     return functions['add_text_to_knowledge_base_enhanced'](*args, **kwargs)
 
 def get_vector_store(*args, **kwargs):
-    """Wrapper para get_vector_store"""
+    """Wrapper para get_vector_store - Usa la misma base de datos que el servidor MCP"""
     functions = get_rag_functions()
     return functions['get_vector_store'](*args, **kwargs)
 
@@ -169,4 +185,18 @@ def get_cache_stats(*args, **kwargs):
 def get_vector_store_stats_advanced(*args, **kwargs):
     """Wrapper para get_vector_store_stats_advanced"""
     functions = get_rag_functions()
-    return functions['get_vector_store_stats_advanced'](*args, **kwargs) 
+    return functions['get_vector_store_stats_advanced'](*args, **kwargs)
+
+def optimize_vector_store(*args, **kwargs):
+    print(">>> [Wrapper] Llamando a optimize_vector_store")
+    if not setup_rag_core_environment():
+        raise ImportError("No se pudo configurar el entorno para rag_core")
+    try:
+        import importlib
+        rag_core = importlib.import_module("rag_core")
+        result = rag_core.optimize_vector_store(*args, **kwargs)
+        print(f">>> [Wrapper] Resultado de optimize_vector_store: {result}")
+        return result
+    except Exception as e:
+        print(f"❌ Error llamando a optimize_vector_store: {e}")
+        return {"status": "error", "message": str(e)} 

@@ -282,18 +282,18 @@ class MainView:
         bottom_frame.pack(fill=tk.X, padx=10, pady=5)
         
         # Widget de estadísticas
-        self.stats_widget = StatisticsWidget(bottom_frame)
-        self.stats_widget.pack(side=tk.RIGHT)
+        # self.stats_widget = StatisticsWidget(bottom_frame)
+        # self.stats_widget.pack(side=tk.RIGHT)
         
         # Conectar callbacks del widget de estadísticas con el controlador
-        stats_callbacks = {
-            'update_processing_stats': self._update_processing_stats_from_controller,
-            'update_cache_stats': self._update_cache_stats_from_controller,
-            'update_database_stats': self._update_database_stats_from_controller,
-            'clear_cache': self._clear_cache_from_controller,
-            'optimize_database': self._optimize_database_from_controller
-        }
-        self.stats_widget.set_callbacks(stats_callbacks)
+        # stats_callbacks = {
+        #     'update_processing_stats': self._update_processing_stats_from_controller,
+        #     'update_cache_stats': self._update_cache_stats_from_controller,
+        #     'update_database_stats': self._update_database_stats_from_controller,
+        #     'clear_cache': self._clear_cache_from_controller,
+        #     'optimize_database': self._optimize_database_from_controller
+        # }
+        # self.stats_widget.set_callbacks(stats_callbacks)
     
     def create_storage_tab(self):
         """Crear pestaña de almacenamiento"""
@@ -674,9 +674,10 @@ class MainView:
             print(f"Error actualizando estadísticas de cache: {e}")
     
     def _update_database_stats_from_controller(self):
-        """Actualiza estadísticas de base de datos desde el controlador"""
+        print(">>> [GUI] Botón Actualizar presionado")
         try:
             stats = self.controller.get_database_statistics()
+            print(f">>> [GUI] Estadísticas actualizadas: {stats}")
             self.stats_widget.update_database_stats(stats)
         except Exception as e:
             print(f"Error actualizando estadísticas de base de datos: {e}")
@@ -692,12 +693,15 @@ class MainView:
             print(f"Error limpiando cache: {e}")
     
     def _optimize_database_from_controller(self):
-        """Optimiza base de datos desde el controlador"""
+        print(">>> [GUI] Botón Optimizar presionado")
         try:
-            # Por ahora solo actualizamos las estadísticas
-            # En el futuro se podría implementar optimización real
+            result = self.controller.optimize_database()
+            print(f">>> [GUI] Resultado de optimización: {result}")
             self._update_database_stats_from_controller()
+            msg = result.get('message', 'Optimización completada')
+            status = result.get('status', 'success')
             if hasattr(self, 'ui_callbacks') and 'show_message' in self.ui_callbacks:
-                self.ui_callbacks['show_message']("Optimización", "Función de optimización en desarrollo", "info")
+                tipo = 'info' if status == 'success' else 'error'
+                self.ui_callbacks['show_message']("Optimización", msg, tipo)
         except Exception as e:
             print(f"Error optimizando base de datos: {e}") 

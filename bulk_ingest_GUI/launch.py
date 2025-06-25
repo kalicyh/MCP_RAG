@@ -100,7 +100,7 @@ def main():
         
         # Crear ventana principal
         root = tk.Tk()
-        root.title("Bulk Ingest GUI - Sistema RAG Modular")
+        root.title("Bulk Ingest GUI - Sistema RAG")
         root.geometry("1200x800")
         root.minsize(1000, 700)
         

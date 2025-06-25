@@ -6,7 +6,7 @@ Sistema de procesamiento y almacenamiento de documentos con arquitectura MVC.
 """
 
 __version__ = "2.0.0"
-__author__ = "Sistema RAG Modular"
+__author__ = "cagudelo"
 __description__ = "Sistema de ingesta masiva de documentos con interfaz gráfica avanzada"
 
 # Importar componentes principales
