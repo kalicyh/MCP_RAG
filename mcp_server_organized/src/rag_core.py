@@ -1,5 +1,5 @@
 """
-Sistema RAG Modular Avanzado - Core Module
+Sistema RAG - Core Module
 ==========================================
 
 Este módulo proporciona funcionalidades avanzadas para el procesamiento y almacenamiento
@@ -104,16 +104,28 @@ class EmbeddingCache:
     evitando recalcular embeddings para textos ya procesados.
     """
     
-    def __init__(self, cache_dir: str = "./embedding_cache", max_memory_size: int = 1000):
+    def __init__(self, cache_dir: str = None, max_memory_size: int = 1000):
         """
         Inicializa el cache de embeddings.
         
         Args:
             cache_dir: Directorio donde se almacenan los embeddings en disco
+                       Si es None, usa la configuración del servidor MCP
             max_memory_size: Número máximo de embeddings en memoria (LRU)
         """
+        # Si no se especifica cache_dir, usar la configuración del servidor MCP
+        if cache_dir is None:
+            try:
+                from utils.config import Config
+                cache_dir = Config.EMBEDDING_CACHE_DIR
+            except ImportError:
+                # Fallback: usar directorio relativo al proyecto
+                import os
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                cache_dir = os.path.join(project_root, "mcp_server_organized", "embedding_cache")
+        
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.max_memory_size = max_memory_size
         
         # Cache en memoria usando LRU
@@ -286,7 +298,18 @@ def get_embedding_cache() -> EmbeddingCache:
     if _embedding_cache is None:
         # Usar la configuración del archivo config.py
         from utils.config import Config
+        
+        # Verificar si estamos en la GUI y usar rutas absolutas del servidor MCP
         cache_dir = Config.EMBEDDING_CACHE_DIR
+        
+        # Si la ruta es relativa, convertirla a absoluta del servidor MCP
+        if not os.path.isabs(cache_dir):
+            # Obtener la ruta absoluta del servidor MCP
+            current_file = os.path.abspath(__file__)
+            mcp_src_dir = os.path.dirname(current_file)
+            mcp_server_dir = os.path.dirname(mcp_src_dir)
+            cache_dir = os.path.join(mcp_server_dir, cache_dir)
+        
         _embedding_cache = EmbeddingCache(cache_dir=cache_dir)
     return _embedding_cache
 
@@ -370,6 +393,7 @@ def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
 def get_embedding_function():
     """
     Obtiene la función de embeddings con cache integrado.
+    Detecta automáticamente si hay GPU disponible y la usa cuando es posible.
     
     Returns:
         Función de embeddings con cache
@@ -378,10 +402,28 @@ def get_embedding_function():
         # Configuración del modelo de embeddings
         model_name = "sentence-transformers/all-MiniLM-L6-v2"
         
-        # Crear embeddings base
+        # Detectar automáticamente el dispositivo disponible
+        try:
+            import torch
+            if torch.cuda.is_available():
+                device = 'cuda'
+                gpu_name = torch.cuda.get_device_name(0)
+                log(f"Core: GPU detectada: {gpu_name}")
+                log(f"Core: Usando GPU para embeddings (dispositivo: {device})")
+            else:
+                device = 'cpu'
+                log(f"Core: No se detectó GPU, usando CPU para embeddings")
+        except ImportError:
+            device = 'cpu'
+            log(f"Core: PyTorch no disponible, usando CPU para embeddings")
+        except Exception as e:
+            device = 'cpu'
+            log(f"Core Warning: Error detectando GPU ({e}), usando CPU para embeddings")
+        
+        # Crear embeddings base con el dispositivo detectado
         base_embeddings = HuggingFaceEmbeddings(
             model_name=model_name,
-            model_kwargs={'device': 'cpu'},
+            model_kwargs={'device': device},
             encode_kwargs={'normalize_embeddings': True}
         )
         
@@ -390,9 +432,10 @@ def get_embedding_function():
         
         # Wrapper con cache
         class CachedEmbeddings:
-            def __init__(self, base_embeddings, cache):
+            def __init__(self, base_embeddings, cache, device):
                 self.base_embeddings = base_embeddings
                 self.cache = cache
+                self.device = device
             
             def _cached_embed_query(self, text: str):
                 """Embedding con cache para consultas."""
@@ -443,7 +486,7 @@ def get_embedding_function():
             def embed_documents(self, texts: List[str]):
                 return self._cached_embed_documents(texts)
         
-        return CachedEmbeddings(base_embeddings, cache)
+        return CachedEmbeddings(base_embeddings, cache, device)
         
     except Exception as e:
         log(f"Core: Error inicializando embeddings: {e}")

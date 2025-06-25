@@ -1,6 +1,6 @@
 """
 Servicio de configuración para Bulk Ingest GUI
-Gestiona la configuración de la aplicación
+Gestiona la configuración de la aplicación usando la configuración del servidor MCP
 """
 
 import sys
@@ -16,17 +16,37 @@ sys.path.insert(0, str(project_root))
 import json
 from typing import Dict, Any, Optional
 
-from gui_utils.constants import CONFIG_FILE, DEFAULT_WINDOW_SIZE, PERFORMANCE_LIMITS
+from gui_utils.constants import DEFAULT_WINDOW_SIZE, PERFORMANCE_LIMITS
 from gui_utils.exceptions import ConfigurationLoadError, ConfigurationSaveError
 
 
 class ConfigurationService:
     """
     Servicio para gestionar la configuración de la aplicación
+    Usa la configuración del servidor MCP para mantener consistencia
     """
     
-    def __init__(self, config_file: str = CONFIG_FILE):
-        self.config_file = config_file
+    def __init__(self, config_file: str = None):
+        # Usar configuración del servidor MCP si está disponible
+        try:
+            # Configurar sys.path para importar desde el servidor MCP
+            mcp_src_dir = project_root / "mcp_server_organized" / "src"
+            if str(mcp_src_dir) not in sys.path:
+                sys.path.insert(0, str(mcp_src_dir))
+            
+            from utils.config import Config
+            # Configurar archivo de configuración en el directorio del servidor MCP
+            mcp_server_dir = project_root / "mcp_server_organized"
+            self.config_file = str(mcp_server_dir / "bulk_ingest_config.json")
+            print(f"✅ ConfigurationService: Usando configuración del servidor MCP: {self.config_file}")
+        except ImportError as e:
+            # Fallback: usar configuración local
+            if config_file is None:
+                config_file = "bulk_ingest_config.json"
+            self.config_file = config_file
+            print(f"⚠️ ConfigurationService: Usando configuración local: {self.config_file}")
+            print(f"   Error de importación: {e}")
+        
         self.config = self._get_default_config()
         self.load_configuration()
     
@@ -90,10 +110,13 @@ class ConfigurationService:
             True si se guardó exitosamente
         """
         try:
-            # Crear directorio si no existe
-            config_dir = os.path.dirname(self.config_file)
-            if config_dir and not os.path.exists(config_dir):
-                os.makedirs(config_dir, exist_ok=True)
+            # Crear directorio si no existe (usando Path para mejor manejo)
+            config_path = Path(self.config_file)
+            config_dir = config_path.parent
+            
+            if config_dir and not config_dir.exists():
+                config_dir.mkdir(parents=True, exist_ok=True)
+                print(f"✅ ConfigurationService: Directorio creado: {config_dir}")
             
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
