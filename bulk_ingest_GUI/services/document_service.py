@@ -1,6 +1,6 @@
 """
 Servicio de documentos para Bulk Ingest GUI
-Integra con rag_core.py como núcleo del sistema
+Integra con la nueva estructura modular del servidor MCP
 """
 
 import os
@@ -17,20 +17,47 @@ project_root = current_dir.parent.parent.resolve()
 sys.path.insert(0, str(current_dir.parent))
 sys.path.insert(0, str(project_root))
 
-# Importar funciones de rag_core
-from rag_core import (
-    load_document_with_elements,
-    add_text_to_knowledge_base_enhanced,
-    get_vector_store,
-    log,
-    clear_embedding_cache,
-    get_cache_stats,
-    get_vector_store_stats_advanced
-)
+# Configurar path para el servidor MCP ANTES de importar rag_core
+mcp_src_dir = project_root / "mcp_server_organized" / "src"
+if mcp_src_dir.exists():
+    # Asegurar que el directorio del servidor MCP esté en el path
+    if str(mcp_src_dir) not in sys.path:
+        sys.path.insert(0, str(mcp_src_dir))
+    print(f"✅ Path del servidor MCP configurado en document_service: {mcp_src_dir}")
+
+# Importar funciones de rag_core directamente
+try:
+    # Intentar importar desde la estructura modular
+    from rag_core import (
+        load_document_with_elements,
+        add_text_to_knowledge_base_enhanced,
+        get_vector_store,
+        log,
+        clear_embedding_cache,
+        get_cache_stats,
+        get_vector_store_stats_advanced
+    )
+    print("✅ Funciones de rag_core importadas directamente")
+except ImportError as e:
+    print(f"❌ Error importando rag_core: {e}")
+    # Crear funciones dummy para evitar errores
+    def dummy_function(*args, **kwargs):
+        raise ImportError("rag_core no está disponible")
+    
+    load_document_with_elements = dummy_function
+    add_text_to_knowledge_base_enhanced = dummy_function
+    get_vector_store = dummy_function
+    log = dummy_function
+    clear_embedding_cache = dummy_function
+    get_cache_stats = dummy_function
+    get_vector_store_stats_advanced = dummy_function
+
+# Reemplazar la importación anterior por el wrapper
+import bulk_ingest_GUI.rag_core_wrapper as rag_core_wrapper
 
 from models.document_model import DocumentPreview, DocumentMetadata
-from utils.constants import SUPPORTED_EXTENSIONS, CONVERTED_DOCS_DIR, is_supported_file
-from utils.exceptions import (
+from gui_utils.constants import SUPPORTED_EXTENSIONS, CONVERTED_DOCS_DIR, is_supported_file
+from gui_utils.exceptions import (
     ProcessingError, FileProcessingError, DirectoryNotFoundError,
     UnsupportedFileTypeError, ValidationError
 )
@@ -161,7 +188,7 @@ class DocumentService:
                 log_callback(f"Procesando: {os.path.basename(file_path)}")
             
             # Usar rag_core para cargar el documento con elementos estructurales
-            markdown_content, metadata, structural_elements = load_document_with_elements(file_path)
+            markdown_content, metadata, structural_elements = rag_core_wrapper.load_document_with_elements(file_path)
             
             if not markdown_content or markdown_content.isspace():
                 if log_callback:
@@ -265,7 +292,7 @@ class DocumentService:
             if log_callback:
                 log_callback("⚙️ Configurando base de datos vectorial...")
             
-            vector_store = get_vector_store()
+            vector_store = rag_core_wrapper.get_vector_store()
             
             if log_callback:
                 log_callback("✅ Base de datos configurada")
@@ -301,7 +328,7 @@ class DocumentService:
                         source_metadata['structural_info'] = document.metadata.structural_info
                     
                     # Usar rag_core para almacenar con chunking semántico
-                    add_text_to_knowledge_base_enhanced(
+                    rag_core_wrapper.add_text_to_knowledge_base_enhanced(
                         document.markdown_content,
                         vector_store,
                         source_metadata,
@@ -347,14 +374,14 @@ class DocumentService:
     def get_cache_statistics(self) -> Dict[str, Any]:
         """Obtiene estadísticas del cache de embeddings usando rag_core"""
         try:
-            return get_cache_stats()
+            return rag_core_wrapper.get_cache_stats()
         except Exception as e:
             return {'error': str(e)}
     
     def clear_cache(self):
         """Limpia el cache de embeddings usando rag_core"""
         try:
-            clear_embedding_cache()
+            rag_core_wrapper.clear_embedding_cache()
             return {'status': 'success', 'message': 'Cache limpiado exitosamente'}
         except Exception as e:
             return {'status': 'error', 'message': f'Error limpiando cache: {str(e)}'}
@@ -387,6 +414,6 @@ class DocumentService:
     def get_database_statistics(self) -> Dict[str, Any]:
         """Obtiene estadísticas avanzadas de la base de datos usando rag_core"""
         try:
-            return get_vector_store_stats_advanced()
+            return rag_core_wrapper.get_vector_store_stats_advanced()
         except Exception as e:
             return {'error': str(e)} 

@@ -2,6 +2,7 @@
 """
 Script de lanzamiento alternativo para Bulk Ingest GUI
 Funciona desde cualquier ubicación
+Configurado para la nueva estructura modular del servidor MCP
 """
 
 import sys
@@ -15,20 +16,41 @@ def setup_environment():
     gui_dir = script_path.parent
     project_root = gui_dir.parent
     
+    # Cambiar al directorio de la GUI para que las importaciones relativas funcionen
+    os.chdir(gui_dir)
+    
     # Añadir directorios al path
     sys.path.insert(0, str(gui_dir))
     sys.path.insert(0, str(project_root))
     
-    # Verificar que rag_core.py existe
-    rag_core_path = project_root / "rag_core.py"
-    if not rag_core_path.exists():
-        print(f"❌ Error: No se encontró rag_core.py en {rag_core_path}")
-        return False
+    # Verificar que el núcleo RAG esté disponible en la nueva estructura
+    rag_core_found = False
+    rag_core_path = None
+    
+    # Buscar en la nueva estructura modular
+    modular_rag_core = project_root / "mcp_server_organized" / "src" / "rag_core.py"
+    if modular_rag_core.exists():
+        rag_core_found = True
+        rag_core_path = modular_rag_core
+        print(f"✅ Núcleo RAG encontrado en estructura modular: {rag_core_path}")
+    else:
+        # Fallback: buscar en la estructura original
+        original_rag_core = project_root / "rag_core.py"
+        if original_rag_core.exists():
+            rag_core_found = True
+            rag_core_path = original_rag_core
+            print(f"⚠️ Núcleo RAG encontrado en estructura original: {rag_core_path}")
+        else:
+            print(f"❌ Error: No se encontró el núcleo RAG")
+            print(f"Buscando en:")
+            print(f"  - Estructura modular: {modular_rag_core}")
+            print(f"  - Estructura original: {original_rag_core}")
+            return False
     
     print(f"✅ Entorno configurado:")
     print(f"   📁 GUI Directory: {gui_dir}")
     print(f"   📁 Project Root: {project_root}")
-    print(f"   🔍 rag_core.py: {rag_core_path.exists()}")
+    print(f"   🔍 Núcleo RAG: {rag_core_path}")
     
     return True
 
@@ -44,9 +66,17 @@ def main():
         # Importar módulos
         print("📦 Importando módulos...")
         
-        # Importar rag_core primero
-        import rag_core
-        print("✅ rag_core importado correctamente")
+        # Importar el núcleo RAG (se importará automáticamente desde la estructura correcta)
+        try:
+            from mcp_server_organized.src.rag_core import log
+            print("✅ Núcleo RAG importado desde estructura modular")
+        except ImportError:
+            try:
+                from rag_core import log
+                print("✅ Núcleo RAG importado desde estructura original")
+            except ImportError as e:
+                print(f"❌ Error importando núcleo RAG: {e}")
+                sys.exit(1)
         
         # Importar servicios
         from services.configuration_service import ConfigurationService
@@ -105,7 +135,7 @@ def main():
         print("\n🔧 Soluciones:")
         print("1. Verifica que estés en el directorio correcto")
         print("2. Instala las dependencias: pip install -r requirements.txt")
-        print("3. Verifica que rag_core.py esté en el directorio padre")
+        print("3. Verifica que el servidor MCP esté configurado correctamente")
         sys.exit(1)
         
     except Exception as e:

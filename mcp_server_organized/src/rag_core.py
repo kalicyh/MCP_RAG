@@ -20,228 +20,74 @@ de documentos en un sistema RAG (Retrieval-Augmented Generation), incluyendo:
 """
 
 # =============================================================================
-# IMPORTS Y DEPENDENCIAS
+# IMPORTACIONES PRINCIPALES
 # =============================================================================
 
 import os
-from dotenv import load_dotenv
-import torch
 import sys
-from tqdm import tqdm
-import requests
-import re
-from datetime import datetime
-from typing import List, Dict, Any, Optional
-import unicodedata
-import hashlib
+import json
 import pickle
+import hashlib
+import tempfile
+import threading
+import time
+import re
+import unicodedata
+from datetime import datetime
 from pathlib import Path
-from functools import lru_cache
+from typing import Dict, Any, List, Optional, Tuple
+from urllib.parse import urlparse
+import requests
+from tqdm import tqdm
+from dotenv import load_dotenv
 
-# LangChain imports
-from langchain_community.vectorstores import Chroma
-from langchain_community.chat_models import ChatOllama
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+# Configuración de logging
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Unstructured imports
-from unstructured.partition.auto import partition
-from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
+# Importaciones de LangChain y ChromaDB
+try:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+    from langchain_community.vectorstores import Chroma
+    from langchain.chains import RetrievalQA
+    from langchain.llms import HuggingFacePipeline
+    from langchain.schema import Document
+    from langchain.retrievers import ContextualCompressionRetriever
+    from langchain.retrievers.document_compressors import LLMChainExtractor
+    from chromadb.config import Settings
+    from langchain_community.chat_models import ChatOllama
+except ImportError as e:
+    print(f"Error importando LangChain: {e}")
+    print("Instalando dependencias...")
+    os.system("pip install langchain langchain-community langchain-chroma langchain-ollama")
 
-# ChromaDB imports
-from chromadb.config import Settings
+# Importaciones de Unstructured
+try:
+    from unstructured.partition.auto import partition
+    from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
+except ImportError as e:
+    print(f"Error importando Unstructured: {e}")
+    print("Instalando dependencias...")
+    os.system("pip install unstructured")
+
+# Importaciones de modelos estructurados
+try:
+    from models import MetadataModel
+except ImportError as e:
+    print(f"Advertencia: No se pudieron importar los modelos estructurados: {e}")
+    MetadataModel = None
 
 # =============================================================================
 # CONFIGURACIÓN AVANZADA DE UNSTRUCTURED
 # =============================================================================
 
-# Configuraciones optimizadas para diferentes tipos de documentos
-UNSTRUCTURED_CONFIGS = {
-    # Documentos de Office
-    '.pdf': {
-        'strategy': 'hi_res',
-        'include_metadata': True,
-        'include_page_breaks': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.docx': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.doc': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.pptx': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.ppt': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.xlsx': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.xls': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.rtf': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    
-    # Documentos OpenDocument
-    '.odt': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.odp': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.ods': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    
-    # Formatos web y markup
-    '.html': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.htm': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.xml': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.md': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    
-    # Formatos de texto plano
-    '.txt': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.csv': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.tsv': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    
-    # Formatos de datos
-    '.json': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.yaml': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.yml': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    
-    # Imágenes (requieren OCR)
-    '.png': {
-        'strategy': 'hi_res',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.jpg': {
-        'strategy': 'hi_res',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.jpeg': {
-        'strategy': 'hi_res',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.tiff': {
-        'strategy': 'hi_res',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.bmp': {
-        'strategy': 'hi_res',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    
-    # Correos electrónicos
-    '.eml': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    },
-    '.msg': {
-        'strategy': 'fast',
-        'include_metadata': True,
-        'max_partition': 2000,
-        'new_after_n_chars': 1500
-    }
-}
+# Importar configuración centralizada
+from utils.config import Config
+
+# Usar la configuración centralizada en lugar de duplicar
+UNSTRUCTURED_CONFIGS = Config.UNSTRUCTURED_CONFIGS
 
 # Configuración por defecto para archivos no especificados
 DEFAULT_CONFIG = {
@@ -438,7 +284,10 @@ def get_embedding_cache() -> EmbeddingCache:
     """
     global _embedding_cache
     if _embedding_cache is None:
-        _embedding_cache = EmbeddingCache()
+        # Usar la configuración del archivo config.py
+        from utils.config import Config
+        cache_dir = Config.EMBEDDING_CACHE_DIR
+        _embedding_cache = EmbeddingCache(cache_dir=cache_dir)
     return _embedding_cache
 
 def get_cache_stats() -> Dict[str, Any]:
@@ -469,9 +318,19 @@ def clear_embedding_cache():
 # =============================================================================
 
 def log(message: str):
-    """Función de logging centralizada con timestamp."""
+    """Función de logging centralizada con timestamp y colores usando Rich."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{timestamp}] {message}")
+    print(f"[{timestamp}] {message}", file=sys.stderr)
+    # Detectar tipo de mensaje para colorear
+   
+    # if any(word in message.lower() for word in ["error", "falló", "fatal", "excepción"]):
+    #     rich_print(f"[bold red][{timestamp}] {message}[/bold red]")
+    # elif any(word in message.lower() for word in ["advertencia", "warning"]):
+    #     rich_print(f"[bold yellow][{timestamp}] {message}[/bold yellow]")
+    # elif any(word in message.lower() for word in ["éxito", "exitosamente", "completado", "ok", "iniciado", "iniciando"]):
+    #     rich_print(f"[bold green][{timestamp}] {message}[/bold green]")
+    # else:
+    #     rich_print(f"[cyan][{timestamp}] {message}[/cyan]")
 
 def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
     """
@@ -1012,7 +871,7 @@ def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str
         file_path: Ruta del archivo procesado
     
     Returns:
-        Diccionario con metadatos estructurales
+        Diccionario con metadatos estructurales o MetadataModel si está disponible
     """
     structural_info = {
         "total_elements": len(elements),
@@ -1028,6 +887,38 @@ def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str
     structural_info["total_text_length"] = total_text_length
     structural_info["avg_element_length"] = total_text_length / len(elements) if elements else 0
     
+    # Si MetadataModel está disponible, crear un modelo estructurado
+    if MetadataModel is not None:
+        try:
+            metadata_model = MetadataModel(
+                source=os.path.basename(file_path),
+                input_type="file_processing",
+                processed_date=datetime.now(),
+                file_path=file_path,
+                file_type=os.path.splitext(file_path)[1].lower(),
+                file_size=os.path.getsize(file_path) if os.path.exists(file_path) else 0,
+                processing_method="unstructured_enhanced",
+                structural_info=structural_info,
+                total_elements=structural_info["total_elements"],
+                titles_count=structural_info["titles_count"],
+                tables_count=structural_info["tables_count"],
+                lists_count=structural_info["lists_count"],
+                narrative_blocks=structural_info["narrative_blocks"],
+                other_elements=structural_info["other_elements"],
+                chunking_method="semantic",
+                avg_chunk_size=structural_info["avg_element_length"]
+            )
+            
+            # Actualizar información estructural usando el método del modelo
+            metadata_model.update_structural_info(elements)
+            
+            log(f"Core: Metadatos estructurados creados con MetadataModel")
+            return metadata_model.to_dict()
+            
+        except Exception as e:
+            log(f"Core Warning: Error creando MetadataModel, usando diccionario: {e}")
+    
+    # Fallback a diccionario simple si MetadataModel no está disponible
     metadata = {
         "source": os.path.basename(file_path),
         "file_path": file_path,
@@ -1271,7 +1162,7 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
     # Estrategia 1: Unstructured con configuración óptima
     try:
         log(f"Core: Intentando carga con Unstructured (configuración óptima)...")
-        config = UNSTRUCTURED_CONFIGS.get(file_extension, DEFAULT_CONFIG)
+        config = Config.get_unstructured_config(file_extension)
         
         # Para PDFs, usar configuración más rápida para evitar colgadas
         if file_extension == '.pdf':
@@ -1691,6 +1582,16 @@ def get_document_statistics(vector_store: Chroma) -> dict:
             tables_count = metadata.get("structural_info_tables_count", 0)
             titles_count = metadata.get("structural_info_titles_count", 0)
             lists_count = metadata.get("structural_info_lists_count", 0)
+            
+            # Convertir a enteros para evitar errores de comparación
+            try:
+                tables_count = int(tables_count) if tables_count is not None else 0
+                titles_count = int(titles_count) if titles_count is not None else 0
+                lists_count = int(lists_count) if lists_count is not None else 0
+            except (ValueError, TypeError):
+                tables_count = 0
+                titles_count = 0
+                lists_count = 0
             
             if tables_count > 0:
                 stats["structural_stats"]["documents_with_tables"] += 1
@@ -2293,7 +2194,7 @@ def load_document_with_elements(file_path: str) -> tuple[str, dict, List[Any]]:
     # Estrategia 1: Unstructured con configuración óptima
     try:
         log(f"Core: Intentando carga con Unstructured (configuración óptima)...")
-        config = UNSTRUCTURED_CONFIGS.get(file_extension, DEFAULT_CONFIG)
+        config = Config.get_unstructured_config(file_extension)
         
         # Para PDFs, usar configuración más rápida para evitar colgadas
         if file_extension == '.pdf':
@@ -2457,10 +2358,10 @@ def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1
 # Configuración del proyecto
 load_dotenv()
 
-# Obtener la ruta absoluta del directorio del script actual
-_project_root = os.path.dirname(os.path.abspath(__file__))
-# Forzar la ruta absoluta para la base de datos, evitando problemas de directorio de trabajo
-PERSIST_DIRECTORY = os.path.join(_project_root, "rag_mcp_db")
+# Obtener la ruta absoluta del directorio del proyecto
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Usar la configuración centralizada para la base de datos
+PERSIST_DIRECTORY = os.path.join(_project_root, Config.VECTOR_STORE_DIR.replace("./", ""))
 COLLECTION_NAME = "mcp_rag_collection"
 
 # Perfiles de configuración para diferentes tamaños de base de datos

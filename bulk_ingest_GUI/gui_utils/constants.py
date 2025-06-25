@@ -31,7 +31,14 @@ SUPPORTED_EXTENSIONS = [
 ]
 
 # Directorios
-CONVERTED_DOCS_DIR = "./converted_docs"
+# Usar directorios del servidor MCP organizado
+current_dir = Path(__file__).parent.parent.resolve()
+project_root = current_dir.parent.resolve()
+mcp_server_dir = project_root / "mcp_server_organized"
+
+CONVERTED_DOCS_DIR = str(mcp_server_dir / "data" / "documents")
+EMBEDDING_CACHE_DIR = str(mcp_server_dir / "embedding_cache")
+VECTOR_STORE_DIR = str(mcp_server_dir / "data" / "vector_store")
 CONFIG_FILE = "bulk_ingest_config.json"
 
 # =============================================================================
