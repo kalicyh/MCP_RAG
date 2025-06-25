@@ -16,8 +16,8 @@ sys.path.insert(0, str(project_root))
 import json
 from typing import Dict, Any, Optional
 
-from utils.constants import CONFIG_FILE, DEFAULT_WINDOW_SIZE, PERFORMANCE_LIMITS
-from utils.exceptions import ConfigurationLoadError, ConfigurationSaveError
+from gui_utils.constants import CONFIG_FILE, DEFAULT_WINDOW_SIZE, PERFORMANCE_LIMITS
+from gui_utils.exceptions import ConfigurationLoadError, ConfigurationSaveError
 
 
 class ConfigurationService:

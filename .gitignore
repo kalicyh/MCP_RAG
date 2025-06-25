@@ -60,10 +60,23 @@ ENV/
 env.bak/
 venv.bak/
 
-# Local database and generated files
+# Local database and generated files (GUI local)
 /rag_mcp_db/
 /converted_docs/
 /embedding_cache/
+
+# Server MCP organized data directories (generated content)
+/mcp_server_organized/embedding_cache/
+/mcp_server_organized/data/documents/
+/mcp_server_organized/data/vector_store/
+/mcp_server_organized/data/vector_store/*/
+
+# ChromaDB database files
+*.sqlite3
+*.db
+
+# Embedding cache files
+*.pkl
 
 # IDE / Editor specific
 .vscode/

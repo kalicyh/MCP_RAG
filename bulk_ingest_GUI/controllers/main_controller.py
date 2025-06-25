@@ -18,10 +18,9 @@ sys.path.insert(0, str(current_dir.parent))
 sys.path.insert(0, str(project_root))
 
 from services.configuration_service import ConfigurationService
-from services.document_service import DocumentService
 from models.document_model import DocumentPreview
-from utils.constants import MESSAGES
-from utils.exceptions import BulkIngestError
+from gui_utils.constants import MESSAGES
+from gui_utils.exceptions import BulkIngestError
 
 
 class MainController:
@@ -32,6 +31,9 @@ class MainController:
     def __init__(self, root: tk.Tk, config_service: ConfigurationService):
         self.root = root
         self.config_service = config_service
+        
+        # Importar DocumentService de forma diferida para evitar importación circular
+        from services.document_service import DocumentService
         self.document_service = DocumentService(config_service)
         
         # Estado de la aplicación

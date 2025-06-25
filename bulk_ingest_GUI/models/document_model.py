@@ -12,13 +12,13 @@ project_root = current_dir.parent.parent.resolve()
 sys.path.insert(0, str(current_dir.parent))
 sys.path.insert(0, str(project_root))
 
-from utils.constants import get_file_type, is_supported_file
+from gui_utils.constants import get_file_type, is_supported_file
 import tkinter as tk
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 
-from utils.exceptions import UnsupportedFileTypeError, ValidationError
+from gui_utils.exceptions import UnsupportedFileTypeError, ValidationError
 
 
 @dataclass

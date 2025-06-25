@@ -13,31 +13,57 @@ project_root = current_dir.parent.resolve()
 sys.path.insert(0, str(current_dir))
 sys.path.insert(0, str(project_root))
 
+# Importar constantes necesarias ANTES de setup_environment
+from gui_utils.constants import APP_NAME, VERSION
+
+def setup_environment():
+    """Configura el entorno de la aplicación"""
+    # Usar directorios del servidor MCP organizado
+    mcp_server_dir = project_root / "mcp_server_organized"
+    
+    # Asegurar que los directorios del servidor MCP existan usando su función
+    try:
+        # Importar la configuración del servidor MCP
+        from utils.config import Config
+        
+        # Asegurar que los directorios existan
+        Config.ensure_directories()
+        
+        print(f"[bold green]✅ Directorios del servidor MCP verificados:[/bold green]")
+        print(f"[bold green]  📁 Documents: {Config.CONVERTED_DOCS_DIR}[/bold green]")
+        print(f"[bold green]  📁 Vector Store: {Config.VECTOR_STORE_DIR}[/bold green]")
+        print(f"[bold green]  📁 Embedding Cache: {Config.EMBEDDING_CACHE_DIR}[/bold green]")
+        
+    except ImportError as e:
+        print(f"[bold yellow]⚠️ No se pudo importar la configuración del servidor MCP: {e}[/bold yellow]")
+        print(f"[bold yellow]  Creando directorios manualmente...[/bold yellow]")
+        
+        # Fallback: crear directorios manualmente
+        server_directories = {
+            "embedding_cache": mcp_server_dir / "embedding_cache",
+            "vector_store": mcp_server_dir / "data" / "vector_store",
+            "documents": mcp_server_dir / "data" / "documents"
+        }
+        
+        for name, path in server_directories.items():
+            path.mkdir(parents=True, exist_ok=True)
+            print(f"[bold green]✅ Directorio {name}: {path}[/bold green]")
+    
+    print(f"[bold green]✅ Entorno configurado para {APP_NAME} v{VERSION}[/bold green]")
+    print(f"[bold blue]📁 Usando directorios del servidor MCP: {mcp_server_dir}[/bold blue]")
+
+# Configurar el entorno ANTES de importar cualquier módulo que use rag_core
+setup_environment()
+
 import tkinter as tk
 from services.configuration_service import ConfigurationService
 from controllers.main_controller import MainController
 from views.main_view import MainView
-from utils.constants import APP_NAME, VERSION
-from utils.exceptions import BulkIngestError
+from gui_utils.exceptions import BulkIngestError
 
 # Importar Rich para mejorar la salida en consola
 from rich import print
 from rich.panel import Panel
-
-
-def setup_environment():
-    """Configura el entorno de la aplicación"""
-    # Crear directorios necesarios si no existen
-    directories = [
-        "converted_docs",
-        "embedding_cache",
-        "rag_mcp_db"
-    ]
-    
-    for directory in directories:
-        Path(directory).mkdir(exist_ok=True)
-    
-    print(f"[bold green]✅ Entorno configurado para {APP_NAME} v{VERSION}[/bold green]")
 
 
 def create_application():
@@ -91,9 +117,6 @@ def main():
     try:
         print(Panel(f"[bold blue]🚀 Iniciando {APP_NAME} v{VERSION}[/bold blue]", title="[cyan]Inicio[/cyan]"))
         print("[cyan]" + "=" * 50 + "[/cyan]")
-        
-        # Configurar entorno
-        setup_environment()
         
         # Crear aplicación
         root, controller, main_view = create_application()
