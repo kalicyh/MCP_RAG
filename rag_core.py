@@ -475,15 +475,17 @@ def clear_embedding_cache():
 def log(message: str):
     """Función de logging centralizada con timestamp y colores usando Rich."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}", file=sys.stderr)
     # Detectar tipo de mensaje para colorear
-    if any(word in message.lower() for word in ["error", "falló", "fatal", "excepción"]):
-        rich_print(f"[bold red][{timestamp}] {message}[/bold red]")
-    elif any(word in message.lower() for word in ["advertencia", "warning"]):
-        rich_print(f"[bold yellow][{timestamp}] {message}[/bold yellow]")
-    elif any(word in message.lower() for word in ["éxito", "exitosamente", "completado", "ok", "iniciado", "iniciando"]):
-        rich_print(f"[bold green][{timestamp}] {message}[/bold green]")
-    else:
-        rich_print(f"[cyan][{timestamp}] {message}[/cyan]")
+   
+    # if any(word in message.lower() for word in ["error", "falló", "fatal", "excepción"]):
+    #     rich_print(f"[bold red][{timestamp}] {message}[/bold red]")
+    # elif any(word in message.lower() for word in ["advertencia", "warning"]):
+    #     rich_print(f"[bold yellow][{timestamp}] {message}[/bold yellow]")
+    # elif any(word in message.lower() for word in ["éxito", "exitosamente", "completado", "ok", "iniciado", "iniciando"]):
+    #     rich_print(f"[bold green][{timestamp}] {message}[/bold green]")
+    # else:
+    #     rich_print(f"[cyan][{timestamp}] {message}[/cyan]")
 
 def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
     """

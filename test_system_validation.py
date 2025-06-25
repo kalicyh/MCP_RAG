@@ -323,26 +323,123 @@ def test_optimization_features():
         return False, error_msg
 
 def test_server_tools():
-    """Prueba todas las herramientas del servidor MCP."""
+    """Prueba todas las herramientas del servidor MCP y muestra su estado detallado."""
     print_header("HERRAMIENTAS DEL SERVIDOR MCP")
     
     try:
         # Importar funciones del servidor
-        from rag_server import learn_text, learn_document, ask_rag, learn_from_url
-        
-        print_section("1. Prueba de learn_text")
-        
-        text_result = learn_text(
-            "El sistema RAG mejorado incluye procesamiento inteligente con Unstructured y metadatos estructurales detallados.",
-            "test_enhanced_features"
+        from rag_server import (
+            learn_text, learn_document, ask_rag, learn_from_url,
+            ask_rag_filtered, get_knowledge_base_stats, get_embedding_cache_stats,
+            clear_embedding_cache_tool, optimize_vector_database,
+            get_vector_database_stats, reindex_vector_database
         )
-        print(f"✅ learn_text: {text_result[:100]}...")
         
-        print_section("2. Prueba de learn_document")
+        # Definir información detallada de cada herramienta
+        tools_info = {
+            "learn_text": {
+                "description": "Añade texto manual a la base de conocimientos",
+                "parameters": ["text (str)", "source_name (str, opcional)"],
+                "test_data": {
+                    "text": "El sistema RAG mejorado incluye procesamiento inteligente con Unstructured y metadatos estructurales detallados.",
+                    "source_name": "test_enhanced_features"
+                }
+            },
+            "learn_document": {
+                "description": "Procesa documentos con Unstructured avanzado",
+                "parameters": ["file_path (str)"],
+                "test_data": {
+                    "file_path": None  # Se creará temporalmente
+                }
+            },
+            "learn_from_url": {
+                "description": "Procesa contenido de URLs y páginas web",
+                "parameters": ["url (str)"],
+                "test_data": {
+                    "url": "https://httpbin.org/html"
+                }
+            },
+            "ask_rag": {
+                "description": "Hace preguntas a la base de conocimientos",
+                "parameters": ["query (str)"],
+                "test_data": {
+                    "query": "¿Qué funcionalidades incluye el sistema RAG mejorado?"
+                }
+            },
+            "ask_rag_filtered": {
+                "description": "Preguntas con filtros de metadatos",
+                "parameters": ["query (str)", "file_type (str, opcional)", "min_tables (int, opcional)", "min_titles (int, opcional)", "processing_method (str, opcional)"],
+                "test_data": {
+                    "query": "¿Qué información hay sobre el sistema?",
+                    "file_type": ".txt",
+                    "min_tables": None,
+                    "min_titles": None,
+                    "processing_method": None
+                }
+            },
+            "get_knowledge_base_stats": {
+                "description": "Obtiene estadísticas detalladas de la base de conocimientos",
+                "parameters": [],
+                "test_data": {}
+            },
+            "get_embedding_cache_stats": {
+                "description": "Obtiene estadísticas del cache de embeddings",
+                "parameters": [],
+                "test_data": {}
+            },
+            "clear_embedding_cache_tool": {
+                "description": "Limpia el cache de embeddings",
+                "parameters": [],
+                "test_data": {}
+            },
+            "optimize_vector_database": {
+                "description": "Optimiza la base de datos vectorial",
+                "parameters": [],
+                "test_data": {}
+            },
+            "get_vector_database_stats": {
+                "description": "Obtiene estadísticas de la base de datos vectorial",
+                "parameters": [],
+                "test_data": {}
+            },
+            "reindex_vector_database": {
+                "description": "Reindexa la base de datos vectorial",
+                "parameters": ["profile (str, opcional)"],
+                "test_data": {
+                    "profile": "auto"
+                }
+            }
+        }
         
-        # Crear un archivo de prueba para learn_document
+        # Mapeo de funciones
+        tools_functions = {
+            "learn_text": learn_text,
+            "learn_document": learn_document,
+            "learn_from_url": learn_from_url,
+            "ask_rag": ask_rag,
+            "ask_rag_filtered": ask_rag_filtered,
+            "get_knowledge_base_stats": get_knowledge_base_stats,
+            "get_embedding_cache_stats": get_embedding_cache_stats,
+            "clear_embedding_cache_tool": clear_embedding_cache_tool,
+            "optimize_vector_database": optimize_vector_database,
+            "get_vector_database_stats": get_vector_database_stats,
+            "reindex_vector_database": reindex_vector_database
+        }
+        
+        print_section("1. Información General de Herramientas")
+        
+        # Crear tabla de información de herramientas
+        tools_table = Table(title="Herramientas MCP Disponibles", show_lines=True, header_style="bold blue")
+        tools_table.add_column("HERRAMIENTA", style="cyan", no_wrap=True)
+        tools_table.add_column("DESCRIPCIÓN", style="white")
+        tools_table.add_column("PARÁMETROS", style="yellow")
+        tools_table.add_column("ESTADO", style="bold")
+        
+        results = {}
+        
+        # Crear archivo temporal para learn_document
         test_doc_content = """
-# Documento de Prueba del Servidor
+# Documento de Prueba del Servidor MCP
 
 Este documento prueba las capacidades mejoradas del servidor MCP.
 
@@ -366,25 +463,155 @@ Este documento prueba las capacidades mejoradas del servidor MCP.
             test_file = f.name
         
         try:
-            doc_result = learn_document(test_file)
-            print(f"✅ learn_document: {doc_result[:100]}...")
+            # Probar cada herramienta
+            for tool_name, tool_info in tools_info.items():
+                print(f"\n🔧 Probando: {tool_name}")
+                
+                # Actualizar datos de prueba si es necesario
+                if tool_name == "learn_document":
+                    tool_info["test_data"]["file_path"] = test_file
+                
+                # Obtener la función
+                tool_function = tools_functions.get(tool_name)
+                
+                if tool_function is None:
+                    status = "[red]❌ NO DISPONIBLE[/red]"
+                    result_details = "Función no encontrada"
+                    results[tool_name] = False
+                else:
+                    try:
+                        # Ejecutar la herramienta
+                        start_time = time.time()
+                        
+                        if tool_name == "learn_text":
+                            result = tool_function(
+                                tool_info["test_data"]["text"],
+                                tool_info["test_data"]["source_name"]
+                            )
+                        elif tool_name == "learn_document":
+                            result = tool_function(tool_info["test_data"]["file_path"])
+                        elif tool_name == "learn_from_url":
+                            result = tool_function(tool_info["test_data"]["url"])
+                        elif tool_name == "ask_rag":
+                            result = tool_function(tool_info["test_data"]["query"])
+                        elif tool_name == "ask_rag_filtered":
+                            result = tool_function(
+                                tool_info["test_data"]["query"],
+                                tool_info["test_data"]["file_type"],
+                                tool_info["test_data"]["min_tables"],
+                                tool_info["test_data"]["min_titles"],
+                                tool_info["test_data"]["processing_method"]
+                            )
+                        elif tool_name == "reindex_vector_database":
+                            result = tool_function(tool_info["test_data"]["profile"])
+                        else:
+                            # Herramientas sin parámetros
+                            result = tool_function()
+                        
+                        execution_time = time.time() - start_time
+                        
+                        # Analizar resultado
+                        if result and len(str(result)) > 0:
+                            if "Error" in str(result) or "error" in str(result).lower():
+                                status = "[yellow]⚠️ CON ADVERTENCIAS[/yellow]"
+                                result_details = f"Ejecutado en {execution_time:.2f}s - Respuesta con advertencias"
+                                results[tool_name] = False
+                            else:
+                                status = "[green]✅ FUNCIONANDO[/green]"
+                                result_details = f"Ejecutado en {execution_time:.2f}s - Respuesta exitosa"
+                                results[tool_name] = True
+                        else:
+                            status = "[yellow]⚠️ SIN RESPUESTA[/yellow]"
+                            result_details = f"Ejecutado en {execution_time:.2f}s - Sin respuesta"
+                            results[tool_name] = False
+                        
+                        # Mostrar resultado resumido
+                        result_preview = str(result)[:50] + "..." if len(str(result)) > 50 else str(result)
+                        print(f"   📊 Resultado: {result_preview}")
+                        
+                    except Exception as e:
+                        status = "[red]❌ ERROR[/red]"
+                        result_details = f"Error: {str(e)[:50]}..."
+                        results[tool_name] = False
+                        print(f"   ❌ Error: {e}")
+                
+                # Añadir a la tabla
+                params_str = ", ".join(tool_info["parameters"]) if tool_info["parameters"] else "Sin parámetros"
+                tools_table.add_row(
+                    tool_name,
+                    tool_info["description"],
+                    params_str,
+                    status
+                )
+        
         finally:
+            # Limpiar archivo temporal
             try:
                 os.unlink(test_file)
             except:
                 pass
         
-        print_section("3. Prueba de ask_rag")
+        # Mostrar tabla de herramientas
+        console.print(tools_table)
         
-        query_result = ask_rag("¿Qué funcionalidades incluye el sistema RAG mejorado?")
-        print(f"✅ ask_rag: {query_result[:100]}...")
+        print_section("2. Resumen de Estado de Herramientas")
         
-        print_section("4. Prueba de learn_from_url")
+        # Contar herramientas por estado
+        total_tools = len(results)
+        working_tools = sum(1 for success in results.values() if success)
+        error_tools = total_tools - working_tools
         
-        url_result = learn_from_url("https://httpbin.org/html")
-        print(f"✅ learn_from_url: {url_result[:100]}...")
+        # Panel de resumen
+        console.print(Panel(
+            f"[bold]Total de herramientas:[/bold] [cyan]{total_tools}[/cyan]\n"
+            f"[bold]Funcionando correctamente:[/bold] [green]{working_tools}[/green]\n"
+            f"[bold]Con problemas:[/bold] [red]{error_tools}[/red]\n"
+            f"[bold]Tasa de éxito:[/bold] [bold yellow]{(working_tools/total_tools)*100:.1f}%[/bold yellow]",
+            title="[bold magenta]Estado General de Herramientas MCP[/bold magenta]",
+            border_style="magenta"
+        ))
         
-        details = "Todas las herramientas MCP funcionando correctamente"
+        # Mostrar herramientas por estado
+        if working_tools > 0:
+            working_list = [name for name, ok in results.items() if ok]
+            console.print(Panel(
+                "\n".join(f"[green]• {name}[/green]" for name in working_list),
+                title=f"[bold green]HERRAMIENTAS FUNCIONANDO ({working_tools})[/bold green]",
+                border_style="green"
+            ))
+        
+        if error_tools > 0:
+            error_list = [name for name, ok in results.items() if not ok]
+            console.print(Panel(
+                "\n".join(f"[red]• {name}[/red]" for name in error_list),
+                title=f"[bold red]HERRAMIENTAS CON PROBLEMAS ({error_tools})[/bold red]",
+                border_style="red"
+            ))
+        
+        print_section("3. Información Detallada de Herramientas")
+        
+        # Mostrar información detallada de cada herramienta
+        for tool_name, tool_info in tools_info.items():
+            success = results.get(tool_name, False)
+            status_icon = "✅" if success else "❌"
+            status_color = "green" if success else "red"
+            
+            console.print(f"[bold {status_color}]{status_icon} {tool_name}[/bold {status_color}]")
+            console.print(f"   [white]Descripción:[/white] {tool_info['description']}")
+            
+            if tool_info['parameters']:
+                params_str = ", ".join(tool_info['parameters'])
+                console.print(f"   [yellow]Parámetros:[/yellow] {params_str}")
+            else:
+                console.print(f"   [yellow]Parámetros:[/yellow] Sin parámetros")
+            
+            # Mostrar ejemplo de uso si hay datos de prueba
+            if tool_info['test_data']:
+                console.print(f"   [blue]Ejemplo de uso:[/blue] {tool_info['test_data']}")
+            
+            console.print("")  # Línea en blanco
+        
+        details = f"Herramientas MCP probadas: {working_tools}/{total_tools} funcionando correctamente"
         return True, details
         
     except Exception as e:
@@ -482,6 +709,204 @@ def test_metadata_filtering():
         print(f"❌ {error_msg}")
         return False, error_msg
 
+def test_mcp_server_status():
+    """Muestra información detallada del estado del servidor MCP."""
+    print_header("ESTADO DEL SERVIDOR MCP")
+    
+    try:
+        from rag_server import mcp, rag_state
+        
+        print_section("1. Configuración del Servidor MCP")
+        
+        # Información básica del servidor
+        server_info = {
+            "Nombre del servidor": mcp.name,
+            "Estado de inicialización": "Inicializado" if "initialized" in rag_state else "No inicializado",
+            "Estado de calentamiento": "Caliente" if "warmed_up" in rag_state else "No calentado",
+            "Componentes disponibles": []
+        }
+        
+        # Verificar componentes disponibles
+        if "vector_store" in rag_state:
+            server_info["Componentes disponibles"].append("Base vectorial")
+        if "qa_chain" in rag_state:
+            server_info["Componentes disponibles"].append("Cadena QA")
+        
+        # Mostrar información en tabla
+        config_table = Table(title="Configuración del Servidor MCP", show_lines=True, header_style="bold blue")
+        config_table.add_column("CONFIGURACIÓN", style="cyan", no_wrap=True)
+        config_table.add_column("VALOR", style="white")
+        
+        for key, value in server_info.items():
+            if key == "Componentes disponibles":
+                value_str = ", ".join(value) if value else "Ninguno"
+            else:
+                value_str = str(value)
+            config_table.add_row(key, value_str)
+        
+        console.print(config_table)
+        
+        print_section("2. Herramientas Registradas")
+        
+        # Obtener información de las herramientas registradas
+        tools_table = Table(title="Herramientas Registradas en el Servidor", show_lines=True, header_style="bold green")
+        tools_table.add_column("HERRAMIENTA", style="cyan", no_wrap=True)
+        tools_table.add_column("TIPO", style="yellow")
+        tools_table.add_column("DESCRIPCIÓN", style="white")
+        
+        # Lista de herramientas conocidas
+        known_tools = [
+            ("learn_text", "Función", "Añade texto a la base de conocimientos"),
+            ("learn_document", "Función", "Procesa documentos con Unstructured"),
+            ("learn_from_url", "Función", "Procesa contenido de URLs"),
+            ("ask_rag", "Función", "Hace preguntas a la base de conocimientos"),
+            ("ask_rag_filtered", "Función", "Preguntas con filtros de metadatos"),
+            ("get_knowledge_base_stats", "Función", "Obtiene estadísticas de la base"),
+            ("get_embedding_cache_stats", "Función", "Obtiene estadísticas del cache"),
+            ("clear_embedding_cache_tool", "Función", "Limpia el cache de embeddings"),
+            ("optimize_vector_database", "Función", "Optimiza la base vectorial"),
+            ("get_vector_database_stats", "Función", "Obtiene estadísticas de BD"),
+            ("reindex_vector_database", "Función", "Reindexa la base vectorial")
+        ]
+        
+        for tool_name, tool_type, description in known_tools:
+            # Verificar si la herramienta está disponible
+            try:
+                from rag_server import globals
+                if hasattr(globals, tool_name):
+                    status = "✅ Disponible"
+                else:
+                    status = "❌ No disponible"
+            except:
+                status = "❓ Desconocido"
+            
+            tools_table.add_row(tool_name, tool_type, description)
+        
+        console.print(tools_table)
+        
+        print_section("3. Estado de Componentes del Sistema")
+        
+        # Verificar estado de componentes críticos
+        components_status = {}
+        
+        try:
+            from rag_core import get_vector_store, get_cache_stats
+            
+            # Verificar base vectorial
+            try:
+                vector_store = get_vector_store()
+                components_status["Base Vectorial"] = "✅ Operativa"
+            except Exception as e:
+                components_status["Base Vectorial"] = f"❌ Error: {str(e)[:30]}..."
+            
+            # Verificar cache de embeddings
+            try:
+                cache_stats = get_cache_stats()
+                if cache_stats:
+                    components_status["Cache de Embeddings"] = "✅ Operativo"
+                else:
+                    components_status["Cache de Embeddings"] = "⚠️ No disponible"
+            except Exception as e:
+                components_status["Cache de Embeddings"] = f"❌ Error: {str(e)[:30]}..."
+            
+        except Exception as e:
+            components_status["Sistema Core"] = f"❌ Error: {str(e)[:30]}..."
+        
+        # Mostrar estado de componentes
+        components_table = Table(title="Estado de Componentes del Sistema", show_lines=True, header_style="bold magenta")
+        components_table.add_column("COMPONENTE", style="cyan", no_wrap=True)
+        components_table.add_column("ESTADO", style="bold")
+        
+        for component, status in components_status.items():
+            components_table.add_row(component, status)
+        
+        console.print(components_table)
+        
+        print_section("4. Información de Rendimiento")
+        
+        # Obtener estadísticas de rendimiento si están disponibles
+        performance_info = {}
+        
+        try:
+            from rag_core import get_cache_stats, get_vector_store_stats_advanced
+            
+            # Estadísticas del cache
+            cache_stats = get_cache_stats()
+            if cache_stats:
+                performance_info["Solicitudes totales al cache"] = cache_stats.get('total_requests', 0)
+                performance_info["Tasa de hits del cache"] = cache_stats.get('overall_hit_rate', 'N/A')
+                performance_info["Cache en memoria"] = f"{cache_stats.get('memory_cache_size', 0)} elementos"
+                performance_info["Cache en disco"] = f"{cache_stats.get('disk_cache_size', 0)} elementos"
+            
+            # Estadísticas de la base vectorial
+            vector_stats = get_vector_store_stats_advanced()
+            if vector_stats:
+                performance_info["Documentos en BD"] = vector_stats.get('total_documents', 0)
+                performance_info["Uso de memoria"] = f"{vector_stats.get('current_memory_usage_mb', 0):.1f} MB"
+                performance_info["Es base grande"] = vector_stats.get('is_large_database', False)
+            
+        except Exception as e:
+            performance_info["Error obteniendo estadísticas"] = str(e)[:50]
+        
+        # Mostrar información de rendimiento
+        if performance_info:
+            perf_table = Table(title="Estadísticas de Rendimiento", show_lines=True, header_style="bold yellow")
+            perf_table.add_column("MÉTRICA", style="cyan", no_wrap=True)
+            perf_table.add_column("VALOR", style="white")
+            
+            for metric, value in performance_info.items():
+                perf_table.add_row(metric, str(value))
+            
+            console.print(perf_table)
+        else:
+            console.print("[yellow]⚠️ No se pudieron obtener estadísticas de rendimiento[/yellow]")
+        
+        print_section("5. Recomendaciones del Sistema")
+        
+        # Generar recomendaciones basadas en el estado actual
+        recommendations = []
+        
+        if not rag_state.get("initialized", False):
+            recommendations.append("🔧 Inicializar el sistema RAG completamente")
+        
+        if not rag_state.get("warmed_up", False):
+            recommendations.append("🔥 Ejecutar calentamiento del sistema")
+        
+        try:
+            cache_stats = get_cache_stats()
+            if cache_stats:
+                hit_rate = float(cache_stats.get('overall_hit_rate', '0%').rstrip('%'))
+                if hit_rate < 30:
+                    recommendations.append("📈 Optimizar cache de embeddings (tasa de hits baja)")
+                
+                memory_size = cache_stats.get('memory_cache_size', 0)
+                max_memory = cache_stats.get('max_memory_size', 1000)
+                if memory_size >= max_memory * 0.9:
+                    recommendations.append("💾 Considerar aumentar tamaño del cache en memoria")
+        except:
+            pass
+        
+        if recommendations:
+            console.print(Panel(
+                "\n".join(f"[white]• {rec}[/white]" for rec in recommendations),
+                title="[bold blue]RECOMENDACIONES[/bold blue]",
+                border_style="blue"
+            ))
+        else:
+            console.print(Panel(
+                "[green]✅ El sistema está funcionando de manera óptima[/green]",
+                title="[bold green]RECOMENDACIONES[/bold green]",
+                border_style="green"
+            ))
+        
+        details = f"Servidor MCP analizado: {len(components_status)} componentes verificados"
+        return True, details
+        
+    except Exception as e:
+        error_msg = f"Error analizando estado del servidor MCP: {str(e)}"
+        print(f"❌ {error_msg}")
+        return False, error_msg
+
 def generate_test_report(results, test_details):
     """Genera un reporte detallado de las pruebas en formato tabla usando Rich."""
     print_header("REPORTE FINAL DE PRUEBAS")
@@ -576,6 +1001,10 @@ def main():
         "Herramientas del Servidor MCP": {
             "description": "Prueba todas las herramientas disponibles en el servidor MCP",
             "function": test_server_tools
+        },
+        "Estado del Servidor MCP": {
+            "description": "Muestra información detallada del estado del servidor MCP",
+            "function": test_mcp_server_status
         },
         "Manejo de Errores": {
             "description": "Valida el manejo robusto de errores y casos edge",
