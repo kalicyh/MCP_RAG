@@ -31,7 +31,7 @@ class MainView:
         self.controller = controller
         
         # Configurar la ventana principal
-        self.root.title("Bulk Ingest Avanzado - Sistema RAG Modular")
+        self.root.title("批量导入高级版 - 模块化RAG系统")
         self.root.geometry("1100x850")
         self.root.minsize(900, 700)
         
@@ -197,7 +197,7 @@ class MainView:
     def create_processing_tab(self):
         """Crear pestaña de procesamiento"""
         processing_frame = ttk.Frame(self.notebook)
-        self.notebook.add(processing_frame, text="📁 Procesamiento")
+        self.notebook.add(processing_frame, text="📁 处理")
         
         # Sección de directorio
         self.create_directory_section(processing_frame)
@@ -220,35 +220,35 @@ class MainView:
     def create_review_tab(self):
         """Crear pestaña de revisión"""
         review_frame = ttk.Frame(self.notebook)
-        self.notebook.add(review_frame, text="📋 Revisión")
+        self.notebook.add(review_frame, text="📋 审核")
         
         # Frame superior para filtros y controles
         top_frame = ttk.Frame(review_frame)
         top_frame.pack(fill=tk.X, padx=10, pady=5)
         
         # Filtros
-        filter_frame = ttk.LabelFrame(top_frame, text="Filtros")
+        filter_frame = ttk.LabelFrame(top_frame, text="过滤器")
         filter_frame.pack(fill=tk.X, pady=5)
         
-        ttk.Label(filter_frame, text="Buscar:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(filter_frame, text="搜索:").pack(side=tk.LEFT, padx=5)
         search_entry = ttk.Entry(filter_frame, textvariable=self.search_text, width=30)
         search_entry.pack(side=tk.LEFT, padx=5)
         search_entry.bind('<KeyRelease>', lambda e: self._update_documents_list())
-        search_entry_tooltip = ttk.Label(filter_frame, text="🔍 Escribe parte del nombre para filtrar la lista.", foreground="#56F175", background="#0D1117")
+        search_entry_tooltip = ttk.Label(filter_frame, text="🔍 输入文件名的一部分以过滤列表。", foreground="#56F175", background="#0D1117")
         search_entry_tooltip.pack(side=tk.LEFT, padx=5)
         
-        ttk.Label(filter_frame, text="Tipo:").pack(side=tk.LEFT, padx=10)
+        ttk.Label(filter_frame, text="类型:").pack(side=tk.LEFT, padx=10)
         file_types = ["Todos", ".pdf", ".docx", ".txt", ".md", ".xlsx", ".pptx"]
         file_type_menu = ttk.OptionMenu(filter_frame, self.file_type_filter, "Todos", *file_types, 
                                        command=lambda _: self._update_documents_list())
         file_type_menu.pack(side=tk.LEFT, padx=5)
-        file_type_tooltip = ttk.Label(filter_frame, text="📂 Filtra por extensión de archivo.", foreground="#56F175", background="#0D1117")
+        file_type_tooltip = ttk.Label(filter_frame, text="📂 按文件扩展名过滤。", foreground="#56F175", background="#0D1117")
         file_type_tooltip.pack(side=tk.LEFT, padx=5)
         
         # Botones de selección
-        ttk.Button(filter_frame, text="Seleccionar todo", command=self._select_all).pack(side=tk.LEFT, padx=5)
-        ttk.Button(filter_frame, text="Deseleccionar todo", command=self._deselect_all).pack(side=tk.LEFT, padx=5)
-        selection_help = ttk.Label(filter_frame, text="Puedes seleccionar uno o varios documentos para previsualizar o almacenar.", foreground="#56F175", background="#0D1117")
+        ttk.Button(filter_frame, text="全选", command=self._select_all).pack(side=tk.LEFT, padx=5)
+        ttk.Button(filter_frame, text="全不选", command=self._deselect_all).pack(side=tk.LEFT, padx=5)
+        selection_help = ttk.Label(filter_frame, text="您可以选择一个或多个文档进行预览或存储。", foreground="#56F175", background="#0D1117")
         selection_help.pack(side=tk.LEFT, padx=10)
         
         # Frame principal con lista y preview
@@ -256,7 +256,7 @@ class MainView:
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
         # Lista de documentos (izquierda)
-        list_frame = ttk.LabelFrame(main_frame, text="Documentos procesados")
+        list_frame = ttk.LabelFrame(main_frame, text="已处理文档")
         list_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
         
         self.docs_listbox = tk.Listbox(list_frame, selectmode=tk.MULTIPLE, height=20)
@@ -270,7 +270,7 @@ class MainView:
         self.docs_listbox.bind('<<ListboxSelect>>', self._on_document_select)
         
         # Preview de documento (derecha)
-        preview_frame = ttk.LabelFrame(main_frame, text="Previsualización")
+        preview_frame = ttk.LabelFrame(main_frame, text="预览")
         preview_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
         
         # Crear widget de preview
@@ -298,7 +298,7 @@ class MainView:
     def create_storage_tab(self):
         """Crear pestaña de almacenamiento"""
         storage_frame = ttk.Frame(self.notebook)
-        self.notebook.add(storage_frame, text="💾 Almacenamiento")
+        self.notebook.add(storage_frame, text="💾 存储")
         
         # Opciones de almacenamiento
         self.create_storage_options(storage_frame)
@@ -317,25 +317,25 @@ class MainView:
     
     def create_directory_section(self, parent):
         """Crear sección de selección de directorio"""
-        dir_frame = ttk.LabelFrame(parent, text="📁 Directorio de documentos")
+        dir_frame = ttk.LabelFrame(parent, text="📁 文档目录")
         dir_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        ttk.Label(dir_frame, text="Ruta:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(dir_frame, text="路径:").pack(side=tk.LEFT, padx=5)
         dir_entry = ttk.Entry(dir_frame, textvariable=self.selected_directory, width=60)
         dir_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        ttk.Button(dir_frame, text="Examinar", command=self._browse_directory).pack(side=tk.LEFT, padx=5)
+        ttk.Button(dir_frame, text="浏览", command=self._browse_directory).pack(side=tk.LEFT, padx=5)
     
     def create_options_section(self, parent):
         """Crear sección de opciones"""
-        options_frame = ttk.LabelFrame(parent, text="⚙️ Opciones de procesamiento")
+        options_frame = ttk.LabelFrame(parent, text="⚙️ 处理选项")
         options_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        ttk.Checkbutton(options_frame, text="Guardar copia en Markdown", 
+        ttk.Checkbutton(options_frame, text="保存Markdown副本", 
                        variable=self.save_markdown).pack(side=tk.LEFT, padx=10)
     
     def create_progress_section(self, parent):
         """Crear sección de progreso"""
-        progress_frame = ttk.LabelFrame(parent, text="📊 Progreso")
+        progress_frame = ttk.LabelFrame(parent, text="📊 处理进度")
         progress_frame.pack(fill=tk.X, padx=10, pady=5)
         
         self.progress_var = tk.DoubleVar()
@@ -343,19 +343,19 @@ class MainView:
                                            maximum=100, style='green.Horizontal.TProgressbar')
         self.progress_bar.pack(fill=tk.X, padx=10, pady=5)
         
-        self.progress_label = ttk.Label(progress_frame, text="Progreso: 0/0")
+        self.progress_label = ttk.Label(progress_frame, text="进度: 0/0")
         self.progress_label.pack(side=tk.LEFT, padx=10)
     
     def create_logs_section(self, parent_frame):
         """Crear sección de logs"""
-        log_frame = ttk.LabelFrame(parent_frame, text="📝 Logs de procesamiento")
+        log_frame = ttk.LabelFrame(parent_frame, text="📝 处理日志")
         log_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
         # Frame para botones de control de logs
         log_control_frame = ttk.Frame(log_frame)
         log_control_frame.pack(fill=tk.X, padx=5, pady=2)
         
-        ttk.Button(log_control_frame, text="Limpiar logs", 
+        ttk.Button(log_control_frame, text="清除日志", 
                   command=self._clear_logs).pack(side=tk.LEFT, padx=2)
         
         # Frame para área de texto y scrollbar
@@ -377,48 +377,48 @@ class MainView:
         button_frame = ttk.Frame(parent)
         button_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        self.process_button = ttk.Button(button_frame, text="🚀 Iniciar Procesamiento", 
+        self.process_button = ttk.Button(button_frame, text="🚀 开始处理", 
                                         command=self._start_processing)
         self.process_button.pack(side=tk.LEFT, padx=5)
         
-        self.stop_button = ttk.Button(button_frame, text="⏹️ Detener", 
+        self.stop_button = ttk.Button(button_frame, text="⏹️ 停止", 
                                      command=self._stop_processing, state=tk.DISABLED)
         self.stop_button.pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(button_frame, text="🧹 Limpiar", command=self._clear_documents).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="🧹 清理", command=self._clear_documents).pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(button_frame, text="📋 Ir a Revisión", command=self._go_to_review).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="📋 转到审核", command=self._go_to_review).pack(side=tk.RIGHT, padx=5)
     
     def create_summary_section(self, parent):
         """Crear sección de resumen"""
-        summary_frame = ttk.LabelFrame(parent, text="📈 Resumen de procesamiento")
+        summary_frame = ttk.LabelFrame(parent, text="📈 处理摘要")
         summary_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        self.summary_label = ttk.Label(summary_frame, text="Resumen: 0 documentos procesados")
+        self.summary_label = ttk.Label(summary_frame, text="摘要: 已处理 0 个文档")
         self.summary_label.pack(side=tk.LEFT, padx=10, pady=5)
     
     def create_storage_options(self, parent):
         """Crear opciones de almacenamiento"""
-        options_frame = ttk.LabelFrame(parent, text="⚙️ Opciones de almacenamiento")
+        options_frame = ttk.LabelFrame(parent, text="⚙️ 存储选项")
         options_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        ttk.Label(options_frame, text="Selecciona los documentos que deseas almacenar en la base de conocimientos.").pack(padx=10, pady=5)
+        ttk.Label(options_frame, text="选择要存储到知识库的文档。").pack(padx=10, pady=5)
     
     def create_storage_buttons(self, parent):
         """Crear botones de almacenamiento"""
         button_frame = ttk.Frame(parent)
         button_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        self.store_button = ttk.Button(button_frame, text="💾 Almacenar Seleccionados", 
+        self.store_button = ttk.Button(button_frame, text="💾 存储所选文档", 
                                       command=self._start_storage)
         self.store_button.pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(button_frame, text="📤 Exportar Lista", command=self._export_documents).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="📥 Importar Lista", command=self._import_documents).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="📤 导出列表", command=self._export_documents).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="📥 导入列表", command=self._import_documents).pack(side=tk.LEFT, padx=5)
     
     def create_storage_progress_section(self, parent):
         """Crear sección de progreso de almacenamiento"""
-        progress_frame = ttk.LabelFrame(parent, text="📊 Progreso de almacenamiento")
+        progress_frame = ttk.LabelFrame(parent, text="📊 存储进度")
         progress_frame.pack(fill=tk.X, padx=10, pady=5)
         
         self.storage_progress_var = tk.DoubleVar()
@@ -426,12 +426,12 @@ class MainView:
                                                    maximum=100, style='green.Horizontal.TProgressbar')
         self.storage_progress_bar.pack(fill=tk.X, padx=10, pady=5)
         
-        self.storage_progress_label = ttk.Label(progress_frame, text="Progreso: 0/0")
+        self.storage_progress_label = ttk.Label(progress_frame, text="进度: 0/0")
         self.storage_progress_label.pack(side=tk.LEFT, padx=10)
     
     def create_storage_logs(self, parent_frame):
         """Crear logs de almacenamiento"""
-        log_frame = ttk.LabelFrame(parent_frame, text="📝 Logs de almacenamiento")
+        log_frame = ttk.LabelFrame(parent_frame, text="📝 存储日志")
         log_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
         # Frame interno para área de texto y scrollbar
@@ -450,10 +450,10 @@ class MainView:
     
     def create_final_summary_section(self, parent):
         """Crear sección de resumen final"""
-        summary_frame = ttk.LabelFrame(parent, text="📈 Resumen final")
+        summary_frame = ttk.LabelFrame(parent, text="📈 最终摘要")
         summary_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        self.final_summary_label = ttk.Label(summary_frame, text="Resumen: 0 documentos almacenados")
+        self.final_summary_label = ttk.Label(summary_frame, text="摘要: 已准备存储 0 个文档")
         self.final_summary_label.pack(side=tk.LEFT, padx=10, pady=5)
     
     def _register_callbacks(self):
@@ -549,7 +549,7 @@ class MainView:
     def _update_progress(self, current, total, current_file=""):
         percent = (current / total * 100) if total > 0 else 0
         self.progress_var.set(percent)
-        self.progress_label.config(text=f"Progreso: {current}/{total} - {current_file}")
+        self.progress_label.config(text=f"进度: {current}/{total} - {current_file}")
         self.root.update_idletasks()
     
     def _update_logs(self, message):
@@ -576,7 +576,7 @@ class MainView:
             display_text = f"{status} {doc.original_name} ({doc.file_type}) - {doc.size_kb:.1f}KB"
             self.docs_listbox.insert(tk.END, display_text)
         if not filtered_docs:
-            self.docs_listbox.insert(tk.END, "No hay documentos que coincidan con el filtro.")
+            self.docs_listbox.insert(tk.END, "没有符合筛选条件的文档。")
     
     def _update_summary(self):
         """Actualizar resumen de documentos"""
@@ -584,11 +584,11 @@ class MainView:
         total_size = sum(doc.size_kb for doc in documents)
         total_words = sum(doc.metadata.word_count for doc in documents)
         
-        summary_text = f"Resumen: {len(documents)} documentos procesados - {total_size:.1f}KB - {total_words:,} palabras"
+        summary_text = f"摘要: {len(documents)} 个文档已处理 - {total_size:.1f}KB - {total_words:,} 个词"
         self.summary_label.config(text=summary_text)
         
         # Actualizar también el resumen final
-        final_summary_text = f"Resumen: {len(documents)} documentos listos para almacenar"
+        final_summary_text = f"摘要: {len(documents)} 个文档已准备存储"
         self.final_summary_label.config(text=final_summary_text)
     
     def _enable_processing_buttons(self):
@@ -616,7 +616,7 @@ class MainView:
     def _update_storage_progress(self, current, total, current_file=""):
         percent = (current / total * 100) if total > 0 else 0
         self.storage_progress_var.set(percent)
-        self.storage_progress_label.config(text=f"Progreso: {current}/{total} - {current_file}")
+        self.storage_progress_label.config(text=f"进度: {current}/{total} - {current_file}")
         self.root.update_idletasks()
     
     def process_log_queue(self):
@@ -663,7 +663,7 @@ class MainView:
             stats = self.controller.get_processing_statistics()
             self.stats_widget.update_processing_stats(stats)
         except Exception as e:
-            print(f"Error actualizando estadísticas de procesamiento: {e}")
+            print(f"更新处理统计信息时出错: {e}")
     
     def _update_cache_stats_from_controller(self):
         """Actualiza estadísticas de cache desde el controlador"""
@@ -671,16 +671,16 @@ class MainView:
             stats = self.controller.get_cache_statistics()
             self.stats_widget.update_cache_stats(stats)
         except Exception as e:
-            print(f"Error actualizando estadísticas de cache: {e}")
+            print(f"更新缓存统计信息时出错: {e}")
     
     def _update_database_stats_from_controller(self):
-        print(">>> [GUI] Botón Actualizar presionado")
+        print(">>> [GUI] 更新按钮已按下")
         try:
             stats = self.controller.get_database_statistics()
-            print(f">>> [GUI] Estadísticas actualizadas: {stats}")
+            print(f">>> [GUI] 统计信息已更新: {stats}")
             self.stats_widget.update_database_stats(stats)
         except Exception as e:
-            print(f"Error actualizando estadísticas de base de datos: {e}")
+            print(f"更新数据库统计信息时出错: {e}")
     
     def _clear_cache_from_controller(self):
         """Limpia cache desde el controlador"""
@@ -690,13 +690,13 @@ class MainView:
                 # Actualizar estadísticas de cache después de limpiar
                 self._update_cache_stats_from_controller()
         except Exception as e:
-            print(f"Error limpiando cache: {e}")
+            print(f"清理缓存时出错: {e}")
     
     def _optimize_database_from_controller(self):
-        print(">>> [GUI] Botón Optimizar presionado")
+        print(">>> [GUI] 优化按钮已按下")
         try:
             result = self.controller.optimize_database()
-            print(f">>> [GUI] Resultado de optimización: {result}")
+            print(f">>> [GUI] 优化结果: {result}")
             self._update_database_stats_from_controller()
             msg = result.get('message', 'Optimización completada')
             status = result.get('status', 'success')
@@ -704,4 +704,4 @@ class MainView:
                 tipo = 'info' if status == 'success' else 'error'
                 self.ui_callbacks['show_message']("Optimización", msg, tipo)
         except Exception as e:
-            print(f"Error optimizando base de datos: {e}") 
+            print(f"优化数据库时出错: {e}")

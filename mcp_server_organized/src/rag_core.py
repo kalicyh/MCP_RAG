@@ -1,22 +1,21 @@
 """
-Sistema RAG - Core Module
+RAG 系统 - 核心模块
 ==========================================
 
-Este módulo proporciona funcionalidades avanzadas para el procesamiento y almacenamiento
-de documentos en un sistema RAG (Retrieval-Augmented Generation), incluyendo:
+本模块为 RAG（检索增强生成）系统提供高级文档处理与存储功能，包括：
 
-- Procesamiento de múltiples formatos de documentos
-- Cache de embeddings para optimización de rendimiento
-- Chunking semántico avanzado
-- Optimizaciones para bases de datos grandes
-- Normalización de texto y limpieza
-- Gestión avanzada de metadatos
-- Sistema de cache de embeddings
-- Sistema de cache de documentos
-- Sistema de cache de consultas
-- Sistema de cache de respuestas
-- Sistema de cache de metadatos
-- Sistema de cache de embeddings
+- 多格式文档处理
+- Embedding 缓存优化性能
+- 高级语义分块
+- 大型数据库优化
+- 文本归一化与清理
+- 高级元数据管理
+- Embedding 缓存系统
+- 文档缓存系统
+- 查询缓存系统
+- 响应缓存系统
+- 元数据缓存系统
+- Embedding 缓存系统
 """
 
 # =============================================================================
@@ -59,8 +58,8 @@ try:
     from chromadb.config import Settings
     from langchain_community.chat_models import ChatOllama
 except ImportError as e:
-    print(f"Error importando LangChain: {e}")
-    print("Instalando dependencias...")
+    print(f"导入 LangChain 时出错: {e}")
+    print("正在安装依赖项...")
     os.system("pip install langchain langchain-community langchain-chroma langchain-ollama")
 
 # Importaciones de Unstructured
@@ -68,15 +67,15 @@ try:
     from unstructured.partition.auto import partition
     from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
 except ImportError as e:
-    print(f"Error importando Unstructured: {e}")
-    print("Instalando dependencias...")
+    print(f"导入 Unstructured 时出错: {e}")
+    print("正在安装依赖项...")
     os.system("pip install unstructured")
 
 # Importaciones de modelos estructurados
 try:
     from models import MetadataModel
 except ImportError as e:
-    print(f"Advertencia: No se pudieron importar los modelos estructurados: {e}")
+    print(f"警告: 无法导入结构化模型: {e}")
     MetadataModel = None
 
 # =============================================================================
@@ -141,8 +140,8 @@ class EmbeddingCache:
         self.misses = 0
         self.disk_hits = 0
         
-        log(f"Core: Cache de embeddings inicializado en '{self.cache_dir}'")
-        log(f"Core: Tamaño máximo en memoria: {max_memory_size} embeddings")
+        log(f"核心: Embedding 缓存初始化在 '{self.cache_dir}'")
+        log(f"核心: 内存最大大小: {max_memory_size} embeddings")
     
     def _get_cache_key(self, text: str) -> str:
         """Genera una clave única para el texto usando hash MD5."""
@@ -183,7 +182,7 @@ class EmbeddingCache:
         if cache_key in self._memory_cache:
             self.hits += 1
             self._update_access_order(cache_key)
-            log(f"Core: Cache HIT en memoria para texto de {len(text)} caracteres")
+            log(f"核心: 内存缓存命中，文本长度 {len(text)}")
             return self._memory_cache[cache_key]
         
         # 2. Buscar en disco
@@ -198,10 +197,10 @@ class EmbeddingCache:
                 self._update_access_order(cache_key)
                 
                 self.disk_hits += 1
-                log(f"Core: Cache HIT en disco para texto de {len(text)} caracteres")
+                log(f"核心: 磁盘缓存命中，文本长度 {len(text)}")
                 return embedding
             except Exception as e:
-                log(f"Core: Error cargando embedding desde disco: {e}")
+                log(f"核心: 从磁盘加载 embedding 时出错: {e}")
                 # Eliminar archivo corrupto
                 try:
                     cache_file.unlink()
@@ -209,7 +208,7 @@ class EmbeddingCache:
                     pass
         
         self.misses += 1
-        log(f"Core: Cache MISS para texto de {len(text)} caracteres")
+        log(f"核心: 缓存未命中，文本长度 {len(text)}")
         return None
     
     def set(self, text: str, embedding):
@@ -234,15 +233,15 @@ class EmbeddingCache:
         try:
             with open(cache_file, 'wb') as f:
                 pickle.dump(embedding, f)
-            log(f"Core: Embedding guardado en cache (memoria + disco) para texto de {len(text)} caracteres")
+            log(f"核心: Embedding 已缓存（内存 + 磁盘），文本长度 {len(text)}")
         except Exception as e:
-            log(f"Core: Error guardando embedding en disco: {e}")
+            log(f"核心: 保存 embedding 到磁盘时出错: {e}")
     
     def clear_memory(self):
         """Limpia el cache en memoria, manteniendo el cache en disco."""
         self._memory_cache.clear()
         self._access_order.clear()
-        log("Core: Cache en memoria limpiado")
+        log("核心: 内存缓存已清空")
     
     def clear_all(self):
         """Limpia todo el cache (memoria y disco)."""
@@ -252,9 +251,9 @@ class EmbeddingCache:
         try:
             for cache_file in self.cache_dir.glob("*.pkl"):
                 cache_file.unlink()
-            log("Core: Cache completo limpiado (memoria + disco)")
+            log("核心: 完全清空缓存（内存 + 磁盘）")
         except Exception as e:
-            log(f"Core: Error limpiando cache en disco: {e}")
+            log(f"核心: 清理磁盘缓存时出错: {e}")
     
     def get_stats(self) -> Dict[str, Any]:
         """Obtiene estadísticas del cache."""
@@ -279,10 +278,10 @@ class EmbeddingCache:
     def print_stats(self):
         """Imprime las estadísticas del cache."""
         stats = self.get_stats()
-        log("Core: === Estadísticas del Cache de Embeddings ===")
+        log("核心: === Embedding 缓存统计信息 ===")
         for key, value in stats.items():
-            log(f"Core: {key}: {value}")
-        log("Core: ===========================================")
+            log(f"核心: {key}: {value}")
+        log("核心: ===========================================")
 
 # =============================================================================
 # FUNCIONES DE UTILIDAD Y GESTIÓN DEL CACHE
@@ -338,7 +337,7 @@ def clear_embedding_cache():
     if _embedding_cache:
         _embedding_cache.clear_all()
         _embedding_cache = None
-    log("Core: Cache de embeddings limpiado completamente")
+    log("核心: Embedding 缓存已完全清空")
 
 # =============================================================================
 # FUNCIONES DE LOGGING Y UTILIDADES GENERALES
@@ -385,9 +384,9 @@ def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
                 size = file.write(data)
                 pbar.update(size)
         
-        log(f"Core: Descarga completada: {filename}")
+        log(f"核心: 下载完成: {filename}")
     except Exception as e:
-        log(f"Core: Error en descarga: {e}")
+        log(f"核心: 下载出错: {e}")
         raise
 
 # =============================================================================
@@ -412,17 +411,17 @@ def get_embedding_function():
             if torch.cuda.is_available():
                 device = 'cuda'
                 gpu_name = torch.cuda.get_device_name(0)
-                log(f"Core: GPU detectada: {gpu_name}")
-                log(f"Core: Usando GPU para embeddings (dispositivo: {device})")
+                log(f"核心: 检测到 GPU: {gpu_name}")
+                log(f"核心: 使用 GPU 进行 embeddings 计算 (设备: {device})")
             else:
                 device = 'cpu'
-                log(f"Core: No se detectó GPU, usando CPU para embeddings")
+                log(f"核心: 未检测到 GPU，使用 CPU 进行 embeddings 计算")
         except ImportError:
             device = 'cpu'
-            log(f"Core: PyTorch no disponible, usando CPU para embeddings")
+            log(f"核心: PyTorch 不可用，使用 CPU 进行 embeddings 计算")
         except Exception as e:
             device = 'cpu'
-            log(f"Core Warning: Error detectando GPU ({e}), usando CPU para embeddings")
+            log(f"核心警告: 检测 GPU 时出错 ({e}), 使用 CPU 进行 embeddings 计算")
         
         # Crear embeddings base con el dispositivo detectado
         base_embeddings = HuggingFaceEmbeddings(
@@ -493,7 +492,7 @@ def get_embedding_function():
         return CachedEmbeddings(base_embeddings, cache, device)
         
     except Exception as e:
-        log(f"Core: Error inicializando embeddings: {e}")
+        log(f"核心: 初始化 embeddings 时出错: {e}")
         raise
 
 def get_optimal_vector_store_profile() -> str:
@@ -530,11 +529,11 @@ def get_optimal_vector_store_profile() -> str:
         else:
             profile = 'large'
         
-        log(f"Core: Detectados {count} documentos, usando perfil '{profile}'")
+        log(f"核心: 检测到 {count} 个文档，使用配置文件 '{profile}'")
         return profile
         
     except Exception as e:
-        log(f"Core Warning: No se pudo detectar perfil automáticamente: {e}")
+        log(f"核心警告: 无法自动检测配置文件: {e}")
         return 'medium'  # Perfil por defecto
 
 def get_vector_store(profile: str = 'auto') -> Chroma:
@@ -552,11 +551,11 @@ def get_vector_store(profile: str = 'auto') -> Chroma:
     if profile == 'auto':
         profile = get_optimal_vector_store_profile()
     
-    log(f"Core: Inicializando base de datos vectorial con perfil '{profile}'...")
+    log(f"核心: 初始化向量数据库，配置文件 '{profile}'...")
     
     # Obtener información del perfil
     profile_info = VECTOR_STORE_PROFILES.get(profile, {})
-    log(f"Core: Perfil '{profile}' - {profile_info.get('description', 'Configuración estándar')}")
+    log(f"核心: 配置文件 '{profile}' - {profile_info.get('description', '标准配置')}")
     
     embeddings = get_embedding_function()
     
@@ -575,8 +574,8 @@ def get_vector_store(profile: str = 'auto') -> Chroma:
         client_settings=chroma_settings
     )
     
-    log(f"Core: Base de datos vectorial optimizada inicializada en '{PERSIST_DIRECTORY}'")
-    log(f"Core: Perfil aplicado: {profile} - {profile_info.get('recommended_for', 'Configuración general')}")
+    log(f"核心: 向量数据库优化初始化在 '{PERSIST_DIRECTORY}'")
+    log(f"核心: 应用配置文件: {profile} - {profile_info.get('recommended_for', '通用配置')}")
     
     return vector_store
 
@@ -748,7 +747,7 @@ def normalize_spanish_characters(text: str) -> str:
     try:
         text = unicodedata.normalize('NFC', text)
     except Exception as e:
-        log(f"Core Warning: Error normalizando Unicode: {e}")
+        log(f"核心警告: Unicode 归一化时出错: {e}")
     
     # Corregir patrones específicos de acentos mal codificados
     # Patrón: letra + acento mal codificado
@@ -851,7 +850,7 @@ def convert_table_to_text(table_element) -> str:
             normalized_text = normalize_spanish_characters(text_representation)
             return normalized_text
     except Exception as e:
-        log(f"Core Warning: Error convirtiendo tabla: {e}")
+        log(f"核心警告: 转换表格时出错: {e}")
         # Intentar normalizar incluso en caso de error
         try:
             text_representation = str(table_element)
@@ -959,11 +958,11 @@ def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str
             # Actualizar información estructural usando el método del modelo
             metadata_model.update_structural_info(elements)
             
-            log(f"Core: Metadatos estructurados creados con MetadataModel")
+            log(f"核心: 使用 MetadataModel 创建结构化元数据")
             return metadata_model.to_dict()
             
         except Exception as e:
-            log(f"Core Warning: Error creando MetadataModel, usando diccionario: {e}")
+            log(f"核心警告: 创建 MetadataModel 时出错，使用字典: {e}")
     
     # Fallback a diccionario simple si MetadataModel no está disponible
     metadata = {
@@ -1191,7 +1190,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             return "\n\n".join(normalized_contents)
             
     except Exception as e:
-        log(f"Core Warning: Fallback de LangChain falló: {e}")
+        log(f"核心警告: LangChain 回退加载失败: {e}")
         return ""
 
 def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
@@ -1208,12 +1207,12 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
     
     # Estrategia 1: Unstructured con configuración óptima
     try:
-        log(f"Core: Intentando carga con Unstructured (configuración óptima)...")
+        log(f"核心: 尝试使用 Unstructured 加载（最佳配置）...")
         config = Config.get_unstructured_config(file_extension)
         
         # Para PDFs, usar configuración más rápida para evitar colgadas
         if file_extension == '.pdf':
-            log(f"Core: PDF detectado, usando configuración rápida para evitar timeouts...")
+            log(f"核心: 检测到 PDF，使用快速配置以避免超时...")
             config = config.copy()
             config['strategy'] = 'fast'
             config['max_partition'] = 1000
@@ -1228,29 +1227,29 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
         metadata = extract_structural_metadata(elements, file_path)
         
         if processed_text and not processed_text.isspace():
-            log(f"Core: Carga exitosa con Unstructured (configuración óptima)")
+            log(f"核心: 使用 Unstructured 加载成功（最佳配置）")
             return processed_text, metadata
     
     except Exception as e:
-        log(f"Core Warning: Unstructured (configuración óptima) falló: {e}")
+        log(f"核心警告: Unstructured（最佳配置）加载失败: {e}")
     
     # Estrategia 2: Unstructured con configuración básica
     try:
-        log(f"Core: Intentando carga con Unstructured (configuración básica)...")
+        log(f"核心: 尝试使用 Unstructured 加载（基本配置）...")
         elements = partition(filename=file_path, strategy="fast", max_partition=1000)
         processed_text = process_unstructured_elements(elements)
         metadata = extract_structural_metadata(elements, file_path)
         
         if processed_text and not processed_text.isspace():
-            log(f"Core: Carga exitosa con Unstructured (configuración básica)")
+            log(f"核心: 使用 Unstructured 加载成功（基本配置）")
             return processed_text, metadata
     
     except Exception as e:
-        log(f"Core Warning: Unstructured (configuración básica) falló: {e}")
+        log(f"核心警告: Unstructured（基本配置）加载失败: {e}")
     
     # Estrategia 3: Cargadores específicos de LangChain
     try:
-        log(f"Core: Intentando carga con cargadores específicos de LangChain...")
+        log(f"核心: 尝试使用 LangChain 特定加载器加载...")
         fallback_text = load_with_langchain_fallbacks(file_path)
         
         if fallback_text and not fallback_text.isspace():
@@ -1271,14 +1270,14 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
                     "avg_element_length": len(fallback_text)
                 }
             }
-            log(f"Core: Carga exitosa con cargadores específicos de LangChain")
+            log(f"核心: 使用 LangChain 特定加载器加载成功")
             return fallback_text, metadata
     
     except Exception as e:
-        log(f"Core Warning: Cargadores específicos de LangChain fallaron: {e}")
+        log(f"核心警告: LangChain 特定加载器加载失败: {e}")
     
     # Si todas las estrategias fallan
-    log(f"Core Error: Todas las estrategias de carga fallaron para '{file_path}'")
+    log(f"核心错误: 所有加载策略均失败，文件: '{file_path}'")
     return "", {}
 
 def flatten_metadata(metadata: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
@@ -1325,25 +1324,25 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
         structural_elements: Lista de elementos estructurales para chunking semántico
     """
     if not text or text.isspace():
-        log("Core Advertencia: Se intentó añadir texto vacío o solo espacios en blanco.")
+        log("核心警告: 尝试添加空文本或仅空格的文本.")
         return
 
     # Limpiar el texto antes de procesarlo
-    log(f"Core: Limpiando y preparando texto para procesamiento RAG...")
+    log(f"核心: 清理和准备文本以进行 RAG 处理...")
     cleaned_text = clean_text_for_rag(text)
     
     if not cleaned_text or cleaned_text.isspace():
-        log("Core Advertencia: El texto quedó vacío después de la limpieza.")
+        log("核心警告: 清理后文本为空.")
         return
 
     # Determinar qué tipo de chunking usar
     if use_semantic_chunking and structural_elements and len(structural_elements) > 1:
         # Usar chunking semántico real con elementos estructurales
-        log(f"Core: Usando chunking semántico avanzado con {len(structural_elements)} elementos estructurales...")
+        log(f"核心: 使用高级语义分块，{len(structural_elements)} 个结构化元素...")
         texts = create_advanced_semantic_chunks(structural_elements, max_chunk_size=800, overlap=150)
         
         if not texts:
-            log("Core Warning: No se pudieron crear chunks semánticos, usando chunking tradicional...")
+            log("核心警告: 无法创建语义块，使用传统分块...")
             # Fallback a chunking tradicional
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=1000,
@@ -1355,7 +1354,7 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
     
     elif use_semantic_chunking and source_metadata and 'structural_info' in source_metadata:
         # Usar chunking semántico mejorado (sin elementos estructurales)
-        log(f"Core: Usando chunking semántico mejorado basado en metadatos estructurales...")
+        log(f"核心: 使用基于结构化元数据的语义分块...")
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,  # Chunks más pequeños para mejor precisión
             chunk_overlap=150,  # Overlap moderado
@@ -1366,7 +1365,7 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
     
     else:
         # Usar chunking tradicional mejorado
-        log(f"Core: Usando chunking tradicional mejorado...")
+        log(f"核心: 使用改进的传统分块...")
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
@@ -1375,7 +1374,7 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
         )
         texts = text_splitter.split_text(cleaned_text)
     
-    log(f"Core: Texto dividido en {len(texts)} fragmentos")
+    log(f"核心: 文本分割为 {len(texts)} 个片段")
     
     # Preparar metadatos para cada chunk
     if source_metadata:
@@ -1398,17 +1397,17 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
             
             metadatas.append(metadata)
         
-        log(f"Core: Añadiendo metadatos de fuente: {source_metadata.get('source', 'unknown')}")
+        log(f"核心: 添加源元数据: {source_metadata.get('source', 'unknown')}")
     else:
         metadatas = None
     
-    log(f"Core: Generando embeddings y añadiendo a la base de datos...")
+    log(f"核心: 生成 embeddings 并添加到数据库...")
     if metadatas:
         vector_store.add_texts(texts, metadatas=metadatas)
     else:
         vector_store.add_texts(texts)
     vector_store.persist()
-    log(f"Core: {len(texts)} fragmentos añadidos y guardados en la base de conocimientos")
+    log(f"核心: {len(texts)} 个片段已添加并保存到知识库")
 
 def add_text_to_knowledge_base(text: str, vector_store: Chroma, source_metadata: dict = None):
     """
@@ -1445,9 +1444,9 @@ def get_qa_chain(vector_store: Chroma, metadata_filter: dict = None) -> Retrieva
         vector_store: La base de datos vectorial
         metadata_filter: Diccionario con filtros de metadatos (ej: {"file_type": ".pdf", "processing_method": "unstructured_enhanced"})
     """
-    log(f"Core: Inicializando modelo de lenguaje local (Ollama)...")
+    log(f"核心: 初始化本地语言模型 (Ollama)...")
     llm = ChatOllama(model="llama3", temperature=0)
-    log(f"Core: Configurando cadena RAG con recuperación de fuentes mejorada...")
+    log(f"核心: 配置 RAG 链接，改进的源检索...")
     
     # Configurar parámetros de búsqueda
     search_kwargs = {
@@ -1458,7 +1457,7 @@ def get_qa_chain(vector_store: Chroma, metadata_filter: dict = None) -> Retrieva
     # Añadir filtros de metadatos si se proporcionan
     if metadata_filter:
         search_kwargs["filter"] = metadata_filter
-        log(f"Core: Aplicando filtros de metadatos: {metadata_filter}")
+        log(f"核心: 应用元数据过滤器: {metadata_filter}")
     
     # Configurar el retriever con parámetros optimizados para mejor recuperación
     retriever = vector_store.as_retriever(
@@ -1475,7 +1474,7 @@ def get_qa_chain(vector_store: Chroma, metadata_filter: dict = None) -> Retrieva
             "verbose": False  # Reducir verbosidad en producción
         }
     )
-    log(f"Core: Cadena RAG configurada exitosamente con seguimiento de fuentes mejorado")
+    log(f"核心: RAG 链接配置成功，改进的源追踪")
     return qa_chain
 
 def search_with_metadata_filters(vector_store: Chroma, query: str, metadata_filter: dict = None, k: int = 5) -> List[Any]:
@@ -1491,7 +1490,7 @@ def search_with_metadata_filters(vector_store: Chroma, query: str, metadata_filt
     Returns:
         Lista de documentos que coinciden con la consulta y filtros
     """
-    log(f"Core: Realizando búsqueda con filtros de metadatos...")
+    log(f"核心: 进行带元数据过滤的搜索...")
     
     # Configurar parámetros de búsqueda
     search_kwargs = {
@@ -1502,7 +1501,7 @@ def search_with_metadata_filters(vector_store: Chroma, query: str, metadata_filt
     # Añadir filtros si se proporcionan
     if metadata_filter:
         search_kwargs["filter"] = metadata_filter
-        log(f"Core: Filtros aplicados: {metadata_filter}")
+        log(f"核心: 应用的过滤器: {metadata_filter}")
     
     # Realizar búsqueda
     retriever = vector_store.as_retriever(
@@ -1511,7 +1510,7 @@ def search_with_metadata_filters(vector_store: Chroma, query: str, metadata_filt
     )
     
     results = retriever.get_relevant_documents(query)
-    log(f"Core: Búsqueda completada - {len(results)} resultados encontrados")
+    log(f"核心: 搜索完成 - 找到 {len(results)} 个结果")
     
     return results
 
@@ -1586,14 +1585,14 @@ def get_document_statistics(vector_store: Chroma) -> dict:
     Returns:
         Diccionario con estadísticas de la base de datos
     """
-    log(f"Core: Obteniendo estadísticas de la base de datos...")
+    log(f"核心: 获取数据库统计信息...")
     
     try:
         # Obtener todos los documentos para análisis
         all_docs = vector_store.get()
         
         if not all_docs or not all_docs['documents']:
-            return {"total_documents": 0, "message": "Base de datos vacía"}
+            return {"total_documents": 0, "message": "数据库为空"}
         
         documents = all_docs['documents']
         metadatas = all_docs.get('metadatas', [])
@@ -1658,11 +1657,11 @@ def get_document_statistics(vector_store: Chroma) -> dict:
             stats["structural_stats"]["avg_titles_per_doc"] = total_titles / stats["total_documents"]
             stats["structural_stats"]["avg_lists_per_doc"] = total_lists / stats["total_documents"]
         
-        log(f"Core: Estadísticas obtenidas - {stats['total_documents']} documentos")
+        log(f"核心: 获取统计信息成功 - {stats['total_documents']} 个文档")
         return stats
         
     except Exception as e:
-        log(f"Core Error: Error obteniendo estadísticas: {e}")
+        log(f"核心错误: 获取统计信息时出错: {e}")
         return {"error": str(e)}
 
 # --- Configuración de Base Vectorial Optimizada ---
@@ -1707,10 +1706,10 @@ def optimize_vector_store(vector_store: Chroma = None) -> dict:
         
         # Detectar automáticamente si es una base grande
         if is_large_database(vector_store):
-            log("Core: Detectada base de datos grande, usando optimización incremental")
+            log("核心: 检测到大数据库，使用增量优化")
             return optimize_vector_store_large(vector_store)
         
-        log("Core: Iniciando optimización de la base vectorial...")
+        log("核心: 开始优化向量数据库...")
         
         # Obtener estadísticas antes de la optimización
         stats_before = get_vector_store_stats(vector_store)
@@ -1718,18 +1717,18 @@ def optimize_vector_store(vector_store: Chroma = None) -> dict:
         collection = vector_store._collection
         
         # En lugar de reindexar, usar métodos nativos de ChromaDB para optimización
-        log("Core: Aplicando optimizaciones nativas de ChromaDB...")
+        log("核心: 应用 ChromaDB 原生优化...")
         
         # 1. Forzar persistencia para optimizar almacenamiento
         try:
             collection.persist()
-            log("Core: Persistencia forzada completada")
+            log("核心: 强制持久化完成")
         except Exception as e:
-            log(f"Core Warning: No se pudo forzar persistencia: {e}")
+            log(f"核心警告: 无法强制持久化: {e}")
         
         # 2. Obtener información de la colección para verificar estado
         count = collection.count()
-        log(f"Core: Verificando {count} documentos en la colección")
+        log(f"核心: 检查到 {count} 个文档在集合中")
         
         # 3. Realizar una consulta de prueba para verificar índices
         try:
@@ -1738,53 +1737,53 @@ def optimize_vector_store(vector_store: Chroma = None) -> dict:
                 query_texts=["test"],
                 n_results=1
             )
-            log("Core: Índices de búsqueda verificados")
+            log("核心: 搜索索引验证通过")
         except Exception as e:
-            log(f"Core Warning: Error verificando índices: {e}")
+            log(f"核心警告: 验证索引时出错: {e}")
         
         # 4. Verificar configuración de la colección
         try:
             # Obtener metadatos de la colección
             collection_metadata = collection.metadata
-            log(f"Core: Metadatos de colección: {collection_metadata}")
+            log(f"核心: 集合元数据: {collection_metadata}")
         except Exception as e:
-            log(f"Core Warning: No se pudieron obtener metadatos: {e}")
+            log(f"核心警告: 无法获取元数据: {e}")
         
         # 5. Forzar compactación si está disponible
         try:
             # Intentar compactar la base de datos
             if hasattr(collection, 'compact'):
                 collection.compact()
-                log("Core: Compactación de base de datos completada")
+                log("核心: 数据库压缩完成")
             else:
-                log("Core: Compactación no disponible en esta versión de ChromaDB")
+                log("核心: 此版本的 ChromaDB 不支持压缩")
         except Exception as e:
-            log(f"Core Warning: Error en compactación: {e}")
+            log(f"核心警告: 压缩时出错: {e}")
         
         # Obtener estadísticas después de la optimización
         stats_after = get_vector_store_stats(vector_store)
         
-        log("Core: Optimización de base vectorial completada")
+        log("核心: 向量数据库优化完成")
         
         return {
             "status": "success",
-            "message": "Base vectorial optimizada usando métodos nativos de ChromaDB",
+            "message": "向量数据库已使用 ChromaDB 原生方法优化",
             "stats_before": stats_before,
             "stats_after": stats_after,
             "documents_processed": count,
             "optimization_type": "native",
             "optimizations_applied": [
-                "persistencia forzada",
-                "verificación de índices",
-                "compactación de base de datos"
+                "强制持久化",
+                "索引验证",
+                "数据库压缩"
             ]
         }
         
     except Exception as e:
-        log(f"Core Error: Error optimizando base vectorial: {e}")
+        log(f"核心错误: 优化向量数据库时出错: {e}")
         return {
             "status": "error",
-            "message": f"Error optimizando base vectorial: {str(e)}"
+            "message": f"优化向量数据库时出错: {str(e)}"
         }
 
 def get_vector_store_stats(vector_store: Chroma = None) -> dict:
@@ -1831,7 +1830,7 @@ def get_vector_store_stats(vector_store: Chroma = None) -> dict:
         }
         
     except Exception as e:
-        log(f"Core Error: Error obteniendo estadísticas de base vectorial: {e}")
+        log(f"核心错误: 获取向量数据库统计信息时出错: {e}")
         return {"error": str(e)}
 
 def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> dict:
@@ -1854,19 +1853,19 @@ def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> 
         
         # Detectar automáticamente si es una base grande
         if is_large_database(vector_store):
-            log(f"Core: Detectada base de datos grande, usando reindexado incremental con perfil '{profile}'")
+            log(f"核心: 检测到大数据库，使用配置文件 '{profile}' 的增量重建索引")
             return reindex_vector_store_large(vector_store, profile)
         
-        log(f"Core: Iniciando reindexado de base vectorial con perfil '{profile}'...")
+        log(f"核心: 使用配置文件 '{profile}' 开始重建索引...")
         
         collection = vector_store._collection
         
         # Obtener estadísticas antes del reindexado
         count_before = collection.count()
-        log(f"Core: Documentos antes del reindexado: {count_before}")
+        log(f"核心: 重建索引前文档数量: {count_before}")
         
         # En lugar de eliminar y reinsertar, usar métodos nativos de ChromaDB
-        log("Core: Aplicando reindexado usando métodos nativos de ChromaDB...")
+        log("核心: 应用增量重建索引，使用 ChromaDB 原生方法...")
         
         # 1. Verificar que la colección esté en buen estado
         try:
@@ -1875,67 +1874,67 @@ def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> 
                 query_texts=["test"],
                 n_results=1
             )
-            log("Core: Índices de búsqueda verificados")
+            log("核心: 搜索索引验证通过")
         except Exception as e:
-            log(f"Core Warning: Error verificando índices: {e}")
+            log(f"核心警告: 验证索引时出错: {e}")
         
         # 2. Forzar persistencia si está disponible
         try:
             if hasattr(collection, 'persist'):
                 collection.persist()
-                log("Core: Persistencia forzada completada")
+                log("核心: 强制持久化完成")
             else:
-                log("Core: Persistencia no disponible en esta versión")
+                log("核心: 持久化在此版本不可用")
         except Exception as e:
-            log(f"Core Warning: No se pudo forzar persistencia: {e}")
+            log(f"核心警告: 无法强制持久化: {e}")
         
         # 3. Verificar configuración de la colección
         try:
             collection_metadata = collection.metadata
-            log(f"Core: Metadatos de colección: {collection_metadata}")
+            log(f"核心: 集合元数据: {collection_metadata}")
         except Exception as e:
-            log(f"Core Warning: No se pudieron obtener metadatos: {e}")
+            log(f"核心警告: 无法获取元数据: {e}")
         
         # 4. Intentar compactación si está disponible
         try:
             if hasattr(collection, 'compact'):
                 collection.compact()
-                log("Core: Compactación de base de datos completada")
+                log("核心: 数据库压缩完成")
             else:
-                log("Core: Compactación no disponible en esta versión de ChromaDB")
+                log("核心: 此版本的 ChromaDB 不支持压缩")
         except Exception as e:
-            log(f"Core Warning: Error en compactación: {e}")
+            log(f"核心警告: 压缩时出错: {e}")
         
         # 5. Verificar que el perfil se aplique correctamente
         # Esto se hace automáticamente al crear el vector_store con el perfil
-        log(f"Core: Perfil '{profile}' aplicado a la configuración")
+        log(f"核心: 配置文件 '{profile}' 已应用")
         
         # Obtener estadísticas después del reindexado
         count_after = collection.count()
-        log(f"Core: Documentos después del reindexado: {count_after}")
+        log(f"核心: 重建索引后文档数量: {count_after}")
         
-        log("Core: Reindexado de base vectorial completado")
+        log("核心: 向量数据库重建索引完成")
         
         return {
             "status": "success",
-            "message": f"Base vectorial reindexada con perfil '{profile}' usando métodos nativos",
+            "message": f"向量数据库已使用配置文件 '{profile}' 重建索引",
             "documents_before": count_before,
             "documents_after": count_after,
             "reindex_type": "native",
             "profile_applied": profile,
             "optimizations_applied": [
-                "verificación de índices",
-                "persistencia forzada",
-                "compactación de base de datos",
-                "aplicación de perfil"
+                "索引验证",
+                "强制持久化",
+                "数据库压缩",
+                "应用配置文件"
             ]
         }
         
     except Exception as e:
-        log(f"Core Error: Error reindexando base vectorial: {e}")
+        log(f"核心错误: 重建索引时出错: {e}")
         return {
             "status": "error",
-            "message": f"Error reindexando base vectorial: {str(e)}"
+            "message": f"重建索引时出错: {str(e)}"
         }
 
 def reindex_vector_store_large(vector_store: Chroma = None, profile: str = 'auto') -> dict:
@@ -1953,21 +1952,21 @@ def reindex_vector_store_large(vector_store: Chroma = None, profile: str = 'auto
         if vector_store is None:
             vector_store = get_vector_store()
         
-        log(f"Core: Iniciando reindexado incremental con perfil '{profile}'...")
+        log(f"核心: 开始增量重建索引，配置文件 '{profile}'...")
         
         # Verificar si es una base grande
         if not is_large_database(vector_store):
-            log("Core: Base no es grande, usando reindexado estándar")
+            log("核心: 数据库不大，使用标准重建索引")
             return reindex_vector_store(vector_store, profile)
         
         # Usar la misma lógica que optimize_vector_store_large pero con nuevo perfil
         return optimize_vector_store_large(vector_store)
         
     except Exception as e:
-        log(f"Core Error: Error en reindexado para base grande: {e}")
+        log(f"核心错误: 大型数据库重建索引时出错: {e}")
         return {
             "status": "error",
-            "message": f"Error en reindexado para base grande: {str(e)}"
+            "message": f"大型数据库重建索引时出错: {str(e)}"
         }
 
 def get_vector_store_stats_advanced(vector_store: Chroma = None) -> dict:
@@ -1996,20 +1995,20 @@ def get_vector_store_stats_advanced(vector_store: Chroma = None) -> dict:
         
         # Estimaciones basadas en el tamaño
         if total_docs < 1000:
-            estimated_optimization_time = "1-5 minutos"
-            recommended_approach = "estándar"
+            estimated_optimization_time = "1-5 分钟"
+            recommended_approach = "标准"
         elif total_docs < 10000:
-            estimated_optimization_time = "5-15 minutos"
-            recommended_approach = "estándar"
+            estimated_optimization_time = "5-15 分钟"
+            recommended_approach = "标准"
         elif total_docs < 50000:
-            estimated_optimization_time = "15-45 minutos"
-            recommended_approach = "incremental"
+            estimated_optimization_time = "15-45 分钟"
+            recommended_approach = "增量"
         elif total_docs < 100000:
-            estimated_optimization_time = "45-90 minutos"
-            recommended_approach = "incremental"
+            estimated_optimization_time = "45-90 分钟"
+            recommended_approach = "增量"
         else:
-            estimated_optimization_time = "2-4 horas"
-            recommended_approach = "incremental"
+            estimated_optimization_time = "2-4 小时"
+            recommended_approach = "增量"
         
         advanced_stats = {
             **basic_stats,
@@ -2025,7 +2024,7 @@ def get_vector_store_stats_advanced(vector_store: Chroma = None) -> dict:
         return advanced_stats
         
     except Exception as e:
-        log(f"Core Error: Error obteniendo estadísticas avanzadas: {e}")
+        log(f"核心错误: 获取高级统计信息时出错: {e}")
         return {"error": str(e)}
 
 # --- Configuraciones para Bases Grandes ---
@@ -2055,12 +2054,12 @@ def is_large_database(vector_store: Chroma = None) -> bool:
         return count > LARGE_DB_CONFIG['memory_threshold']
         
     except Exception as e:
-        log(f"Core Error: Error verificando tamaño de base: {e}")
+        log(f"核心错误: 检查数据库大小时出错: {e}")
         return False
 
 def get_memory_usage() -> float:
     """
-    Obtiene el uso actual de memoria en MB.
+    Obtiene el uso currente de memoria en MB.
     
     Returns:
         Uso de memoria en MB
@@ -2070,7 +2069,7 @@ def get_memory_usage() -> float:
         process = psutil.Process()
         return process.memory_info().rss / 1024 / 1024  # Convertir a MB
     except ImportError:
-        log("Core: psutil no disponible, no se puede monitorear memoria")
+        log("核心: psutil 不可用，无法监控内存")
         return 0.0
 
 def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
@@ -2088,11 +2087,11 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
         if vector_store is None:
             vector_store = get_vector_store()
         
-        log("Core: Iniciando optimización para base de datos grande...")
+        log("核心: 开始优化大型数据库...")
         
         # Verificar si realmente es una base grande
         if not is_large_database(vector_store):
-            log("Core: Base no es grande, usando optimización estándar")
+            log("核心: 数据库不大，使用标准优化")
             return optimize_vector_store(vector_store)
         
         # Crear directorio temporal si no existe
@@ -2106,7 +2105,7 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
         if not all_data['documents']:
             return {
                 "status": "warning",
-                "message": "No hay documentos para optimizar"
+                "message": "没有文档可供优化"
             }
         
         documents = all_data['documents']
@@ -2117,8 +2116,8 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
         batch_size = LARGE_DB_CONFIG['incremental_batch_size']
         checkpoint_interval = LARGE_DB_CONFIG['checkpoint_interval']
         
-        log(f"Core: Optimizando {total_docs} documentos en modo incremental")
-        log(f"Core: Batch size: {batch_size}, Checkpoint cada: {checkpoint_interval}")
+        log(f"核心: 在增量模式下优化 {total_docs} 个文档")
+        log(f"核心: 批处理大小: {batch_size}, 每 {checkpoint_interval}个文档创建检查点")
         
         # Guardar datos originales en archivos temporales
         import pickle
@@ -2141,7 +2140,7 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
         if os.path.exists(checkpoint_file):
             with open(checkpoint_file, 'r') as f:
                 processed_count = int(f.read().strip())
-            log(f"Core: Resumiendo desde documento {processed_count}")
+            log(f"核心: 从文档 {processed_count} 恢复")
         
         try:
             for i in range(processed_count, total_docs, batch_size):
@@ -2153,7 +2152,7 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
                 # Verificar uso de memoria
                 memory_usage = get_memory_usage()
                 if memory_usage > LARGE_DB_CONFIG['max_memory_usage_mb']:
-                    log(f"Core Warning: Uso de memoria alto ({memory_usage:.1f}MB), pausando...")
+                    log(f"核心警告: 内存使用过高 ({memory_usage:.1f}MB)，暂停中...")
                     # Forzar limpieza de memoria
                     import gc
                     gc.collect()
@@ -2167,16 +2166,16 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
                     )
                     
                     processed_count = end_idx
-                    log(f"Core: Batch procesado ({i+1}-{end_idx} de {total_docs}) - Memoria: {memory_usage:.1f}MB")
+                    log(f"核心: 批处理完成 ({i+1}-{end_idx} / {total_docs}) - 内存: {memory_usage:.1f}MB")
                     
                     # Guardar checkpoint
                     if end_idx % checkpoint_interval == 0 or end_idx == total_docs:
                         with open(checkpoint_file, 'w') as f:
                             f.write(str(end_idx))
-                        log(f"Core: Checkpoint guardado en documento {end_idx}")
+                        log(f"核心: 检查点已保存，文档 {end_idx}")
                         
                 except Exception as batch_error:
-                    log(f"Core Error: Error en batch {i//batch_size + 1}: {batch_error}")
+                    log(f"核心错误: 批处理 {i//batch_size + 1} 出错: {batch_error}")
                     # Intentar con batch más pequeño
                     smaller_batch_size = batch_size // 2
                     for j in range(0, len(batch_docs), smaller_batch_size):
@@ -2190,7 +2189,7 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
                             metadatas=sub_metadatas,
                             ids=sub_ids
                         )
-                        log(f"Core: Sub-batch procesado ({j+1}-{sub_end} de {len(batch_docs)})")
+                        log(f"核心: 子批处理完成 ({j+1}-{sub_end} / {len(batch_docs)})")
             
             # Limpiar archivos temporales
             if os.path.exists(temp_data_file):
@@ -2198,32 +2197,32 @@ def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
             if os.path.exists(checkpoint_file):
                 os.remove(checkpoint_file)
             
-            log("Core: Optimización incremental completada")
+            log("核心: 增量优化完成")
             
             return {
                 "status": "success",
-                "message": f"Base vectorial optimizada incrementalmente ({total_docs} documentos)",
+                "message": f"向量数据库已增量优化 ({total_docs} 个文档)",
                 "documents_processed": total_docs,
                 "optimization_type": "incremental"
             }
             
         except Exception as e:
-            log(f"Core Error: Error durante optimización incremental: {e}")
+            log(f"核心错误: 增量优化过程中出错: {e}")
             # Restaurar desde checkpoint si es posible
             if os.path.exists(checkpoint_file):
-                log("Core: Error recuperable, se puede reanudar desde checkpoint")
+                log("核心: 可恢复错误，可以从检查点恢复")
             
             return {
                 "status": "error",
-                "message": f"Error en optimización incremental: {str(e)}",
+                "message": f"增量优化出错: {str(e)}",
                 "recoverable": True
             }
         
     except Exception as e:
-        log(f"Core Error: Error en optimización para base grande: {e}")
+        log(f"核心错误: 优化大型数据库时出错: {e}")
         return {
             "status": "error",
-            "message": f"Error en optimización para base grande: {str(e)}"
+            "message": f"优化大型数据库时出错: {str(e)}"
         }
 
 def load_document_with_elements(file_path: str) -> tuple[str, dict, List[Any]]:
@@ -2240,12 +2239,12 @@ def load_document_with_elements(file_path: str) -> tuple[str, dict, List[Any]]:
     
     # Estrategia 1: Unstructured con configuración óptima
     try:
-        log(f"Core: Intentando carga con Unstructured (configuración óptima)...")
+        log(f"核心: 尝试使用 Unstructured 加载（最佳配置）...")
         config = Config.get_unstructured_config(file_extension)
         
         # Para PDFs, usar configuración más rápida para evitar colgadas
         if file_extension == '.pdf':
-            log(f"Core: PDF detectado, usando configuración rápida para evitar timeouts...")
+            log(f"核心: 检测到 PDF，使用快速配置以避免超时...")
             config = config.copy()
             config['strategy'] = 'fast'
             config['max_partition'] = 1000
@@ -2260,29 +2259,29 @@ def load_document_with_elements(file_path: str) -> tuple[str, dict, List[Any]]:
         metadata = extract_structural_metadata(elements, file_path)
         
         if processed_text and not processed_text.isspace():
-            log(f"Core: Carga exitosa con Unstructured (configuración óptima)")
+            log(f"核心: 使用 Unstructured 加载成功（最佳配置）")
             return processed_text, metadata, elements
     
     except Exception as e:
-        log(f"Core Warning: Unstructured (configuración óptima) falló: {e}")
+        log(f"核心警告: Unstructured（最佳配置）加载失败: {e}")
     
     # Estrategia 2: Unstructured con configuración básica
     try:
-        log(f"Core: Intentando carga con Unstructured (configuración básica)...")
+        log(f"核心: 尝试使用 Unstructured 加载（基本配置）...")
         elements = partition(filename=file_path, strategy="fast", max_partition=1000)
         processed_text = process_unstructured_elements(elements)
         metadata = extract_structural_metadata(elements, file_path)
         
         if processed_text and not processed_text.isspace():
-            log(f"Core: Carga exitosa con Unstructured (configuración básica)")
+            log(f"核心: 使用 Unstructured 加载成功（基本配置）")
             return processed_text, metadata, elements
     
     except Exception as e:
-        log(f"Core Warning: Unstructured (configuración básica) falló: {e}")
+        log(f"核心警告: Unstructured（基本配置）加载失败: {e}")
     
     # Estrategia 3: Cargadores específicos de LangChain (sin elementos estructurales)
     try:
-        log(f"Core: Intentando carga con cargadores específicos de LangChain...")
+        log(f"核心: 尝试使用 LangChain 特定加载器加载...")
         fallback_text = load_with_langchain_fallbacks(file_path)
         
         if fallback_text and not fallback_text.isspace():
@@ -2303,14 +2302,14 @@ def load_document_with_elements(file_path: str) -> tuple[str, dict, List[Any]]:
                     "avg_element_length": len(fallback_text)
                 }
             }
-            log(f"Core: Carga exitosa con cargadores específicos de LangChain")
+            log(f"核心: 使用 LangChain 特定加载器加载成功")
             return fallback_text, metadata, None  # Sin elementos estructurales
     
     except Exception as e:
-        log(f"Core Warning: Cargadores específicos de LangChain fallaron: {e}")
+        log(f"核心警告: LangChain 特定加载器加载失败: {e}")
     
     # Si todas las estrategias fallan
-    log(f"Core Error: Todas las estrategias de carga fallaron para '{file_path}'")
+    log(f"核心错误: 所有加载策略均失败，文件: '{file_path}'")
     return "", {}, None
 
 def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1000, overlap: int = 200) -> List[str]:
@@ -2332,7 +2331,7 @@ def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1
     current_chunk = []
     current_size = 0
     
-    log(f"Core: Creando chunks semánticos avanzados con {len(elements)} elementos...")
+    log(f"核心: 创建高级语义块，{len(elements)} 个元素...")
     
     for i, element in enumerate(elements):
         # Extraer texto del elemento
@@ -2368,7 +2367,7 @@ def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1
             chunk_text = "\n\n".join(current_chunk)
             if chunk_text.strip():
                 chunks.append(chunk_text)
-                log(f"Core: Chunk {len(chunks)} creado con {len(current_chunk)} elementos, tamaño: {len(chunk_text)}")
+                log(f"核心: 创建第 {len(chunks)} 个块，包含 {len(current_chunk)} 个元素，大小: {len(chunk_text)}")
             
             # Crear overlap con elementos anteriores si es posible
             overlap_elements = []
@@ -2393,7 +2392,7 @@ def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1
         chunk_text = "\n\n".join(current_chunk)
         if chunk_text.strip():
             chunks.append(chunk_text)
-            log(f"Core: Chunk final {len(chunks)} creado con {len(current_chunk)} elementos, tamaño: {len(chunk_text)}")
+            log(f"核心: 创建最后一个块，包含 {len(current_chunk)} 个元素，大小: {len(chunk_text)}")
     
-    log(f"Core: Chunking semántico avanzado completado: {len(chunks)} chunks creados")
+    log(f"核心: 高级语义分块完成: 创建了 {len(chunks)} 个块")
     return chunks

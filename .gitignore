@@ -87,3 +87,4 @@ venv.bak/
 # OS specific
 .DS_Store
 Thumbs.db 
+bulk_ingest_GUI/data/vector_store/*

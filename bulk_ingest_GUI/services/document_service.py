@@ -1,9 +1,8 @@
 """
-Servicio de documentos para Bulk Ingest GUI
-Integra con la nueva estructura modular del servidor MCP
+文档服务用于 Bulk Ingest GUI
+与 MCP 服务器的新模块化结构集成
 
-Este servicio usa la misma base de datos que el servidor MCP para mantener
-consistencia de datos entre la GUI y el servidor.
+此服务使用与 MCP 服务器相同的数据库，以保持 GUI 和服务器之间的数据一致性。
 """
 
 import os
@@ -33,8 +32,8 @@ from gui_utils.exceptions import (
 
 class DocumentService:
     """
-    Servicio para manejo de documentos que integra con rag_core.py
-    Usa la misma base de datos que el servidor MCP para consistencia
+    用于处理文档的服务，与 rag_core.py 集成
+    使用与 MCP 服务器相同的数据库以保持一致性
     """
     
     def __init__(self, config_service):
@@ -43,41 +42,41 @@ class DocumentService:
         self.processing_thread = None
         self.stop_processing = False
         
-        # Estadísticas de procesamiento
+        # 处理统计数据
         self.stats = {
-            'total_processed': 0,
-            'successful': 0,
-            'failed': 0,
-            'skipped': 0,
-            'total_size': 0
+            'total_processed': 0,  # 总处理数
+            'successful': 0,       # 成功数
+            'failed': 0,           # 失败数
+            'skipped': 0,          # 跳过数
+            'total_size': 0        # 总大小
         }
         
-        # Verificar que rag_core esté disponible
+        # 验证 rag_core 是否可用
         try:
             rag_core_wrapper.get_rag_functions()
-            print("✅ DocumentService: rag_core configurado correctamente")
+            print("✅ DocumentService: rag_core 配置成功")
         except ImportError as e:
-            print(f"❌ DocumentService: Error configurando rag_core: {e}")
+            print(f"❌ DocumentService: 配置 rag_core 时出错: {e}")
             raise
     
     def process_directory(self, directory_path: str, save_markdown: bool = True, 
                          progress_callback=None, log_callback=None) -> List[DocumentPreview]:
         """
-        Procesa todos los documentos en un directorio
+        处理目录中的所有文档
         
-        Args:
-            directory_path: Ruta del directorio a procesar
-            save_markdown: Si guardar copias en Markdown
-            progress_callback: Función para reportar progreso
-            log_callback: Función para reportar logs
+        参数：
+            directory_path: 要处理的目录路径
+            save_markdown: 是否保存为 Markdown 格式
+            progress_callback: 用于报告进度的回调函数
+            log_callback: 用于报告日志的回调函数
             
-        Returns:
-            Lista de documentos procesados
+        返回：
+            处理的文档列表
         """
         if not os.path.isdir(directory_path):
             raise DirectoryNotFoundError(directory_path)
         
-        # Limpiar estadísticas
+        # 清空统计数据
         self.stats = {
             'total_processed': 0,
             'successful': 0,
@@ -86,32 +85,32 @@ class DocumentService:
             'total_size': 0
         }
         
-        # Encontrar todos los archivos soportados
+        # 查找所有支持的文件
         files_to_process = self._find_supported_files(directory_path)
         
         if not files_to_process:
             if log_callback:
-                log_callback("No se encontraron archivos soportados en el directorio")
+                log_callback("未在目录中找到支持的文件")
             return []
         
         if log_callback:
-            log_callback(f"Encontrados {len(files_to_process)} archivos para procesar")
+            log_callback(f"找到 {len(files_to_process)} 个文件待处理")
         
-        # Procesar archivos
+        # 处理文件
         processed_documents = []
         
         for i, file_path in enumerate(files_to_process):
             if self.stop_processing:
                 if log_callback:
-                    log_callback("Procesamiento detenido por el usuario")
+                    log_callback("用户停止了处理")
                 break
             
             try:
-                # Reportar progreso
+                # 报告进度
                 if progress_callback:
                     progress_callback(i + 1, len(files_to_process), os.path.basename(file_path))
                 
-                # Procesar documento
+                # 处理单个文档
                 document = self._process_single_file(file_path, save_markdown, log_callback)
                 
                 if document:
@@ -127,16 +126,16 @@ class DocumentService:
                 self.stats['failed'] += 1
                 self.stats['total_processed'] += 1
                 if log_callback:
-                    log_callback(f"Error procesando {os.path.basename(file_path)}: {str(e)}")
+                    log_callback(f"处理 {os.path.basename(file_path)} 时出错: {str(e)}")
         
         if log_callback:
-            log_callback(f"Procesamiento completado: {self.stats['successful']} exitosos, "
-                        f"{self.stats['failed']} fallidos, {self.stats['skipped']} omitidos")
+            log_callback(f"处理完成: {self.stats['successful']} 成功, "
+                        f"{self.stats['failed']} 失败, {self.stats['skipped']} 跳过")
         
         return processed_documents
     
     def _find_supported_files(self, directory_path: str) -> List[str]:
-        """Encuentra todos los archivos soportados en un directorio"""
+        """查找目录中所有支持的文件"""
         supported_files = []
         
         for root, _, files in os.walk(directory_path):
@@ -150,38 +149,38 @@ class DocumentService:
     def _process_single_file(self, file_path: str, save_markdown: bool, 
                            log_callback=None) -> Optional[DocumentPreview]:
         """
-        Procesa un archivo individual usando rag_core.py
+        使用 rag_core.py 处理单个文件
         
-        Args:
-            file_path: Ruta del archivo a procesar
-            save_markdown: Si guardar copia en Markdown
-            log_callback: Función para reportar logs
+        参数：
+            file_path: 要处理的文件路径
+            save_markdown: 是否保存为 Markdown 格式
+            log_callback: 用于报告日志的回调函数
             
-        Returns:
-            DocumentPreview si se procesó exitosamente, None si se omitió
+        返回：
+            如果成功处理，返回 DocumentPreview；如果跳过，返回 None
         """
         try:
             if log_callback:
-                log_callback(f"Procesando: {os.path.basename(file_path)}")
+                log_callback(f"正在处理: {os.path.basename(file_path)}")
             
-            # Usar rag_core para cargar el documento con elementos estructurales
+            # 使用 rag_core 加载带有结构化元素的文档
             markdown_content, metadata, structural_elements = rag_core_wrapper.load_document_with_elements(file_path)
             
             if not markdown_content or markdown_content.isspace():
                 if log_callback:
-                    log_callback(f"Documento vacío: {os.path.basename(file_path)}")
+                    log_callback(f"文档为空: {os.path.basename(file_path)}")
                 return None
             
-            # Crear metadatos mejorados
+            # 创建增强的元数据
             enhanced_metadata = self._create_enhanced_metadata(file_path, metadata, markdown_content)
             
-            # Guardar copia en Markdown si se solicita
+            # 如果需要，保存为 Markdown 格式
             if save_markdown:
                 md_path = self._save_markdown_copy(file_path, markdown_content)
                 if md_path:
                     enhanced_metadata['converted_to_md'] = md_path
             
-            # Crear documento
+            # 创建文档
             document = DocumentPreview(
                 file_path=file_path,
                 markdown_content=markdown_content,
@@ -191,95 +190,85 @@ class DocumentService:
                 structural_elements=structural_elements
             )
             
-            # Validar documento
+            # 验证文档
             document.validate()
             
             if log_callback:
-                log_callback(f"✅ {os.path.basename(file_path)} procesado ({len(markdown_content)} caracteres)")
+                log_callback(f"✅ {os.path.basename(file_path)} 处理成功 ({len(markdown_content)} 字符)")
             
             return document
             
         except Exception as e:
             if log_callback:
-                log_callback(f"❌ Error procesando {os.path.basename(file_path)}: {str(e)}")
+                log_callback(f"❌ 处理 {os.path.basename(file_path)} 时出错: {str(e)}")
             raise FileProcessingError(file_path, e)
     
     def _create_enhanced_metadata(self, file_path: str, original_metadata: Dict[str, Any], 
                                 content: str) -> Dict[str, Any]:
-        """Crea metadatos mejorados para el documento"""
+        """创建文档的增强元数据"""
         enhanced_metadata = original_metadata.copy() if original_metadata else {}
         
-        # Añadir información adicional
+        # 添加额外信息
         enhanced_metadata.update({
-            'file_path': file_path,
-            'original_name': os.path.basename(file_path),
-            'file_type': os.path.splitext(file_path)[1].lower(),
-            'processed_date': datetime.now().isoformat(),
-            'size_bytes': len(content.encode('utf-8')),
-            'word_count': len(content.split()),
-            'character_count': len(content),
-            'processing_service': 'document_service_v2'
+            'file_path': file_path,  # 文件路径
+            'original_name': os.path.basename(file_path),  # 原始文件名
+            'file_type': os.path.splitext(file_path)[1].lower(),  # 文件类型
+            'processed_date': datetime.now().isoformat(),  # 处理日期
+            'size_bytes': len(content.encode('utf-8')),  # 文件大小（字节）
+            'word_count': len(content.split()),  # 单词数
+            'character_count': len(content),  # 字符数
+            'processing_service': 'document_service_v2'  # 处理服务名称
         })
         
         return enhanced_metadata
     
     def _save_markdown_copy(self, file_path: str, content: str) -> Optional[str]:
-        """Guarda una copia del documento en formato Markdown usando la configuración del servidor MCP"""
+        """使用 MCP 服务器配置保存文档的 Markdown 副本"""
         try:
-            # Obtener la configuración del servidor MCP
+            # 获取 MCP 服务器的配置
             current_dir = Path(__file__).parent.resolve()
             project_root = current_dir.parent.parent.resolve()
             mcp_data_dir = project_root / "mcp_server_organized" / "data" / "documents"
             
-            # Crear directorio si no existe
+            # 如果目录不存在，则创建
             mcp_data_dir.mkdir(parents=True, exist_ok=True)
             
-            # Generar nombre del archivo Markdown
+            # 生成 Markdown 文件名
             original_name = os.path.basename(file_path)
             name_without_ext = os.path.splitext(original_name)[0]
             md_filename = f"{name_without_ext}.md"
             md_filepath = mcp_data_dir / md_filename
             
-            # Guardar archivo
+            # 保存文件
             with open(md_filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             
             return str(md_filepath)
             
         except Exception as e:
-            rag_core_wrapper.log(f"Error guardando copia Markdown: {e}")
+            rag_core_wrapper.log(f"保存 Markdown 副本时出错: {e}")
             return None
     
     def store_documents(self, documents: List[DocumentPreview], 
                        progress_callback=None, log_callback=None) -> Dict[str, Any]:
-        """
-        Almacena documentos en la base de datos usando rag_core.py
-        
-        Args:
-            documents: Lista de documentos a almacenar
-            progress_callback: Función para reportar progreso
-            log_callback: Función para reportar logs
-            
-        Returns:
-            Diccionario con resultados del almacenamiento
-        """
+        """存储文档到数据库中，使用 rag_core.py"""
         if not documents:
-            return {'status': 'no_documents', 'message': 'No hay documentos para almacenar'}
+            return {'status': 'no_documents', 'message': '没有文档可存储'}
         
         try:
             if log_callback:
-                log_callback("🚀 Iniciando almacenamiento en base de datos...")
+                log_callback("🚀 开始将文档存储到数据库...")
             
-            # Configurar base de datos vectorial usando rag_core
+            # 配置向量数据库，使用 rag_core
             if log_callback:
-                log_callback("⚙️ Configurando base de datos vectorial...")
+                log_callback("⚙️ 正在配置向量数据库...")
             
             vector_store = rag_core_wrapper.get_vector_store()
             
             if log_callback:
-                log_callback("✅ Base de datos configurada")
+                log_callback("✅ 向量数据库配置成功")
             
-            # Estadísticas de almacenamiento
+            # 存储统计数据
             storage_stats = {
                 'total_documents': len(documents),
                 'successful': 0,
@@ -287,29 +276,29 @@ class DocumentService:
                 'errors': []
             }
             
-            # Procesar cada documento
+            # 处理每个文档
             for i, document in enumerate(documents):
                 if progress_callback:
                     progress_callback(i + 1, len(documents), document.original_name)
                 
                 try:
-                    # Crear metadatos para almacenamiento
+                    # 创建存储元数据
                     source_metadata = {
-                        "source": document.original_name,
-                        "file_path": document.file_path,
-                        "file_type": document.file_type,
-                        "processed_date": datetime.now().isoformat(),
-                        "converted_to_md": "Yes" if hasattr(document.metadata, 'converted_to_md') else "No",
-                        "size_bytes": document.metadata.size_bytes,
-                        "word_count": document.metadata.word_count,
-                        "processing_method": document.metadata.processing_method
+                        "source": document.original_name,  # 来源文件名
+                        "file_path": document.file_path,  # 文件路径
+                        "file_type": document.file_type,  # 文件类型
+                        "processed_date": datetime.now().isoformat(),  # 处理日期
+                        "converted_to_md": "是" if hasattr(document.metadata, 'converted_to_md') else "否",  # 是否转换为 Markdown
+                        "size_bytes": document.metadata.size_bytes,  # 文件大小
+                        "word_count": document.metadata.word_count,  # 单词数
+                        "processing_method": document.metadata.processing_method  # 处理方法
                     }
                     
-                    # Añadir información estructural si está disponible
+                    # 如果有结构化信息，添加到元数据中
                     if hasattr(document.metadata, 'structural_info'):
                         source_metadata['structural_info'] = document.metadata.structural_info
                     
-                    # Usar rag_core para almacenar con chunking semántico
+                    # 使用 rag_core 进行语义分块存储
                     rag_core_wrapper.add_text_to_knowledge_base_enhanced(
                         document.markdown_content,
                         vector_store,
@@ -321,29 +310,29 @@ class DocumentService:
                     storage_stats['successful'] += 1
                     
                     if log_callback:
-                        log_callback(f"✅ {document.original_name} almacenado exitosamente")
+                        log_callback(f"✅ {document.original_name} 成功存储")
                     
                 except Exception as e:
                     storage_stats['failed'] += 1
-                    error_msg = f"Error almacenando {document.original_name}: {str(e)}"
+                    error_msg = f"存储 {document.original_name} 时出错: {str(e)}"
                     storage_stats['errors'].append(error_msg)
                     
                     if log_callback:
                         log_callback(f"❌ {error_msg}")
             
-            # Resultado final
+            # 最终结果
             if log_callback:
-                log_callback(f"🎉 Almacenamiento completado: {storage_stats['successful']} exitosos, "
-                           f"{storage_stats['failed']} fallidos")
+                log_callback(f"🎉 存储完成: {storage_stats['successful']} 成功, "
+                           f"{storage_stats['failed']} 失败")
             
             return {
                 'status': 'completed',
                 'stats': storage_stats,
-                'message': f"Almacenamiento completado: {storage_stats['successful']} documentos"
+                'message': f"存储完成: {storage_stats['successful']} 个文档"
             }
             
         except Exception as e:
-            error_msg = f"Error general durante el almacenamiento: {str(e)}"
+            error_msg = f"存储过程中发生一般性错误: {str(e)}"
             if log_callback:
                 log_callback(f"💥 {error_msg}")
             
@@ -384,7 +373,7 @@ class DocumentService:
         self.stop_processing = True
     
     def reset_statistics(self):
-        """Reinicia las estadísticas de procesamiento"""
+        """Reinicia las统计数据处理"""
         self.stats = {
             'total_processed': 0,
             'successful': 0,
@@ -398,4 +387,4 @@ class DocumentService:
         try:
             return rag_core_wrapper.get_vector_store_stats_advanced()
         except Exception as e:
-            return {'error': str(e)} 
+            return {'error': str(e)}
