@@ -191,112 +191,116 @@ pip install "unstructured[local-inference,all-docs]"
 pip install python-docx openpyxl beautifulsoup4 pytesseract
 ```
 
-### 3. 配置 Ollama（关键）
+### 3. 配置模型（Ollama 或 OpenAI）
 
-Ollama 是 RAG 系统正常运行所必需的，因为它提供了生成回答的本地语言模型。
+系统支持两种主流模型：本地 Ollama 和云端 OpenAI。只需在 `.env` 中切换 `MODEL_TYPE`，无需修改代码。
 
-#### Ollama 安装步骤
+#### Ollama 配置（本地推荐）
+
+Ollama 是默认推荐的本地模型方案，离线可用、隐私友好。
 
 **Windows:**
-1. 从 [ollama.com](https://ollama.com/) 下载 Ollama
-2. 运行安装程序并按照指示完成安装
-3. Ollama 会自动作为服务启动
+1. 从 [ollama.com](https://ollama.com/) 下载并安装 Ollama
+2. 安装完成后会自动作为服务启动
 
 macOS/Linux：
 ```bash
 curl -fsSL https://ollama.ai/install.sh | sh
 ```
 
-#### 验证安装：
-
+**验证安装：**
 ```bash
 ollama --version
-
-# 验证服务是否正在运行
 ollama list
 ```
 
-#### 下载模型：
-
-RAG 系统需要一个语言模型来生成回答。我们选择 Ollama 是因为它是免费的：
-
+**下载模型：**
 ```bash
 # 推荐（速度与质量均衡）
 ollama pull llama3
-
 # 更快的替代
 ollama pull phi3
 ollama pull mistral
-
 # 更强但更吃资源
 ollama pull llama3.1:8b
 ```
 
-
-#### 在系统中配置模型（推荐使用 .env 文件）
-
-模型下载完成后，请在项目根目录下的 `.env` 文件中设置 Ollama 模型名称和温度：
-
+**在 .env 配置 Ollama：**
 ```env
+MODEL_TYPE=OLLAMA
 OLLAMA_MODEL=llama3
 OLLAMA_TEMPERATURE=0
 ```
+如使用其他模型，将 `OLLAMA_MODEL` 改为对应名称，如：`phi3`。
 
-**注意：** 如果你下载了不同的模型，请将 `OLLAMA_MODEL` 的值改为你所使用模型的名称。
-例如：
-```env
-OLLAMA_MODEL=phi3
-```
-
-系统会自动读取 `.env` 配置，无需手动修改代码。
-
-#### 测试 Ollama
-
-
+**测试 Ollama：**
 ```bash
-# 测试模型是否正常工作
 ollama run llama3 "Hello"
 ```
 
-如果你看到生成的回答，说明 Ollama 正常运行。
+**常见问题：**
+- “Ollama is not running”：运行 `ollama serve`
+- “Model not found”：运行 `ollama list`，如无模型请 `ollama pull llama3`
+- “Out of memory”：换更小模型如 `phi3`，关闭占用内存的程序，或增加虚拟内存
 
-#### 常见问题解决方案
+#### OpenAI 配置（云端 GPT-3.5/4）
 
-**错误：“Ollama is not running”（Ollama 未运行）**
-
-```bash
-# 手动启动 Ollama 服务
-ollama serve
+如需使用 OpenAI 或兼容 API（如代理/Azure），在 `.env` 设置：
+```env
+MODEL_TYPE=OPENAI
+OPENAI_API_KEY=sk-xxxxxx
+OPENAI_API_BASE=https://api.openai.com/v1
+OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_TEMPERATURE=0.7
 ```
+参数说明：
+- `MODEL_TYPE`：`OPENAI` 或 `OLLAMA`
+- `OPENAI_API_KEY`：OpenAI API 密钥
+- `OPENAI_API_BASE`：API 地址（官方/代理/Azure）
+- `OPENAI_MODEL`：如 `gpt-3.5-turbo`、`gpt-4`
+- `OPENAI_TEMPERATURE`：生成温度（0~1）
 
-**错误：“Model not found”（未找到模型）**
+**切换模型**：仅需修改 `.env` 的 `MODEL_TYPE` 字段。
 
+**常见问题：**
+- API Key 无效/额度不足：检查密钥与调用额度
+- API 地址错误：确认 `OPENAI_API_BASE` 正确（代理/Azure）
+- 模型名称不支持：确认所填模型已开放
+- 网络问题：如连接超时，请检查网络或代理
+
+**测试 OpenAI：**
 ```bash
-# 查看可用模型列表
-ollama list
-
-# 如果模型不存在，下载模型
-ollama pull llama3
+curl --request POST \
+    --url https://api.openai.com/v1/chat/completions \
+    --header 'Authorization: Bearer sk-xxxxxx' \
+    --header 'Content-Type: application/json' \
+    --data '{
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": "你好"}]
+    }'
 ```
-
-**错误：“Out of memory”（内存不足）**
-
-* 使用更小的模型，例如：`ollama pull phi3`
-* 关闭其他占用大量内存的应用程序
-* 考虑在 Windows 系统中增加虚拟内存容量
 
 
 ### 4. 系统自检
 
-在继续之前，让我们先验证一下一切是否正常运行：
+在继续之前，先验证环境与模型是否正常：
 
-#### 步骤 1：验证 Ollama
+#### 步骤 1：验证模型（Ollama 或 OpenAI）
+Ollama：
 ```bash
-# 验证 Ollama 是否正在运行
 ollama list
-
-# 测试模型
 ollama run llama3 "Test"
+```
+OpenAI：
+```bash
+curl --request POST \
+    --url https://api.openai.com/v1/chat/completions \
+    --header 'Authorization: Bearer sk-xxxxxx' \
+    --header 'Content-Type: application/json' \
+    --data '{
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": "ping"}]
+    }'
 ```
 
 #### 步骤 2：检查 Python 依赖项
@@ -314,7 +318,7 @@ python test_enhanced_rag.py
 ```
 
 如果一切正常，您将看到：
-- ✅ Ollama 正在响应命令
+- ✅ 模型（Ollama 或 OpenAI）正常响应
 - ✅ 所有依赖项导入均无错误
 - ✅ RAG 系统正在处理查询并显示源
 

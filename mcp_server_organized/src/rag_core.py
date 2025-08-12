@@ -1443,13 +1443,32 @@ def get_qa_chain(vector_store: Chroma, metadata_filter: dict = None) -> Retrieva
         vector_store: 向量数据库
         metadata_filter: 包含元数据过滤器的字典 (例如: {"file_type": ".pdf", "processing_method": "unstructured_enhanced"})
     """
-    log(f"核心: 初始化本地语言模型 (Ollama)...")
-    # 从 .env 读取模型配置
+    log(f"核心: 初始化语言模型...")
     load_dotenv()
-    ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
-    ollama_temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
-    llm = ChatOllama(model=ollama_model, temperature=ollama_temperature)
-    log(f"核心: 使用模型: {ollama_model}，温度: {ollama_temperature}")
+    model_type = os.getenv("MODEL_TYPE", "OLLAMA").upper()
+    llm = None
+    if model_type == "OLLAMA":
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
+        ollama_temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
+        llm = ChatOllama(model=ollama_model, temperature=ollama_temperature)
+        log(f"核心: 使用 Ollama 模型: {ollama_model}，温度: {ollama_temperature}")
+    elif model_type == "OPENAI":
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            os.system("pip install langchain-openai")
+            from langchain_openai import ChatOpenAI
+        openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        openai_api_base = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+        llm = ChatOpenAI(
+            api_key=openai_api_key,
+            base_url=openai_api_base,
+            model_name=os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"),
+            temperature=float(os.getenv("OPENAI_TEMPERATURE", "0"))
+        )
+        log(f"核心: 使用 OpenAI 模型: {os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')}，API 地址: {openai_api_base}")
+    else:
+        raise ValueError(f"不支持的模型类型: {model_type}")
     log(f"核心: 配置 RAG 链接，改进的源检索...")
     
     # 配置搜索参数
