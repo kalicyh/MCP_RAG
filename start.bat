@@ -2,18 +2,18 @@
 setlocal
 
 echo =======================================================
-echo  Bulk Ingest GUI - Asistente de Inicio
+echo  批量导入 GUI - 启动助手
 echo =======================================================
 echo.
 
-:: Verificar si el entorno virtual existe y está completo
+:: 检查虚拟环境是否存在且完整
 set VENV_DIR=.venv
 set NEEDS_INSTALL=false
 
 if not exist "%VENV_DIR%\Scripts\activate.bat" (
     set NEEDS_INSTALL=true
 ) else (
-    :: Verificar si PyTorch está instalado
+    :: 检查是否已安装 PyTorch
     call "%VENV_DIR%\Scripts\activate.bat" >nul 2>&1
     python -c "import torch" >nul 2>&1
     if errorlevel 1 (
@@ -22,116 +22,116 @@ if not exist "%VENV_DIR%\Scripts\activate.bat" (
 )
 
 if "%NEEDS_INSTALL%"=="true" (
-    echo 🔧 Primera vez o instalacion incompleta detectada
+    echo 🛠️ 检测到首次运行或安装不完整
     echo.
-    echo Se requiere instalar las dependencias antes de ejecutar la aplicacion.
+    echo 运行应用前需要安装依赖。
     echo.
-    echo ¿Que deseas hacer?
+    echo 请选择操作：
     echo.
-    echo 1. Instalar dependencias (recomendado para primera vez)
-    echo 2. Solo ejecutar la aplicacion (si ya esta instalado)
-    echo 3. Verificar el sistema
-    echo 4. Reparar dependencias (si la instalacion fallo)
-    echo 5. Salir
+    echo 1. 安装依赖（首次运行推荐）
+    echo 2. 仅运行应用（已安装依赖时）
+    echo 3. 检查系统
+    echo 4. 修复依赖（安装失败时）
+    echo 5. 退出
     echo.
-    set /p choice="Selecciona una opcion (1-5): "
+    set /p choice="请选择一个选项 (1-5): "
     
     if "%choice%"=="1" (
         echo.
-        echo Iniciando instalacion de dependencias...
+        echo 正在安装依赖...
         call install_requirements.bat
         if errorlevel 1 (
             echo.
-            echo ❌ La instalacion fallo. Revisa los errores arriba.
+            echo ❌ 安装失败，请检查上方错误。
             pause
             exit /b 1
         )
         echo.
-        echo ✅ Instalacion completada. Iniciando aplicacion...
+        echo ✅ 安装完成，正在启动应用...
         timeout /t 2 /nobreak >nul
         call run_gui.bat
         
     ) else if "%choice%"=="2" (
         echo.
-        echo Intentando ejecutar la aplicacion...
+        echo 正在尝试运行应用...
         call run_gui.bat
         
     ) else if "%choice%"=="3" (
         echo.
-        echo Verificando el sistema...
+        echo 正在检查系统...
         call check_system.bat
         
     ) else if "%choice%"=="4" (
         echo.
-        echo Reparando dependencias...
+        echo 正在修复依赖...
         call fix_dependencies_simple.bat
         
     ) else if "%choice%"=="5" (
         echo.
-        echo Saliendo...
+        echo 已退出...
         exit /b 0
         
     ) else (
         echo.
-        echo Opcion invalida. Saliendo...
+        echo 无效选项，已退出...
         pause
         exit /b 1
     )
     
 ) else (
-    echo ✅ Sistema listo para ejecutar
+    echo ✅ 系统已准备好运行
     echo.
-    echo El entorno virtual existe y las dependencias estan instaladas.
+    echo 虚拟环境已存在且依赖已安装。
     echo.
-    echo ¿Que deseas hacer?
+    echo 请选择操作：
     echo.
-    echo 1. Ejecutar la aplicacion
-    echo 2. Reinstalar dependencias
-    echo 3. Verificar el sistema
-    echo 4. Reparar dependencias
-    echo 5. Salir
+    echo 1. 运行应用
+    echo 2. 重新安装依赖
+    echo 3. 检查系统
+    echo 4. 修复依赖
+    echo 5. 退出
     echo.
-    set /p choice="Selecciona una opcion (1-5): "
+    set /p choice="请选择一个选项 (1-5): "
     
     if "%choice%"=="1" (
         echo.
-        echo Iniciando aplicacion...
+        echo 正在启动应用...
         call run_gui.bat
         
     ) else if "%choice%"=="2" (
         echo.
-        echo Reinstalando dependencias...
+        echo 正在重新安装依赖...
         call install_requirements.bat
         if errorlevel 1 (
             echo.
-            echo ❌ La reinstalacion fallo.
+            echo ❌ 重新安装失败。
             pause
             exit /b 1
         )
         echo.
-        echo ✅ Reinstalacion completada. Iniciando aplicacion...
+        echo ✅ 重新安装完成，正在启动应用...
         timeout /t 2 /nobreak >nul
         call run_gui.bat
         
     ) else if "%choice%"=="3" (
         echo.
-        echo Verificando el sistema...
+        echo 正在检查系统...
         call check_system.bat
         
     ) else if "%choice%"=="4" (
         echo.
-        echo Reparando dependencias...
+        echo 正在修复依赖...
         call fix_dependencies_simple.bat
         
     ) else if "%choice%"=="5" (
         echo.
-        echo Saliendo...
+        echo 已退出...
         exit /b 0
         
     ) else (
         echo.
-        echo Opcion invalida. Saliendo...
+        echo 无效选项，已退出...
         pause
         exit /b 1
     )
-) 
+)

@@ -1,90 +1,89 @@
 @echo off
 setlocal
 
-:: Define el nombre del directorio para el entorno virtual
+:: 检查虚拟环境是否存在
 set VENV_DIR=.venv
 
 echo =======================================================
-echo  Reparador Simple de Dependencias - Bulk Ingest GUI
+echo  简易依赖修复器 - 批量导入 GUI
 echo =======================================================
 echo.
 
-:: Verificar que el entorno virtual existe
 if not exist "%VENV_DIR%\Scripts\activate.bat" (
-    echo ❌ ERROR: Entorno virtual no encontrado
-    echo Por favor, ejecuta install_requirements.bat primero
+    echo ❌ 错误：未找到虚拟环境
+    echo 请先运行 install_requirements.bat
     pause
     exit /b 1
 )
 
-echo ✅ Entorno virtual encontrado: %VENV_DIR%
+echo ✅ 虚拟环境已找到: %VENV_DIR%
 echo.
 
-:: Activar el entorno virtual
-echo Activando entorno virtual...
+:: 激活虚拟环境
+echo 正在激活虚拟环境...
 call "%VENV_DIR%\Scripts\activate.bat"
 if errorlevel 1 (
-    echo ❌ ERROR: No se pudo activar el entorno virtual
-    echo El entorno virtual puede estar corrupto
-    echo Por favor, ejecuta install_requirements.bat para recrearlo
+    echo ❌ 错误：无法激活虚拟环境
+    echo 虚拟环境可能已损坏
+    echo 请运行 install_requirements.bat 重新创建
     pause
     exit /b 1
 )
 
-echo ✅ Entorno virtual activado
+echo ✅ 虚拟环境已激活
 echo.
 
-echo Instalando dependencias criticas...
+echo 正在安装关键依赖...
 echo.
 
-:: Instalar dependencias críticas una por una
+:: 逐个安装关键依赖
 echo [1/6] FastAPI...
 pip install fastapi==0.115.13 >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️ Error con FastAPI, intentando sin version especifica...
+    echo ⚠️ FastAPI 安装失败，尝试无版本...
     pip install fastapi >nul 2>&1
 )
 
 echo [2/6] Uvicorn...
 pip install uvicorn==0.34.3 >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️ Error con Uvicorn, intentando sin version especifica...
+    echo ⚠️ Uvicorn 安装失败，尝试无版本...
     pip install uvicorn >nul 2>&1
 )
 
 echo [3/6] Rich...
 pip install rich==14.0.0 >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️ Error con Rich, intentando sin version especifica...
+    echo ⚠️ Rich 安装失败，尝试无版本...
     pip install rich >nul 2>&1
 )
 
 echo [4/6] LangChain...
 pip install langchain==0.3.26 >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️ Error con LangChain, intentando sin version especifica...
+    echo ⚠️ LangChain 安装失败，尝试无版本...
     pip install langchain >nul 2>&1
 )
 
 echo [5/6] ChromaDB...
 pip install chromadb==1.0.13 >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️ Error con ChromaDB, intentando sin version especifica...
+    echo ⚠️ ChromaDB 安装失败，尝试无版本...
     pip install chromadb >nul 2>&1
 )
 
 echo [6/6] Sentence Transformers...
 pip install sentence-transformers==2.7.0 >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️ Error con Sentence Transformers, intentando sin version especifica...
+    echo ⚠️ Sentence Transformers 安装失败，尝试无版本...
     pip install sentence-transformers >nul 2>&1
 )
 
 echo.
-echo Verificando instalacion...
+echo 正在验证安装...
 echo.
 
-:: Verificar dependencias críticas
+:: 验证关键依赖
 python -c "import fastapi; print('✅ FastAPI OK')" 2>&1
 python -c "import uvicorn; print('✅ Uvicorn OK')" 2>&1
 python -c "import rich; print('✅ Rich OK')" 2>&1
@@ -94,10 +93,10 @@ python -c "import chromadb; print('✅ ChromaDB OK')" 2>&1
 
 echo.
 echo =======================================================
-echo  Reparacion completada
+echo  修复完成
 echo =======================================================
 echo.
-echo Si todas las dependencias muestran "OK", puedes ejecutar:
+echo 如果所有依赖都显示 "OK"，可运行：
 echo   run_gui.bat
 echo.
-pause 
+pause

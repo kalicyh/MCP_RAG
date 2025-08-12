@@ -1,69 +1,68 @@
 @echo off
 setlocal
 
-:: Define el nombre del directorio para el entorno virtual
+:: 定义虚拟环境目录名称
 set VENV_DIR=.venv
 
 echo =======================================================
-echo  Limpiador Forzado de Entorno Virtual - Bulk Ingest GUI
+echo  虚拟环境强制清理器 - 批量导入 GUI
 echo =======================================================
 echo.
 
-echo [1/4] Cerrando procesos de Python activos...
+echo [1/4] 关闭所有 Python 进程...
 taskkill /f /im python.exe >nul 2>&1
 taskkill /f /im pythonw.exe >nul 2>&1
-echo      - Procesos de Python cerrados.
+echo      - Python 进程已关闭。
 
 echo.
-echo [2/4] Esperando que se liberen los archivos...
+echo [2/4] 等待文件释放...
 timeout /t 3 /nobreak >nul
-echo      - Espera completada.
+echo      - 等待完成。
 
 echo.
-echo [3/4] Eliminando entorno virtual existente...
+echo [3/4] 删除现有虚拟环境...
 if exist "%VENV_DIR%" (
     rmdir /s /q "%VENV_DIR%" >nul 2>&1
     if exist "%VENV_DIR%" (
-        echo      - Intentando eliminación forzada...
+        echo      - 正在尝试强制删除...
         rmdir /s /q "%VENV_DIR%" 2>&1
         if exist "%VENV_DIR%" (
-            echo      - ERROR: No se pudo eliminar el entorno virtual.
-            echo      - Por favor, cierra manualmente cualquier ventana de terminal
-            echo      - o editor que pueda estar usando el entorno virtual.
+            echo      - 错误：无法删除虚拟环境。
+            echo      - 请手动关闭所有终端窗口
+            echo      - 或编辑器可能正在使用虚拟环境。
             pause
             exit /b 1
         )
     )
-    echo      - Entorno virtual eliminado exitosamente.
+    echo      - 虚拟环境已成功删除。
 ) else (
-    echo      - No se encontró entorno virtual para eliminar.
+    echo      - 未找到可删除的虚拟环境。
 )
 
 echo.
-echo [4/4] Creando nuevo entorno virtual...
+echo [4/4] 创建新虚拟环境...
 python -m venv %VENV_DIR% >nul 2>&1
 if errorlevel 1 (
     py -m venv %VENV_DIR% >nul 2>&1
     if errorlevel 1 (
         echo.
-        echo ERROR: No se pudo crear el entorno virtual.
-        echo Por favor, asegurate de que Python este instalado y anadido al PATH.
+        echo 错误：无法创建虚拟环境。
+        echo 请确保 Python 已安装并添加到 PATH。
         echo.
-        echo Comandos para verificar Python:
+        echo 检查 Python 命令：
         echo   python --version
         echo   py --version
         pause
         exit /b 1
     )
 )
-echo      - Nuevo entorno virtual creado exitosamente.
+echo      - 新虚拟环境已成功创建。
 
 echo.
 echo =======================================================
-echo  Limpieza forzada completada exitosamente!
+echo  强制清理完成！
 echo =======================================================
 echo.
-echo Ahora puedes ejecutar run_gui.bat para instalar las dependencias
-echo y iniciar la aplicacion.
+echo 现在可以运行 run_gui.bat 安装依赖并启动应用。
 echo.
-pause 
+pause

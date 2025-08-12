@@ -5,131 +5,131 @@ setlocal
 set VENV_DIR=.venv
 
 echo =======================================================
-echo  Reparador de Dependencias - Bulk Ingest GUI
+echo  依赖修复工具 - 批量导入GUI
 echo =======================================================
 echo.
 
-:: Verificar que el entorno virtual existe
+:: 检查虚拟环境是否存在
 if not exist "%VENV_DIR%\Scripts\activate.bat" (
-    echo ❌ ERROR: Entorno virtual no encontrado
-    echo Por favor, ejecuta install_requirements.bat primero
+    echo ❌ 错误：未找到虚拟环境
+    echo 请先运行 install_requirements.bat
     pause
     exit /b 1
 )
 
-echo ✅ Entorno virtual encontrado: %VENV_DIR%
+echo ✅ 虚拟环境已找到: %VENV_DIR%
 echo.
 
-:: Activar el entorno virtual
-echo Activando entorno virtual...
+:: 激活虚拟环境
+echo 正在激活虚拟环境...
 call "%VENV_DIR%\Scripts\activate.bat"
 if errorlevel 1 (
-    echo ❌ ERROR: No se pudo activar el entorno virtual
-    echo El entorno virtual puede estar corrupto
-    echo Por favor, ejecuta install_requirements.bat para recrearlo
+    echo ❌ 错误：无法激活虚拟环境
+    echo 虚拟环境可能已损坏
+    echo 请运行 install_requirements.bat 重新创建
     pause
     exit /b 1
 )
 
-echo ✅ Entorno virtual activado: %VIRTUAL_ENV%
+echo ✅ 虚拟环境已激活: %VIRTUAL_ENV%
 echo.
 
-echo [1/5] Instalando dependencias web (FastAPI, Uvicorn)...
+echo [1/5] 安装 Web 依赖 (FastAPI, Uvicorn)...
 echo.
 
-echo Instalando FastAPI...
+echo 正在安装 FastAPI...
 pip install fastapi==0.115.13
 if errorlevel 1 (
-    echo ❌ Error instalando FastAPI
-    echo Intentando sin version especifica...
+    echo ❌ 安装 FastAPI 失败
+    echo 尝试不指定版本...
     pip install fastapi
 )
 
 echo.
-echo Instalando Uvicorn...
+echo 正在安装 Uvicorn...
 pip install uvicorn==0.34.3
 if errorlevel 1 (
-    echo ❌ Error instalando Uvicorn
-    echo Intentando sin version especifica...
+    echo ❌ 安装 Uvicorn 失败
+    echo 尝试不指定版本...
     pip install uvicorn
 )
 
 echo.
-echo [2/5] Instalando dependencias de interfaz (Rich, Tkinter)...
+echo [2/5] 安装界面依赖 (Rich, Tkinter)...
 echo.
 
-echo Instalando Rich...
+echo 正在安装 Rich...
 pip install rich==14.0.0
 if errorlevel 1 (
-    echo ❌ Error instalando Rich
-    echo Intentando sin version especifica...
+    echo ❌ 安装 Rich 失败
+    echo 尝试不指定版本...
     pip install rich
 )
 
 echo.
-echo Verificando Tkinter (incluido con Python)...
-python -c "import tkinter; print('✅ Tkinter disponible')" 2>&1
+echo 检查 Tkinter（Python自带）...
+python -c "import tkinter; print('✅ Tkinter 可用')" 2>&1
 if errorlevel 1 (
-    echo ❌ Tkinter no disponible
-    echo Esto puede requerir reinstalar Python con Tkinter
+    echo ❌ Tkinter 不可用
+    echo 可能需要重新安装带 Tkinter 的 Python
 )
 
 echo.
-echo [3/5] Instalando dependencias de procesamiento de documentos...
+echo [3/5] 安装文档处理依赖...
 echo.
 
-echo Instalando LangChain...
+echo 正在安装 LangChain...
 pip install langchain==0.3.26
 if errorlevel 1 (
-    echo ❌ Error instalando LangChain
-    echo Intentando sin version especifica...
+    echo ❌ 安装 LangChain 失败
+    echo 尝试不指定版本...
     pip install langchain
 )
 
 echo.
-echo Instalando ChromaDB...
+echo 正在安装 ChromaDB...
 pip install chromadb==1.0.13
 if errorlevel 1 (
-    echo ❌ Error instalando ChromaDB
-    echo Intentando sin version especifica...
+    echo ❌ 安装 ChromaDB 失败
+    echo 尝试不指定版本...
     pip install chromadb
 )
 
 echo.
-echo Instalando Sentence Transformers...
+echo 正在安装 Sentence Transformers...
 pip install sentence-transformers==2.7.0
 if errorlevel 1 (
-    echo ❌ Error instalando Sentence Transformers
-    echo Intentando sin version especifica...
+    echo ❌ 安装 Sentence Transformers 失败
+    echo 尝试不指定版本...
     pip install sentence-transformers
 )
 
 echo.
-echo [4/5] Instalando dependencias de archivos...
+echo [4/5] 安装文件依赖...
 echo.
 
-echo Instalando Unstructured...
+echo 正在安装 Unstructured...
 pip install unstructured==0.17.2
 if errorlevel 1 (
-    echo ❌ Error instalando Unstructured
-    echo Intentando sin version especifica...
+    echo ❌ 安装 Unstructured 失败
+    echo 尝试不指定版本...
     pip install unstructured
 )
 
 echo.
-echo Instalando PyPDF...
+echo 正在安装 PyPDF...
 pip install pypdf==5.6.0
 if errorlevel 1 (
-    echo ❌ Error instalando PyPDF
-    echo Intentando sin version especifica...
+    echo ❌ 安装 PyPDF 失败
+    echo 尝试不指定版本...
     pip install pypdf
 )
 
 echo.
-echo [5/5] Verificando instalacion...
+echo [5/5] 检查安装情况...
 echo.
 
-echo Verificando dependencias criticas:
+echo 检查关键依赖:
 echo.
 
 python -c "import fastapi; print('✅ FastAPI OK')" 2>&1
@@ -144,15 +144,15 @@ python -c "import pypdf; print('✅ PyPDF OK')" 2>&1
 
 echo.
 echo =======================================================
-echo  Reparacion completada
+echo  修复完成
 echo =======================================================
 echo.
-echo Si todas las dependencias muestran "OK", puedes ejecutar:
+echo 如果所有依赖都显示 "OK"，可直接运行:
 echo   run_gui.bat
 echo.
-echo Si hay errores, intenta:
-echo   1. Reinstalar Python con todas las opciones
-echo   2. Ejecutar install_requirements.bat nuevamente
-echo   3. Verificar la conexion a internet
+echo 如果有错误，请尝试:
+echo   1. 重新安装带全部选项的 Python
+echo   2. 再次运行 install_requirements.bat
+echo   3. 检查网络连接
 echo.
 pause 

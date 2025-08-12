@@ -1,122 +1,113 @@
 @echo off
 setlocal
-
-:: Define el nombre del directorio para el entorno virtual
+:: 定义虚拟环境目录名称
 set VENV_DIR=.venv
 
 echo =======================================================
-echo  Diagnostico del Entorno Virtual - Bulk Ingest GUI
+echo  虚拟环境诊断工具 - 批量导入GUI
 echo =======================================================
 echo.
 
-echo [1/5] Verificando existencia del directorio...
+echo [1/5] 检查目录是否存在...
 if exist "%VENV_DIR%" (
-    echo ✅ Directorio .venv existe
+    echo ✅ .venv 目录存在
 ) else (
-    echo ❌ Directorio .venv NO existe
+    echo ❌ .venv 目录不存在
     goto :create_new
 )
 
 echo.
-echo [2/5] Verificando estructura del entorno virtual...
+echo [2/5] 检查虚拟环境结构...
 echo.
-
-:: Verificar archivos y directorios críticos
+:: 检查关键文件和目录
 set MISSING_FILES=0
-
 if exist "%VENV_DIR%\Scripts\activate.bat" (
-    echo ✅ Scripts\activate.bat existe
+    echo ✅ Scripts\activate.bat 存在
 ) else (
-    echo ❌ Scripts\activate.bat NO existe
+    echo ❌ Scripts\activate.bat 不存在
     set /a MISSING_FILES+=1
 )
-
 if exist "%VENV_DIR%\Scripts\python.exe" (
-    echo ✅ Scripts\python.exe existe
+    echo ✅ Scripts\python.exe 存在
 ) else (
-    echo ❌ Scripts\python.exe NO existe
+    echo ❌ Scripts\python.exe 不存在
     set /a MISSING_FILES+=1
 )
-
 if exist "%VENV_DIR%\Lib\site-packages" (
-    echo ✅ Lib\site-packages existe
+    echo ✅ Lib\site-packages 存在
 ) else (
-    echo ❌ Lib\site-packages NO existe
+    echo ❌ Lib\site-packages 不存在
     set /a MISSING_FILES+=1
 )
-
 if exist "%VENV_DIR%\pyvenv.cfg" (
-    echo ✅ pyvenv.cfg existe
+    echo ✅ pyvenv.cfg 存在
 ) else (
-    echo ❌ pyvenv.cfg NO existe
+    echo ❌ pyvenv.cfg 不存在
     set /a MISSING_FILES+=1
 )
 
 echo.
-echo [3/5] Verificando permisos de acceso...
+echo [3/5] 检查访问权限...
 echo.
-
-:: Intentar acceder a los archivos
+:: 尝试访问文件
 if exist "%VENV_DIR%\Scripts\activate.bat" (
     type "%VENV_DIR%\Scripts\activate.bat" >nul 2>&1
     if errorlevel 1 (
-        echo ❌ No se puede leer Scripts\activate.bat (problema de permisos)
+        echo ❌ 无法读取 Scripts\activate.bat（权限问题）
         set /a MISSING_FILES+=1
     ) else (
-        echo ✅ Se puede leer Scripts\activate.bat
+        echo ✅ 可以读取 Scripts\activate.bat
     )
 )
 
 echo.
-echo [4/5] Verificando contenido del directorio...
+echo [4/5] 检查目录内容...
 echo.
-
-echo Contenido del directorio .venv:
+echo .venv 目录内容:
 dir "%VENV_DIR%" /b 2>&1
 
 echo.
-echo Contenido del directorio .venv\Scripts (si existe):
+echo .venv\Scripts 目录内容（如存在）:
 if exist "%VENV_DIR%\Scripts" (
     dir "%VENV_DIR%\Scripts" /b 2>&1
 ) else (
-    echo ❌ Directorio Scripts no existe
+    echo ❌ Scripts 目录不存在
 )
 
 echo.
-echo [5/5] Resumen del diagnostico...
+echo [5/5] 诊断总结...
 echo.
-
 if %MISSING_FILES% GTR 0 (
-    echo ❌ Se encontraron %MISSING_FILES% archivos/directorios faltantes o inaccesibles
+    echo ❌ 发现 %MISSING_FILES% 个缺失或不可访问的文件/目录
     echo.
-    echo El entorno virtual esta corrupto o incompleto.
-    echo Se recomienda eliminarlo y crear uno nuevo.
+    echo 虚拟环境已损坏或不完整。
+    echo 建议删除并重新创建。
     echo.
-    echo ¿Deseas eliminar el entorno virtual corrupto? (S/N)
+    echo 是否删除损坏的虚拟环境？（Y/N）
     set /p choice=
-    if /i "%choice%"=="S" (
+    if /i "%choice%"=="Y" (
         echo.
-        echo Eliminando entorno virtual corrupto...
+        echo 正在删除损坏的虚拟环境...
         rmdir /s /q "%VENV_DIR%" 2>&1
         if exist "%VENV_DIR%" (
-            echo ❌ No se pudo eliminar. Usa force_clean_venv.bat
+            echo ❌ 删除失败。请使用 force_clean_venv.bat
         ) else (
-            echo ✅ Entorno virtual eliminado
+            echo ✅ 虚拟环境已删除
             goto :create_new
         )
     )
 ) else (
-    echo ✅ El entorno virtual parece estar en buen estado
+    echo ✅ 虚拟环境状态良好
     echo.
-    echo El problema puede estar en la verificacion del script run_gui.bat
-    echo Verificando la condicion exacta...
+    echo 问题可能出在 run_gui.bat 的检测脚本
+    echo 正在检查具体条件...
     echo.
     if exist "%VENV_DIR%\Scripts\activate.bat" (
-        echo ✅ La condicion 'exist "%VENV_DIR%\Scripts\activate.bat"' es VERDADERA
-        echo El script NO deberia intentar crear un nuevo entorno
+        echo ✅ 条件 'exist "%VENV_DIR%\Scripts\activate.bat"' 为真
+        echo 脚本不应尝试创建新环境
     ) else (
-        echo ❌ La condicion 'exist "%VENV_DIR%\Scripts\activate.bat"' es FALSA
-        echo El script SI deberia intentar crear un nuevo entorno
+        echo ❌ 条件 'exist "%VENV_DIR%\Scripts\activate.bat"' 为假
+        echo 脚本应尝试创建新环境
     )
 )
 
@@ -125,27 +116,26 @@ goto :end
 :create_new
 echo.
 echo =======================================================
-echo  Creando nuevo entorno virtual...
+echo  正在创建新虚拟环境...
 echo =======================================================
 echo.
-
 python -m venv %VENV_DIR% >nul 2>&1
 if errorlevel 1 (
     py -m venv %VENV_DIR% >nul 2>&1
     if errorlevel 1 (
-        echo ❌ ERROR: No se pudo crear el entorno virtual
-        echo Ejecuta check_python.bat para verificar la instalacion
+        echo ❌ 错误：无法创建虚拟环境
+        echo 请运行 check_python.bat 检查安装
     ) else (
-        echo ✅ Nuevo entorno virtual creado con 'py'
+        echo ✅ 使用 'py' 创建新虚拟环境成功
     )
 ) else (
-    echo ✅ Nuevo entorno virtual creado con 'python'
+    echo ✅ 使用 'python' 创建新虚拟环境成功
 )
 
 :end
 echo.
 echo =======================================================
-echo  Diagnostico completado
+echo  诊断完成
 echo =======================================================
 echo.
-pause 
+pause
