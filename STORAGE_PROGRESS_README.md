@@ -1,270 +1,270 @@
-# 📊 Barra de Progreso de Almacenamiento - Nueva Funcionalidad
+# 📊 存储进度条 - 新功能说明
 
-## 🎯 ¿Qué es esta nueva funcionalidad?
+## 🎯 这是什么功能？
 
-Se ha añadido una **barra de progreso en tiempo real** durante el almacenamiento de documentos en la base de datos vectorial. Esto proporciona:
+我们在将文档写入向量数据库的过程中，新增了一个“实时进度条”。它能提供：
 
-- **📊 Progreso visual** del almacenamiento
-- **📄 Información del documento actual** siendo procesado
-- **⏹️ Control de detención** del proceso
-- **📝 Logs detallados** del almacenamiento
-- **🎯 Mejor experiencia de usuario** con feedback visual
+- **📊 可视化进度**
+- **📄 当前处理的文档信息**
+- **⏹️ 随时停止**存储过程的控制按钮
+- **📝 详细日志**记录
+- **🎯 更好的用户体验**和可视化反馈
 
-## 🌟 Características Principales
+## 🌟 主要特性
 
-### 📊 **Barra de Progreso Visual**
-- **Progreso en tiempo real** con porcentaje
-- **Contador de documentos** (actual/total)
-- **Estado del proceso** (preparando, almacenando, completado)
-- **Documento actual** siendo procesado
+### 📊 可视化进度条
+- 实时百分比进度
+- 文档计数（当前/总数）
+- 过程状态（准备中、存储中、已完成）
+- 当前正在处理的文档名
 
-### ⏹️ **Control de Proceso**
-- **Botón de detener** durante el almacenamiento
-- **Detección automática** de interrupción
-- **Restauración segura** de la interfaz
-- **Manejo de errores** robusto
+### ⏹️ 过程控制
+- 存储过程中可“停止”
+- 自动检测用户中断
+- 界面安全恢复
+- 健壮的错误处理
 
-### 📝 **Logs Detallados**
-- **Timestamps** para cada acción
-- **Información de configuración** de la base de datos
-- **Estado de cada documento** (éxito/error)
-- **Resumen final** del proceso
+### 📝 详细日志
+- 每步操作的时间戳
+- 数据库配置相关信息
+- 每个文档的处理状态（成功/失败）
+- 过程结束后的汇总
 
-## 🛠️ Implementación Técnica
+## 🛠️ 技术实现
 
-### **Nueva Sección de Progreso**
+### 新的“进度”区域
 ```python
 def create_storage_progress_section(self, parent):
-    """Crear sección de progreso de almacenamiento"""
-    progress_frame = ttk.LabelFrame(parent, text="📊 Progreso de Almacenamiento", padding="10")
+    """创建存储进度区域"""
+    progress_frame = ttk.LabelFrame(parent, text="📊 存储进度", padding="10")
     progress_frame.pack(fill=tk.X, pady=(0, 20))
     
-    # Barra de progreso
+    # 进度条
     self.storage_progress_bar = ttk.Progressbar(progress_frame, mode='determinate')
     self.storage_progress_bar.pack(fill=tk.X, pady=(0, 5))
     
-    # Label de estado
-    self.storage_status_label = ttk.Label(progress_frame, text="Listo para almacenar", style='Info.TLabel')
+    # 状态标签
+    self.storage_status_label = ttk.Label(progress_frame, text="准备就绪，可开始存储", style='Info.TLabel')
     self.storage_status_label.pack(anchor=tk.W)
     
-    # Label de archivo actual
+    # 当前文件标签
     self.storage_current_file_label = ttk.Label(progress_frame, text="", style='Subtitle.TLabel')
     self.storage_current_file_label.pack(anchor=tk.W, pady=(2, 0))
     
-    # Botón de detener almacenamiento
-    self.stop_storage_btn = ttk.Button(progress_frame, text="⏹️ Detener Almacenamiento", 
+    # 停止按钮
+    self.stop_storage_btn = ttk.Button(progress_frame, text="⏹️ 停止存储", 
                                       command=self.stop_storage, state='disabled')
     self.stop_storage_btn.pack(anchor=tk.W, pady=(5, 0))
 ```
 
-### **Función de Actualización de Progreso**
+### 进度更新函数
 ```python
 def update_storage_progress(self, current, total, current_file=""):
-    """Actualizar la barra de progreso de almacenamiento"""
+    """更新存储进度条"""
     if total > 0:
         progress = (current / total) * 100
         self.storage_progress_bar['value'] = progress
-        self.storage_status_label.config(text=f"Almacenando... {current}/{total} ({progress:.1f}%)")
+        self.storage_status_label.config(text=f"存储中... {current}/{total} ({progress:.1f}%)")
     
     if current_file:
-        self.storage_current_file_label.config(text=f"Documento actual: {os.path.basename(current_file)}")
+        self.storage_current_file_label.config(text=f"当前文档：{os.path.basename(current_file)}")
     
     self.root.update_idletasks()
 ```
 
-### **Control de Detención**
+### 停止控制
 ```python
 def stop_storage(self):
-    """Detener el almacenamiento"""
+    """停止存储"""
     self.storage_running = False
-    self.storage_status_label.config(text="Deteniendo almacenamiento...")
+    self.storage_status_label.config(text="正在停止存储...")
     self.stop_storage_btn.config(state='disabled')
-    self.log_storage_message("⏹️ Almacenamiento detenido por el usuario")
+    self.log_storage_message("⏹️ 用户已停止存储")
 ```
 
-## 🚀 Flujo de Trabajo
+## 🚀 工作流
 
-### **1. Inicio del Almacenamiento**
+### 1. 开始存储
 ```
-Usuario hace clic en "💾 Almacenar Seleccionados"
+用户点击 “💾 存储所选”
 ↓
-Cambiar a pestaña de almacenamiento
+切换到“存储”标签页
 ↓
-Deshabilitar botón de almacenar
+禁用“存储”按钮
 ↓
-Habilitar botón de detener
+启用“停止”按钮
 ↓
-Inicializar barra de progreso (0%)
+初始化进度条（0%）
 ↓
-Iniciar thread de almacenamiento
-```
-
-### **2. Durante el Almacenamiento**
-```
-Para cada documento:
-↓
-Verificar si se debe detener
-↓
-Actualizar progreso (documento actual/total)
-↓
-Mostrar nombre del documento actual
-↓
-Procesar documento en base de datos
-↓
-Registrar resultado (éxito/error)
-↓
-Actualizar logs
+启动存储线程
 ```
 
-### **3. Finalización**
+### 2. 存储进行中
 ```
-Si completado exitosamente:
+对于每个文档：
 ↓
-Mostrar progreso 100%
+检查是否需要停止
 ↓
-Cambiar estado a "¡Almacenamiento completado!"
+更新进度（当前/总数）
 ↓
-Mostrar mensaje de éxito
+显示当前文档名
 ↓
-Restaurar botones
-
-Si detenido por usuario:
+将文档写入向量数据库
 ↓
-Mostrar estado "Almacenamiento detenido"
+记录结果（成功/失败）
 ↓
-Registrar detención en logs
-↓
-Restaurar botones
+刷新日志
 ```
 
-## 🧪 Script de Prueba
+### 3. 结束
+```
+若成功完成：
+↓
+显示 100% 进度
+↓
+状态改为 “存储完成！”
+↓
+弹出成功提示
+↓
+恢复按钮状态
 
-Se creó `test_storage_progress.py` para probar la funcionalidad:
+若用户停止：
+↓
+状态显示 “存储已停止”
+↓
+在日志中记录停止事件
+↓
+恢复按钮状态
+```
 
-### **Características del Script de Prueba:**
-- **Configuración personalizable** (número de documentos, tiempo por documento)
-- **Simulación realista** del proceso de almacenamiento
-- **Errores aleatorios** para probar robustez
-- **Control completo** del proceso
+## 🧪 测试脚本
 
-### **Cómo Usar el Script de Prueba:**
+我们提供了 `test_storage_progress.py` 来验证此功能：
+
+### 测试脚本特性
+- 可自定义配置（文档数量、每个文档耗时）
+- 贴近真实的存储流程模拟
+- 随机错误注入（约 10% 概率）以验证健壮性
+- 全程可控、可中断
+
+### 使用方式
 ```bash
 python test_storage_progress.py
 ```
 
-### **Configuración de Prueba:**
-- **Número de documentos**: Cuántos documentos simular
-- **Tiempo por documento**: Segundos de simulación por documento
-- **Errores aleatorios**: 10% de probabilidad de error simulado
+### 测试配置项
+- 文档数量：要模拟的文档个数
+- 每文档耗时：每个文档的模拟处理秒数
+- 随机错误：10% 概率的模拟失败
 
-## 📊 Estados de la Barra de Progreso
+## 📊 进度条状态
 
-### **🟢 Estados Normales:**
-- **"Listo para almacenar"**: Estado inicial
-- **"Preparando almacenamiento..."**: Configurando base de datos
-- **"Almacenando... X/Y (Z%)"**: Procesando documentos
-- **"¡Almacenamiento completado!"**: Proceso exitoso
+### 🟢 正常状态
+- “准备就绪，可开始存储”：初始状态
+- “正在准备存储...”：初始化数据库配置
+- “存储中... X/Y (Z%)”：处理中
+- “存储完成！”：流程成功
 
-### **🟡 Estados de Control:**
-- **"Deteniendo almacenamiento..."**: Usuario solicitó detener
-- **"Almacenamiento detenido"**: Proceso interrumpido
+### 🟡 控制状态
+- “正在停止存储...”：用户请求停止
+- “存储已停止”：过程被中断
 
-### **🔴 Estados de Error:**
-- **"Error durante el almacenamiento"**: Error general
-- **"Error almacenando [documento]"**: Error específico
+### 🔴 错误状态
+- “存储过程中发生错误”：通用错误
+- “存储 [文档] 时出错”：具体文件错误
 
-## 🎯 Beneficios de la Nueva Funcionalidad
+## 🎯 新功能带来的好处
 
-### ✅ **Mejor Experiencia de Usuario**
-- **Feedback visual** inmediato del progreso
-- **Información clara** sobre el estado actual
-- **Control del proceso** con botón de detener
-- **Logs detallados** para debugging
+### ✅ 更佳用户体验
+- 进度的即时可视反馈
+- 清晰的当前状态信息
+- 提供停止按钮可控流程
+- 详细日志便于调试
 
-### 🛡️ **Mayor Robustez**
-- **Detección de interrupciones** del usuario
-- **Manejo seguro** de errores
-- **Restauración automática** de la interfaz
-- **Threading seguro** para no bloquear la GUI
+### 🛡️ 更强健壮性
+- 用户中断可检测
+- 错误处理更安全
+- 界面自动恢复
+- 多线程不阻塞 GUI
 
-### 📊 **Mejor Monitoreo**
-- **Progreso cuantitativo** (X/Y documentos)
-- **Progreso porcentual** (Z%)
-- **Documento actual** siendo procesado
-- **Logs con timestamps** para auditoría
+### 📊 更好监控
+- 定量进度（X/Y 文档）
+- 百分比进度（Z%）
+- 实时显示当前文档
+- 带时间戳的日志便于审计
 
-## 🔧 Configuración y Personalización
+## 🔧 配置与定制
 
-### **Variables de Control:**
+### 控制变量
 ```python
-self.storage_running = False  # Control de ejecución
-self.storage_progress_bar     # Barra de progreso
-self.storage_status_label     # Label de estado
-self.storage_current_file_label  # Label de archivo actual
-self.stop_storage_btn         # Botón de detener
+self.storage_running = False  # 运行控制
+self.storage_progress_bar     # 进度条
+self.storage_status_label     # 状态标签
+self.storage_current_file_label  # 当前文件标签
+self.stop_storage_btn         # 停止按钮
 ```
 
-### **Personalización de Estilos:**
-- **Colores de la barra**: Configurables en `setup_styles()`
-- **Fuentes de labels**: Personalizables
-- **Tamaños de widgets**: Ajustables según necesidades
+### 样式定制
+- 进度条颜色：在 `setup_styles()` 中配置
+- 标签字体：可自定义
+- 小部件尺寸：按需调整
 
-## 🚀 Cómo Usar la Nueva Funcionalidad
+## 🚀 如何使用本功能
 
-### **1. Procesar Documentos**
-1. Ejecutar la aplicación avanzada
-2. Procesar documentos en la pestaña de procesamiento
-3. Revisar y seleccionar documentos en la pestaña de revisión
+### 1. 处理文档
+1) 启动高级版应用
+2) 在“处理”标签页处理文档
+3) 在“复审”标签页查看并选择文档
 
-### **2. Iniciar Almacenamiento**
-1. Ir a la pestaña de almacenamiento
-2. Marcar confirmación de almacenamiento
-3. Hacer clic en "💾 Almacenar Seleccionados"
-4. **Observar la barra de progreso en tiempo real**
+### 2. 开始存储
+1) 切到“存储”标签页
+2) 勾选“确认存储”
+3) 点击“💾 存储所选”
+4) 观察实时进度
 
-### **3. Monitorear el Proceso**
-- **Ver progreso** en la barra
-- **Leer logs** detallados
-- **Ver documento actual** siendo procesado
-- **Usar botón de detener** si es necesario
+### 3. 监控过程
+- 看进度条
+- 查看详细日志
+- 关注当前处理的文档
+- 必要时点击“停止”
 
-### **4. Verificar Completación**
-- **Barra al 100%** cuando termine
-- **Mensaje de éxito** automático
-- **Logs finales** con resumen
-- **Botones restaurados** automáticamente
+### 4. 完成校验
+- 进度到 100%
+- 自动成功提示
+- 日志包含最终汇总
+- 按钮状态自动恢复
 
-## 📝 Notas de Implementación
+## 📝 实施说明
 
-### **Archivos Modificados:**
-- `bulk_ingest_gui_advanced.py` - Aplicación principal
-- `test_storage_progress.py` - Script de prueba (nuevo)
+### 修改的文件
+- `bulk_ingest_gui_advanced.py` - 主应用
+- `test_storage_progress.py` - 新增测试脚本
 
-### **Funciones Añadidas:**
-- `create_storage_progress_section()` - Nueva sección de progreso
-- `update_storage_progress()` - Actualización de progreso
-- `stop_storage()` - Control de detención
+### 新增的函数
+- `create_storage_progress_section()` - 新的进度区域
+- `update_storage_progress()` - 进度更新
+- `stop_storage()` - 停止控制
 
-### **Funciones Modificadas:**
-- `store_selected_documents()` - Inicialización de progreso
-- `perform_storage()` - Integración con barra de progreso
+### 修改的函数
+- `store_selected_documents()` - 进度初始化
+- `perform_storage()` - 与进度条联动
 
-### **Variables Añadidas:**
-- `storage_running` - Control de ejecución
-- `storage_progress_bar` - Barra de progreso
-- `storage_status_label` - Label de estado
-- `storage_current_file_label` - Label de archivo actual
-- `stop_storage_btn` - Botón de detener
+### 新增的变量
+- `storage_running` - 运行控制
+- `storage_progress_bar` - 进度条
+- `storage_status_label` - 状态标签
+- `storage_current_file_label` - 当前文件标签
+- `stop_storage_btn` - 停止按钮
 
-## 🎉 Resultado Final
+## 🎉 最终效果
 
-La nueva funcionalidad proporciona:
+该功能实现了：
 
-- **🎯 Control total** sobre el proceso de almacenamiento
-- **📊 Visibilidad completa** del progreso
-- **⏹️ Capacidad de interrupción** segura
-- **📝 Logs detallados** para auditoría
-- **🛡️ Manejo robusto** de errores
-- **✨ Experiencia de usuario** mejorada
+- 🎯 对存储过程的“完全可控”
+- 📊 对进度“完全可见”
+- ⏹️ 安全的“可中断”能力
+- 📝 可审计的“详细日志”
+- 🛡️ 更稳健的错误处理
+- ✨ 显著提升的用户体验
 
-¡La barra de progreso de almacenamiento hace que el proceso sea mucho más transparente y controlable! 🚀 
+存储进度条让整个流程更透明、可控、可靠！🚀

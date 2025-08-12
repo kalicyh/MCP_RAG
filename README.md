@@ -1,33 +1,34 @@
-# Servidor RAG Personal con MCP
+# 个人 RAG 服务器（基于 MCP）
 
-Este proyecto implementa un servidor compatible con el Protocolo de Contexto de Modelo (MCP) que dota a los clientes de IA (como Cursor, Claude for Desktop, etc.) de una capacidad de Recuperación Aumentada por Generación (RAG). Permite al modelo de lenguaje acceder a una base de conocimiento privada y local, alimentada por tus propios textos y documentos.
+本项目实现了一个兼容模型上下文协议（MCP，Model Context Protocol）的服务器，赋能 AI 客户端（如 Cursor、Claude for Desktop 等）具备增强检索生成（RAG，Retrieval-Augmented Generation）能力。允许语言模型访问基于你自己文本和文档的本地私有知识库。
 
-## ✨ Características
+## ✨ 主要特性
 
-- **Memoria Persistente para tu IA:** "Enseña" a tu IA nueva información que recordará entre sesiones.
-- **🆕 Interfaz Gráfica de Usuario (GUI):** Una aplicación de escritorio intuitiva con sistema de scripts organizados para facilitar la instalación y ejecución.
-- **🚀 Procesamiento Avanzado de Documentos:** Alimenta la base de conocimiento con **más de 25 formatos de archivo** incluyendo PDF, DOCX, PPTX, XLSX, imágenes (con OCR), correos electrónicos, y más.
-- **🧠 Procesamiento Inteligente con Unstructured:** Sistema de procesamiento de documentos de nivel empresarial que preserva la estructura semántica, elimina ruido automáticamente y maneja formatos complejos.
-- **🔄 Sistema de Fallbacks Robusto:** Múltiples estrategias de procesamiento garantizan que cualquier documento sea procesado exitosamente.
-- **📊 Metadatos Estructurales:** Información detallada sobre la estructura del documento (títulos, tablas, listas) para mejor rastreabilidad.
-- **🔍 Búsquedas Avanzadas con Filtros:** Sistema de filtrado por metadatos para búsquedas más precisas y relevantes.
-- **📈 Estadísticas de Base de Conocimientos:** Información detallada sobre el contenido almacenado y su estructura.
-- **LLM Local y Privado:** Utiliza modelos de lenguaje locales a través de [Ollama](https://ollama.com/) (ej. Llama 3, Mistral), asegurando que tus datos y preguntas nunca salgan de tu máquina.
-- **100% Local y Offline:** Tanto el modelo de lenguaje como los embeddings se ejecutan en tu máquina. Ningún dato sale a internet. Una vez descargados los modelos, funciona sin conexión.
-- **Ingesta Masiva:** Scripts dedicados para procesar directorios enteros de documentos y construir la base de conocimiento de manera eficiente.
-- **Arquitectura Modular:** La lógica del RAG está separada de los scripts de servidor y de ingesta, facilitando el mantenimiento y la expansión.
-- **Copias en Markdown:** Cada documento procesado se guarda automáticamente en formato Markdown para verificación y reutilización.
-- **🆕 Metadatos de Fuente:** Rastreabilidad completa de información con atribución de fuentes en cada respuesta.
-- **🆕 Optimizado para Agentes de IA:** Descripciones detalladas y manejo de errores inteligente para uso efectivo por agentes de IA.
-- **🆕 Sistema de Scripts Organizado:** Estructura modular de scripts que separa instalación, ejecución y diagnóstico.
+- **为你的 AI 提供持久记忆**：让 AI 学习新信息，并能跨会话记忆。
+- **🆕 图形用户界面（GUI）**：直观的桌面应用，带有结构化脚本，方便安装与运行。
+- **🚀 高级文档处理**：支持超过 25 种格式文件，包括 PDF、DOCX、PPTX、XLSX、图片（含 OCR）、邮件等。
+- **🧠 智能处理引擎 Unstructured**：企业级文档处理，保持语义结构，自动去噪，支持复杂格式。
+- **🔄 可靠回退机制**：多重处理策略确保所有文档均能成功处理。
+- **📊 结构化元数据**：详细文档结构信息（标题、表格、列表），方便追踪。
+- **🔍 高级搜索过滤**：基于元数据的精准过滤，提高搜索相关性。
+- **📈 知识库统计信息**：详尽内容与结构分析。
+- **本地私有大语言模型**：通过 [Ollama](https://ollama.com/) 使用本地模型（如 Llama 3、Mistral），保证数据和提问不出本机。
+- **100% 本地离线运行**：语言模型和向量嵌入均本地执行，数据不联网，模型下载完成后无需网络。
+- **批量导入支持**：专用脚本批量处理文档目录，高效构建知识库。
+- **模块化架构**：RAG 逻辑与服务器、导入脚本分离，便于维护和扩展。
+- **Markdown 备份**：自动保存处理后的每个文档为 Markdown 格式，便于验证和复用。
+- **🆕 来源元数据**：完整的信息溯源，回答附带来源归属。
+- **🆕 AI 代理优化**：详尽描述和智能错误处理，提升代理使用效率。
+- **🆕 结构化脚本体系**：模块化脚本划分安装、运行和诊断流程。
+
 
 ---
 
 ## 🏗️ Arquitectura
 
-El proyecto está organizado en una estructura modular que separa claramente los componentes del servidor MCP y la interfaz gráfica de usuario (GUI). Esta organización facilita el mantenimiento, desarrollo y uso independiente de cada componente.
+该项目采用模块化结构，将 MCP 服务器组件与图形用户界面 (GUI) 清晰地分离。这种组织方式有利于每个组件的独立维护、开发和使用。
 
-### **Estructura del Proyecto:**
+### 项目结构
 
 ```
 MCP_RAG/
@@ -77,516 +78,509 @@ MCP_RAG/
 └── 📄 AGENT_INSTRUCTIONS.md          # Instrucciones para agentes IA
 ```
 
-### **Componentes Principales:**
+### 主要组件
 
-#### **1. Servidor MCP (`mcp_server_organized/`)**
-- **`server.py`**: Servidor MCP principal que expone las herramientas RAG
-- **`src/rag_core.py`**: El corazón del sistema RAG con toda la lógica de procesamiento
-- **`src/tools/`**: Herramientas MCP (`learn_text`, `learn_document`, `ask_rag`, etc.)
-- **`src/services/`**: Servicios del servidor (configuración, logging, etc.)
-- **`src/models/`**: Modelos de datos para el servidor
-- **`src/utils/`**: Utilidades compartidas
+#### 1）MCP 服务器（`mcp_server_organized/`）
+- `server.py`：对外暴露 RAG 工具的 MCP 主服务器
+- `src/rag_core.py`：RAG 的核心，包含全部处理逻辑
+- `src/tools/`：MCP 工具（`learn_text`、`learn_document`、`ask_rag` 等）
+- `src/services/`：服务器端服务（配置、日志等）
+- `src/models/`：数据模型
+- `src/utils/`：通用工具方法
 
-#### **2. Interfaz Gráfica (`bulk_ingest_GUI/`)**
-- **`main.py`**: Punto de entrada principal de la aplicación GUI
-- **`views/main_view.py`**: Interfaz de usuario principal con pestañas
-- **`controllers/main_controller.py`**: Lógica de control de la interfaz
-- **`services/document_service.py`**: Servicio para procesamiento de documentos
-- **`services/configuration_service.py`**: Gestión de configuración
-- **`widgets/`**: Componentes personalizados de la interfaz
-- **`gui_utils/`**: Utilidades específicas de la GUI
+#### 2）图形界面（`bulk_ingest_GUI/`）
+- `main.py`：GUI 应用主入口
+- `views/main_view.py`：多标签的主界面
+- `controllers/main_controller.py`：界面控制逻辑
+- `services/document_service.py`：文档处理服务
+- `services/configuration_service.py`：配置管理
+- `widgets/`：自定义控件
+- `gui_utils/`：GUI 实用工具
 
-#### **3. Scripts de Sistema**
-- **`start.bat`**: Script principal que guía al usuario
-- **`run_gui.bat`**: Ejecuta directamente la aplicación GUI
-- **`install_requirements.bat`**: Instalación completa de dependencias
-- **`check_system.bat`**: Diagnóstico del sistema
-- **`fix_dependencies.bat`**: Reparación de dependencias
+#### 3）系统脚本
+- `start.bat`：引导用户的启动脚本
+- `run_gui.bat`：直接启动 GUI 应用
+- `install_requirements.bat`：完整依赖安装
+- `check_system.bat`：系统诊断
+- `fix_dependencies.bat`：依赖修复
 
-### **Flujo de Datos:**
+### 数据流
 
-1. **Ingesta de Documentos**: La GUI procesa documentos usando `rag_core_wrapper.py`
-2. **Almacenamiento**: Los documentos se guardan en la base de datos vectorial
-3. **Consulta**: El servidor MCP accede a la misma base de datos para responder consultas
-4. **Respuesta**: Las herramientas MCP devuelven respuestas con fuentes
+1. **文档提取**：GUI 使用 `rag_core_wrapper.py` 处理文档
+2. **存储**：文档存储在向量数据库中
+3. **查询**：MCP 服务器访问同一数据库以回答查询
+4. **响应**：MCP 工具返回包含源的响应
 
-### **Separación de Responsabilidades:**
+### **职责分离**
 
-- **Servidor MCP**: Se enfoca en exponer herramientas para clientes de IA
-- **GUI**: Se enfoca en la experiencia de usuario para ingesta de documentos
-- **RAG Core**: Lógica compartida entre ambos componentes
-- **Scripts**: Automatización y gestión del entorno
+- **MCP 服务器**：专注于向 AI 客户端公开工具
+- **GUI**：专注于文档提取的用户体验
+- **RAG 核心**：两个组件之间共享逻辑
+- **脚本**：自动化和环境管理
 
-Esta arquitectura modular permite:
-- ✅ Desarrollo independiente de cada componente
-- ✅ Reutilización de código entre servidor y GUI
-- ✅ Fácil mantenimiento y debugging
-- ✅ Escalabilidad para nuevas características
-- ✅ Uso independiente del servidor o la GUI
+这种模块化架构允许：
+- ✅ 各个组件独立开发
+- ✅ 服务器和 GUI 之间的代码复用
+- ✅ 易于维护和调试
+- ✅ 新功能的可扩展性
+- ✅ 独立使用服务器或 GUI
 
-### **Archivos de Documentación:**
-- [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md): Guía completa para agentes de IA sobre cómo usar el sistema
-- [`GUI_ADVANCED_README.md`](./GUI_ADVANCED_README.md): Guía detallada para la interfaz gráfica para ingesta de documentos masivo
-- [`SCRIPTS_README.md`](./SCRIPTS_README.md): Guía completa del sistema de scripts organizados
-- [`STORAGE_PROGRESS_README.md`](./STORAGE_PROGRESS_README.md): Documentación del sistema de progreso de almacenamiento
-- `test_enhanced_rag.py`: Script de prueba para verificar el funcionamiento del sistema
+### 文档清单
+- [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md)：面向智能体的完整使用指南
+- [`GUI_ADVANCED_README.md`](./GUI_ADVANCED_README.md)：批量导入 GUI 使用指南
+- [`SCRIPTS_README.md`](./SCRIPTS_README.md)：脚本体系说明
+- [`STORAGE_PROGRESS_README.md`](./STORAGE_PROGRESS_README.md)：存储进度系统文档
+- `test_enhanced_rag.py`：系统验证脚本
 
 ---
 
-## 🚀 Guía de Instalación y Configuración
+## 🚀 安装和配置指南
 
-Sigue estos pasos para poner en marcha el sistema.
+请按照以下步骤启动并运行系统。
 
-### Prerrequisitos
+### 先决条件
 
-- **Python 3.10+**
-- **Ollama:** Asegúrate de que [Ollama esté instalado](https://ollama.com/) y en ejecución en tu sistema.
-- **Tesseract OCR (Opcional):** Para procesar imágenes con texto. Descarga desde [GitHub](https://github.com/UB-Mannheim/tesseract/wiki) o usa `choco install tesseract`.
+- **Python 3.10 及以上版本**
+- **Ollama**：确保 [Ollama 已安装](https://ollama.com/) 并正在您的系统上运行。
+- **Tesseract OCR（可选）：**用于处理带有文本的图像。请从 [GitHub](https://github.com/UB-Mannheim/tesseract/wiki) 下载或使用 `choco install tesseract`。
 
-### 1. Instalación (¡Automática!)
+### 1. 安装（自动！）
 
-Gracias al sistema de scripts organizados, la instalación es increíblemente sencilla.
+得益于井然有序的脚本系统，安装过程极其简单。
 
-#### **Para Usuarios (Recomendado):**
-1. **Ejecuta el script principal:** `start.bat`
-2. **Selecciona "1"** para instalar dependencias
-3. **Espera** a que termine la instalación automática
-4. **La aplicación se iniciará** automáticamente
+#### **对于用户（推荐）：**
+1. **运行主脚本：`start.bat`
+2. **选择“1”**安装依赖项
+3. **等待**自动安装完成
+4. **应用程序将自动启动**
 
-#### **Para Desarrolladores:**
-- **Instalación completa:** `install_requirements.bat`
-- **Ejecución:** `run_gui.bat`
-- **Diagnóstico:** `check_system.bat`
+#### **对于开发者：**
+- **完整安装：**`install_requirements.bat`
+- **运行：**`run_gui.bat`
+- **诊断：**`check_system.bat`
 
-El sistema de scripts hace todo por ti:
-- ✅ Crea un entorno virtual de Python en una carpeta `.venv`
-- ✅ Activa el entorno automáticamente
-- ✅ Instala todas las dependencias necesarias desde `requirements.txt`
-- ✅ Detecta automáticamente si tienes GPU NVIDIA y instala PyTorch apropiadamente
-- ✅ Instala Unstructured con capacidades avanzadas
-- ✅ Lanza la aplicación
+脚本系统会为您完成所有操作：
+- ✅ 在 `.venv` 文件夹中创建 Python 虚拟环境
+- ✅ 自动激活环境
+- ✅ 从 `requirements.txt` 安装所有必要的依赖项
+- ✅ 自动检测您是否拥有 NVIDIA GPU 并正确安装 PyTorch
+- ✅ 安装具有高级功能的 Unstructured
+- ✅ 启动应用程序
 
-En ejecuciones posteriores, el script simplemente activará el entorno y lanzará la aplicación directamente.
+在后续运行中，脚本将直接激活环境并启动直接安装应用程序。
 
-### 2. Instalación Manual de Dependencias (Opcional)
+### 2. 手动安装依赖项（可选）
 
-Si prefieres instalar las dependencias manualmente o necesitas capacidades específicas:
+如果您希望手动安装依赖项或需要特定功能：
 
 ```bash
-# Activar entorno virtual
+# 激活虚拟环境
 .\.venv\Scripts\activate
 
-# Instalación completa de Unstructured con todas las capacidades
+# 安装 Unstructured（完整能力）
 pip install "unstructured[local-inference,all-docs]"
 
-# Dependencias adicionales para mejor rendimiento
+# 一些性能相关的建议依赖
 pip install python-docx openpyxl beautifulsoup4 pytesseract
 ```
 
-### 3. Configuración de Ollama (Paso Crítico)
+### 3. 配置 Ollama（关键）
 
-Ollama es necesario para que el sistema RAG funcione, ya que proporciona el modelo de lenguaje local que genera las respuestas.
+Ollama 是 RAG 系统正常运行所必需的，因为它提供了生成回答的本地语言模型。
 
-#### Instalación de Ollama
+#### Ollama 安装步骤
 
 **Windows:**
-1. Descarga Ollama desde [ollama.com](https://ollama.com/)
-2. Ejecuta el instalador y sigue las instrucciones
-3. Ollama se ejecutará automáticamente como servicio
+1. 从 [ollama.com](https://ollama.com/) 下载 Ollama
+2. 运行安装程序并按照指示完成安装
+3. Ollama 会自动作为服务启动
 
-**macOS/Linux:**
+macOS/Linux：
 ```bash
 curl -fsSL https://ollama.ai/install.sh | sh
 ```
 
-#### Verificar Instalación
+#### 验证安装：
 
 ```bash
-# Verificar que Ollama está funcionando
 ollama --version
 
-# Verificar que el servicio está ejecutándose
+# 验证服务是否正在运行
 ollama list
 ```
 
-#### Descargar Modelos de Lenguaje
+#### 下载模型：
 
-El sistema RAG necesita un modelo de lenguaje para generar respuestas. Se utiliza Ollama por ser gratis:
+RAG 系统需要一个语言模型来生成回答。我们选择 Ollama 是因为它是免费的：
 
 ```bash
-# Modelo recomendado (equilibrio entre velocidad y calidad)
+# 推荐（速度与质量均衡）
 ollama pull llama3
 
-# Alternativas más rápidas
+# 更快的替代
 ollama pull phi3
 ollama pull mistral
 
-# Alternativa más potente (requiere más recursos)
+# 更强但更吃资源
 ollama pull llama3.1:8b
 ```
 
-#### Configurar el Modelo en el Sistema
+#### 在系统中配置模型
 
-Una vez descargado el modelo, asegúrate de que `rag_core.py` use el modelo correcto:
+模型下载完成后，确保 `rag_core.py` 使用了正确的模型：
+
 
 ```python
-# En rag_core.py, línea ~100, verifica que use tu modelo:
+# 在 rag_core.py 文件大约第100行，确认使用你的模型：
 llm = ChatOllama(model="llama3", temperature=0)
 ```
 
-**Nota:** Si descargaste un modelo diferente, cambia `"llama3"` por el nombre de tu modelo.
+**注意：** 如果你下载了不同的模型，请将 `"llama3"` 改成你所使用模型的名称。
 
-#### Probar Ollama
+#### 测试 Ollama
+
 
 ```bash
-# Probar que el modelo funciona
-ollama run llama3 "Hola, ¿cómo estás?"
+# 测试模型是否正常工作
+ollama run llama3 "Hello"
 ```
 
-Si ves una respuesta generada, Ollama está funcionando correctamente.
+如果你看到生成的回答，说明 Ollama 正常运行。
 
-#### Solución de Problemas Comunes
+#### 常见问题解决方案
 
-**Error: "Ollama is not running"**
+**错误：“Ollama is not running”（Ollama 未运行）**
+
 ```bash
-# Iniciar Ollama manualmente
+# 手动启动 Ollama 服务
 ollama serve
 ```
 
-**Error: "Model not found"**
+**错误：“Model not found”（未找到模型）**
+
 ```bash
-# Verificar modelos disponibles
+# 查看可用模型列表
 ollama list
 
-# Descargar el modelo si no está
+# 如果模型不存在，下载模型
 ollama pull llama3
 ```
 
-**Error: "Out of memory"**
-- Usa un modelo más pequeño: `ollama pull phi3`
-- Cierra otras aplicaciones que consuman mucha RAM
-- Considera aumentar la memoria virtual en Windows
+**错误：“Out of memory”（内存不足）**
 
-### 4. Verificación Completa del Sistema
+* 使用更小的模型，例如：`ollama pull phi3`
+* 关闭其他占用大量内存的应用程序
+* 考虑在 Windows 系统中增加虚拟内存容量
 
-Antes de continuar, vamos a verificar que todo esté funcionando correctamente:
 
-#### Paso 1: Verificar Ollama
+### 4. 系统自检
+
+在继续之前，让我们先验证一下一切是否正常运行：
+
+#### 步骤 1：验证 Ollama
 ```bash
-# Verificar que Ollama está ejecutándose
+# 验证 Ollama 是否正在运行
 ollama list
 
-# Probar el modelo
-ollama run llama3 "Test de funcionamiento"
+# 测试模型
+ollama run llama3 "Test"
 ```
 
-#### Paso 2: Verificar Dependencias de Python
+#### 步骤 2：检查 Python 依赖项
 ```bash
-# Verificar que todas las dependencias están instaladas
-python -c "import mcp; print('✅ MCP instalado correctamente')"
-python -c "import langchain; print('✅ LangChain instalado correctamente')"
-python -c "import chromadb; print('✅ ChromaDB instalado correctamente')"
-python -c "import unstructured; print('✅ Unstructured instalado correctamente')"
+python -c "import mcp; print('✅ MCP OK')"
+python -c "import langchain; print('✅ LangChain OK')"
+python -c "import chromadb; print('✅ ChromaDB OK')"
+python -c "import unstructured; print('✅ Unstructured OK')"
 ```
 
-#### Paso 3: Probar el Sistema RAG
+#### 步骤 3：测试 RAG 系统
 ```bash
-# Ejecutar el script de prueba mejorado
+# 运行增强测试脚本
 python test_enhanced_rag.py
 ```
 
-Si todo funciona correctamente, verás:
-- ✅ Ollama respondiendo a comandos
-- ✅ Todas las dependencias importándose sin errores
-- ✅ El sistema RAG procesando preguntas y mostrando fuentes
+如果一切正常，您将看到：
+- ✅ Ollama 正在响应命令
+- ✅ 所有依赖项导入均无错误
+- ✅ RAG 系统正在处理查询并显示源
 
-**¡Tu sistema RAG está listo para usar!** 🚀
-
----
-
-## 📋 Formatos de Archivo Soportados
-
-El sistema soporta **más de 25 formatos de archivo** con procesamiento optimizado:
-
-### 📄 **Documentos de Office:**
-- **PDF** (.pdf) - Con procesamiento de alta resolución
-- **Word** (.docx, .doc) - Documentos de Microsoft Word
-- **PowerPoint** (.pptx, .ppt) - Presentaciones
-- **Excel** (.xlsx, .xls) - Hojas de cálculo
-- **RTF** (.rtf) - Formato de texto enriquecido
-
-### 📁 **Documentos OpenDocument:**
-- **ODT** (.odt) - Documentos de texto (LibreOffice/OpenOffice)
-- **ODP** (.odp) - Presentaciones (LibreOffice/OpenOffice)
-- **ODS** (.ods) - Hojas de cálculo (LibreOffice/OpenOffice)
-
-### 🌐 **Formatos Web y Markup:**
-- **HTML** (.html, .htm) - Páginas web
-- **XML** (.xml) - Datos estructurados
-- **Markdown** (.md) - Documentación técnica
-
-### 📝 **Formatos de Texto Plano:**
-- **TXT** (.txt) - Texto simple
-- **CSV** (.csv) - Datos tabulares
-- **TSV** (.tsv) - Datos tabulares separados por tabulaciones
-
-### 📊 **Formatos de Datos:**
-- **JSON** (.json) - Datos estructurados
-- **YAML** (.yaml, .yml) - Configuraciones y datos
-
-### 🖼️ **Imágenes (con OCR):**
-- **PNG** (.png) - Imágenes con texto
-- **JPG/JPEG** (.jpg, .jpeg) - Fotografías con texto
-- **TIFF** (.tiff) - Imágenes de alta calidad
-- **BMP** (.bmp) - Imágenes de mapa de bits
-
-### 📧 **Correos Electrónicos:**
-- **EML** (.eml) - Archivos de correo
-- **MSG** (.msg) - Mensajes de Outlook
+**您的 RAG 系统已准备就绪！** 🚀
 
 ---
 
-## 🛠️ Guía de Uso
+## 📋 支持的文件格式
 
-### Uso 1: Poblar la Base de Conocimiento con la GUI (Recomendado)
+系统支持 25+ 常见格式，针对每类有优化的处理流程：
 
-La forma más fácil e intuitiva de añadir documentos es usando la interfaz gráfica.
+### 📄 Office 文档
+- PDF（.pdf）- 高分辨率处理
+- Word（.docx, .doc）
+- PowerPoint（.pptx, .ppt）
+- Excel（.xlsx, .xls）
+- RTF（.rtf）
 
-1. **Ejecuta el script principal:** `start.bat`
-2. **Selecciona "1"** para ejecutar la aplicación
-3. **La aplicación se iniciará** (la primera vez puede tardar mientras instala las dependencias)
-4. **Usa el botón "Explorar..."** para seleccionar la carpeta con tus documentos
-5. **Haz clic en "Iniciar Procesamiento"**. Los archivos se procesarán con el sistema avanzado de Unstructured
-6. **Ve a la pestaña "Revisión"**, selecciona los archivos que quieres guardar y previsualiza su contenido
-7. **Ve a la pestaña "Almacenamiento"** y haz clic en "Iniciar Almacenamiento" para guardar los documentos seleccionados en la base de datos
+### 📁 OpenDocument 文档
+- ODT（.odt）
+- ODP（.odp）
+- ODS（.ods）
 
-#### ✨ **GUI para ingesta de documentos masivo con Previsualización y Selección**
+### 🌐 Web/标记语言
+- HTML（.html, .htm）
+- XML（.xml）
+- Markdown（.md）
 
-Para un control total sobre el proceso de ingesta, hemos añadido una **GUI**. Esta versión te permite **previsualizar** el contenido de cada documento procesado y **seleccionar manualmente** cuáles quieres incluir en la base de conocimiento.
+### 📝 纯文本/表格
+- TXT（.txt）
+- CSV（.csv）
+- TSV（.tsv）
 
-**Características de la GUI:**
-- **Procesamiento Inteligente:** Usa Unstructured para limpiar ruido y preservar estructura
-- **Previsualización en Tiempo Real:** Ve el contenido procesado antes de almacenar
-- **Selección Granular:** Marca/desmarca documentos individualmente
-- **Metadatos Estructurales:** Información sobre títulos, tablas, listas en cada documento
-- **Sistema de Fallbacks:** Múltiples estrategias garantizan que todo documento se procese
-- **Sistema de Progreso:** Seguimiento detallado del proceso de almacenamiento
+### 📊 数据格式
+- JSON（.json）
+- YAML（.yaml, .yml）
 
-![Pestaña de Procesamiento de la GUI](src/images/gui_procesamiento.png)
+### 🖼️ 图片（含 OCR）
+- PNG（.png）
+- JPG/JPEG（.jpg, .jpeg）
+- TIFF（.tiff）
+- BMP（.bmp）
 
-➡️ **Para una guía completa sobre cómo usarla, consulta el [Guia de Carga Masiva](./GUI_ADVANCED_README.md).**
+### 📧 邮件
+- EML（.eml）
+- MSG（.msg）
 
-### Uso 2: Poblar la Base de Conocimiento desde la Línea de Comandos
+---
 
-Si prefieres usar la línea de comandos o necesitas automatizar la ingesta.
+## 🛠️ 用户指南
 
-1. **Abre una terminal**
-2. **Activa el entorno virtual:** `.\.venv\Scripts\activate`
-3. **Ejecuta el script `bulk_ingest.py`** apuntando a tu carpeta de documentos:
-    ```bash
-    python bulk_ingest.py --directory "C:\Ruta\A\Tus\Documentos"
-    ```
+### 方式 1：使用 GUI 填充知识库（推荐）
 
-**Características del Procesamiento Mejorado:**
-- **Detección Automática de Formato:** El sistema identifica y optimiza el procesamiento según el tipo de archivo
-- **Limpieza Inteligente:** Elimina automáticamente cabeceras, pies de página y contenido irrelevante
-- **Preservación de Estructura:** Mantiene títulos, listas y tablas organizadas
-- **Metadatos Enriquecidos:** Información detallada sobre la estructura de cada documento
-- **Logs Detallados:** Información completa sobre el proceso de cada archivo
+添加文档最简单、最直观的方法是使用图形界面。
 
-### Uso 3: Configuración del Cliente MCP (Ej. Cursor)
+1. **运行主脚本：** `start.bat`
+2. **选择“1”**运行应用程序
+3. **应用程序将启动**（安装依赖项可能需要一段时间）
+4. **使用“浏览...”按钮**选择包含文档的文件夹
+5. **点击“开始处理”**。文件将使用 Unstructured 的高级系统进行处理。
+6. **转到“审阅”选项卡**，选择要保存的文件并预览其内容。
+7. **转到“存储”选项卡**，然后点击“开始保存”，将选定的文档保存到数据库。
 
-Para que tu editor de IA pueda usar el servidor, debes configurarlo.
+#### ✨ **带有预览和选择功能的批量文档提取 GUI**
 
-1. **Encuentra el archivo de configuración de servidores MCP de tu editor.** Para Cursor, busca un archivo como `mcp_servers.json` en su directorio de configuración (`%APPDATA%\cursor` en Windows). Si no existe, puedes crearlo.
+为了全面掌控提取过程，我们添加了一个 **GUI**。此版本允许您 **预览** 每个已处理文档的内容，并 **手动选择** 您想要添加到知识库的文档。
 
-2. **Añade la siguiente configuración al archivo JSON.**
-    
-    Este método utiliza el script del servidor MCP (`run_server_organized.bat`) para ejecutar el servidor RAG.
+**GUI 功能：**
+- **智能处理：**使用非结构化数据去除噪音并保留结构
+- **实时预览：**保存前查看已处理内容
+- **精细选择：**单独标记/取消标记文档
+- **结构化元数据：**每个文档的标题、表格和列表信息
+- **后备系统：**多种策略确保每个文档都得到处理
+- **进度系统：**详细跟踪保存过程
 
-    **¡IMPORTANTE!** Debes reemplazar `"D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG"` con la ruta absoluta real a la carpeta de este proyecto en tu máquina.
+![GUI 处理选项卡](src/images/gui_processing.png)
 
-    ```json
-    {
-      "mcpServers": {
+➡️ **有关如何使用它的完整指南，请参阅[批量上传指南](./GUI_ADVANCED_README.md)。**
+
+### 方式 2：从命令行填充知识库
+
+如果您更喜欢使用命令行或需要自动提取数据。
+1. **打开终端**
+2. **激活虚拟环境：**
+3. **运行脚本**
+```bash
+.\.venv\Scripts\activate
+python bulk_ingest.py --directory "C:\\Path\\To\\Docs"
+```
+
+**增强的处理功能**
+- **自动格式检测**：系统根据文件类型识别并优化处理
+- **智能清理**：自动删除页眉、页脚和不相关内容
+- **结构保存**：保持标题、列表和表格井然有序
+- **丰富的元数据**：提供每个文档结构的详细信息
+- **详细日志**：提供每个文件处理的完整信息
+
+### 方式 3：配置 MCP 客户端（例如 Cursor）
+
+为了让你的 AI 编辑器使用服务器，你必须对其进行配置。
+
+1. **找到你编辑器的 MCP 服务器配置文件。** 对于 Cursor，请在其配置目录（Windows 上为“%APPDATA%\cursor”）中查找类似“mcp_servers.json”的文件。如果该文件不存在，你可以创建它。
+2. **将以下配置添加到 JSON 文件。**
+
+此方法使用 MCP 服务器脚本 (`run_server_organized.bat`) 来运行 RAG 服务器。
+
+**重要提示！** 您必须将“D:\full\path\to\your\MCP_RAG\project”替换为您计算机上该项目文件夹的实际绝对路径。
+
+```json
+{
+    "mcpServers": {
         "rag": {
-          "command": "D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG\\mcp_server_organized\\run_server_organized.bat",
-          "args": [],
-          "workingDirectory": "D:\\ruta\\completa\\a\\tu\\proyecto\\MCP_RAG"
+            "command": "D:\\your\\absolute\\path\\MCP_RAG\\mcp_server_organized\\run_server_organized.bat",
+            "args": [],
+            "workingDirectory": "D:\\your\\absolute\\path\\MCP_RAG"
         }
-      }
     }
-    ```
-
-3. **Reinicia tu editor.** Al arrancar, debería detectar y lanzar el servidor MCP, que expondrá las herramientas RAG para uso en el chat.
-
-### Uso 4: Interactuando con las Herramientas
-
-Una vez configurado, puedes usar las herramientas directamente en el chat de tu editor.
-
-#### Herramientas Disponibles:
-
-**1. `learn_text(text, source_name)` - Añadir información textual**
+}
 ```
-@rag learn_text("El punto de fusión del titanio es 1,668 °C.", "material_properties")
-```
-- **Cuándo usar**: Para añadir hechos, definiciones, notas de conversación, etc.
-- **Parámetros**: 
-  - `text`: El contenido a almacenar
-  - `source_name`: Nombre descriptivo de la fuente (opcional, por defecto "manual_input")
 
-**2. `learn_document(file_path)` - Procesar documentos**
-```
-@rag learn_document("C:\\Reportes\\informe_q3.pdf")
-```
-- **Cuándo usar**: Para procesar archivos PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, imágenes, correos electrónicos y más de 25 formatos
-- **Características Mejoradas**: 
-  - **Procesamiento Inteligente**: Usa Unstructured para limpiar ruido y preservar estructura
-  - **Sistema de Fallbacks**: Múltiples estrategias garantizan procesamiento exitoso
-  - **Metadatos Estructurales**: Información detallada sobre títulos, tablas, listas
-  - **Conversión Automática**: Procesamiento optimizado según el tipo de archivo
-  - **Copias Guardadas**: Documentos procesados guardados en `./converted_docs/`
+3. **重启编辑器。** 启动后，编辑器会检测并启动 MCP 服务器，这将显示 RAG 工具以供聊天使用。
 
-**3. `ask_rag(query)` - Consultar información**
-```
-@rag ask_rag("¿Cuál es el punto de fusión del titanio?")
-```
-- **Cuándo usar**: Para buscar información previamente almacenada
-- **Respuesta incluye**: 
-  - Respuesta generada por IA con contexto mejorado
-  - 📚 Lista de fuentes utilizadas con metadatos estructurales
-  - Información sobre la relevancia de cada fuente
+### 方式四：在聊天中直接调用工具
 
-**4. `ask_rag_filtered(query, file_type, min_tables, min_titles, processing_method)` - Búsquedas con filtros**
-```
-@rag ask_rag_filtered("¿Qué tablas de datos tenemos?", file_type=".pdf", min_tables=1)
-```
-- **Cuándo usar**: Para búsquedas más precisas usando filtros de metadatos
-- **Filtros disponibles**:
-  - `file_type`: Tipo de archivo (ej. ".pdf", ".docx", ".xlsx")
-  - `min_tables`: Mínimo número de tablas en el documento
-  - `min_titles`: Mínimo número de títulos en el documento
-  - `processing_method`: Método de procesamiento usado
-- **Ventajas**: Búsquedas más relevantes y específicas
+配置完成后，您可以直接在编辑器聊天中使用这些工具。
 
-**5. `get_knowledge_base_stats()` - Estadísticas de la base de conocimientos**
+### 可用工具：
+
+
+
+**1. `learn_text(text, source_name)` - 添加文本信息**
+```
+@rag learn_text("钛的熔点为 1.668 °C。", "material_properties")
+```
+- **使用场景**：添加事实、定义、讨论注释等。
+- **参数**：
+- `text`：要存储的内容
+- `source_name`：源的描述性名称（可选，默认为“manual_input”）
+**2. `learn_document(file_path)` - 处理文档**
+```
+@rag learn_document("C:\\Reports\\q3.pdf")
+```
+
+- **适用场景**：处理 PDF、DOCX、PPTX、XLSX、TXT、HTML、CSV、JSON、XML、图片、电子邮件以及超过 25 种其他格式
+- **增强功能**：
+- **智能处理**：使用非结构化数据去除噪音并保留结构
+- **后备系统**：多种策略确保处理成功
+- **结构化元数据**：标题、表格和列表的详细信息
+- **自动转换**：根据文件类型优化处理
+- **已保存副本**：处理后的文档保存在 `./converted_docs/` 中
+
+**3. `ask_rag(query)` - 查询信息**
+```
+@rag ask_rag("钛的熔点是多少？")
+```
+- **使用场景**：搜索先前存储的信息
+- **答案包含**：
+- AI 生成的答案，并增强了上下文
+- 📚 包含结构化元数据的来源列表
+- 每个来源的相关性信息
+
+**4. `ask_rag_filtered(query, file_type, min_tables, min_titles, processing_method)` - 使用过滤器搜索**
+```
+@rag ask_rag_filtered("我们有哪些数据表？", file_type=".pdf", min_tables=1)
+```
+- **何时使用**：使用元数据过滤器进行更精确的搜索
+- **可用的过滤器**：
+- `file_type`：文件类型（例如，".pdf"、".docx"、".xlsx"）
+- `min_tables`：文档中表格的最小数量
+- `min_titles`：文档中标题的最小数量
+- `processing_method`：使用的处理方法
+- **优点**：搜索更相关、更具体
+
+**5. `get_knowledge_base_stats()` - 知识库统计信息**
 ```
 @rag get_knowledge_base_stats()
 ```
-- **Cuándo usar**: Para obtener información sobre el contenido almacenado
-- **Información proporcionada**:
-  - Número total de documentos
-  - Distribución por tipo de archivo
-  - Estadísticas de estructura (tablas, títulos, listas)
-  - Métodos de procesamiento utilizados
+- **使用场景**：获取存储内容信息
+- **提供的信息**：
+- 文档总数
+- 按文件类型分布
+- 结构统计信息（表格、标题、列表）
+- 使用的处理方法
 
-#### Ejemplo de Flujo Completo:
-
+#### 完整流程示例：
 ```bash
-# 1. Añadir información
-@rag learn_text("La temperatura de fusión del titanio es 1,668°C.", "material_properties")
-
-# 2. Procesar un documento complejo (ahora con procesamiento mejorado)
-@rag learn_document("C:\\Documents\\manual_titanio.pdf")
-
-# 3. Hacer preguntas (con respuestas mejoradas)
-@rag ask_rag("¿Cuál es la temperatura de fusión del titanio?")
-
-# 4. Búsqueda filtrada por documentos con tablas
-@rag ask_rag_filtered("¿Qué datos tabulares tenemos?", min_tables=1)
-
-# 5. Ver estadísticas de la base de conocimientos
+@rag learn_text("钛的熔点是 1,668°C。", "material_properties")
+@rag learn_document("C:\\Documents\\manual_titanium.pdf")
+@rag ask_rag("钛的熔点是多少？")
+@rag ask_rag_filtered("我们有哪些表格数据？", min_tables=1)
 @rag get_knowledge_base_stats()
 ```
 
-**Respuesta esperada:**
+**预期回答：**
+
 ```
-La temperatura de fusión del titanio es 1,668°C.
+钛的熔点是 1668°C。
 
-📚 Fuentes de información:
-   1. material_properties (manual_input)
-   2. manual_titanio.pdf (página 3, sección "Propiedades Físicas")
+📚 信息来源：  
+   1. material_properties（手动输入）  
+   2. manual_titanio.pdf（第3页，“物理性能”章节）
 
-📊 Estadísticas de búsqueda filtrada:
-   • Documentos con tablas encontrados: 3
-   • Tipos de archivo: PDF (2), DOCX (1)
-   • Total de tablas: 7
+📊 过滤后搜索统计：  
+   • 发现包含表格的文档数量：3  
+   • 文件类型：PDF（2份）、DOCX（1份）  
+   • 表格总数：7  
 ```
 
 ---
 
-## 🧪 Pruebas y Verificación
+## 🧪 测试与验证
 
-### Probar el Sistema
+### 测试系统
 
-Para verificar que todo funciona correctamente:
+验证一切是否正常运行：
 
 ```bash
-# Probar el sistema RAG mejorado con todas las características
+# 试用增强型 RAG 系统的所有功能
 python test_enhanced_rag.py
 ```
 
-#### **Script de Pruebas Mejorado (`test_enhanced_rag.py`)**
+#### **改进的测试脚本 (`test_enhanced_rag.py`)**
 
-El script de pruebas verifica todas las mejoras implementadas:
+该测试脚本验证了所有已实施的改进：
 
-**🧪 Pruebas Incluidas:**
-- **Procesamiento Mejorado de Documentos**: Verifica el sistema Unstructured con metadatos estructurales
-- **Base de Conocimientos Mejorada**: Prueba el chunking mejorado y metadatos enriquecidos
-- **Integración del Servidor MCP**: Verifica las herramientas mejoradas del servidor
-- **Soporte de Formatos**: Confirma la configuración para más de 25 formatos
+**🧪 包含的测试：**
+- **改进的文档处理**：使用结构化元数据验证非结构化系统
+- **改进的知识库**：测试改进的分块和丰富的元数据
+- **MCP 服务器集成**：验证改进的服务器工具
+- **格式支持**：确认超过 25 种格式的配置
 
-**📊 Información de Salida:**
-- Estado de cada prueba (✅ PASÓ / ❌ FALLÓ)
-- Metadatos estructurales extraídos
-- Método de procesamiento utilizado
-- Información de fuentes y chunks
-- Resumen completo del sistema
+**📊 输出信息：**
+- 每个测试的状态（✅ 通过 / ❌ 失败）
+- 提取的结构化元数据
+- 使用的处理方法
+- 源和分块信息
+- 完整的系统摘要
 
-### Verificar la Base de Datos
-
-Los documentos procesados se almacenan en:
-- **Base de datos vectorial**: `./rag_mcp_db/`
-- **Copias procesadas**: `./converted_docs/` (con información del método de procesamiento)
-
----
-
-## 🤖 Uso por Agentes de IA
-
-El sistema está optimizado para ser utilizado por agentes de IA. Consulta [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md) para:
-
-- Guías detalladas de uso
-- Ejemplos de casos de uso
-- Mejores prácticas
-- Manejo de errores
-- Consideraciones importantes
-
-### Características para Agentes:
-
-- **Descripciones detalladas** de cada herramienta
-- **Ejemplos de uso** claros y específicos
-- **Manejo de errores inteligente** con sugerencias útiles
-- **Metadatos de fuente** para rastreabilidad completa
-- **Respuestas estructuradas** con información de fuentes
+### 验证数据库
+存储位置：
+- 向量数据库：`./rag_mcp_db/`
+- 转换副本：`./converted_docs/`（记录处理方法）
 
 ---
 
-## 🔧 Mejoras Técnicas Implementadas
+## 🤖 AI 代理使用
 
-Esta sección explica las mejoras técnicas avanzadas que han transformado el sistema en una solución de nivel empresarial.
+该系统针对 AI 代理进行了优化。请参阅 [`AGENT_INSTRUCTIONS.md`](./AGENT_INSTRUCTIONS.md) 了解以下内容：
 
-### **A. Procesamiento Inteligente con Unstructured**
+- 详细使用指南
+- 用例示例
+- 最佳实践
+- 错误处理
+- 重要注意事项
 
-#### **¿Qué es Unstructured?**
+### 代理功能：
 
-Unstructured es una librería de procesamiento de documentos que va más allá de la simple extracción de texto. Analiza la **estructura semántica** de los documentos para:
+- **每个工具的详细描述**
+- **清晰具体的使用示例**
+- **智能错误处理**并提供实用建议
+- **源元数据**，实现全面可追溯性
+- **结构化响应**，包含源信息
 
-- **Identificar elementos**: Títulos, párrafos, listas, tablas
-- **Limpiar ruido**: Eliminar cabeceras, pies de página, elementos irrelevantes
-- **Preservar contexto**: Mantener la jerarquía y estructura del documento
-- **Manejar formatos complejos**: PDFs escaneados, documentos con tablas, etc.
+--
 
-#### **Configuración Optimizada por Tipo de Archivo:**
+## 🔧 已实施的技术增强
+
+本节介绍了将系统转变为企业级解决方案的高级技术增强功能。
+
+### **A. 使用非结构化数据进行智能处理**
+
+Unstructured 是一个文档处理库，它的功能远不止简单的文本提取。它能够分析文档的语义结构，从而：
+
+- 识别元素：标题、段落、列表、表格
+- 去除噪音：移除页眉、页脚和不相关的元素
+- 保留上下文：维护文档的层次结构和结构
+- 处理复杂格式：扫描的 PDF、包含表格的文档等。
+
+#### **按文件类型优化配置：**
 
 ```python
 UNSTRUCTURED_CONFIGS = {
@@ -607,7 +601,7 @@ UNSTRUCTURED_CONFIGS = {
 }
 ```
 
-#### **Procesamiento Inteligente de Elementos:**
+#### **智能元素处理：**
 
 ```python
 def process_unstructured_elements(elements: List[Any]) -> str:
@@ -630,25 +624,25 @@ def process_unstructured_elements(elements: List[Any]) -> str:
             processed_parts.append(element.text.strip())
 ```
 
-### **B. Sistema de Fallbacks Robusto**
+### **B. 强大的回退系统**
 
-#### **Estrategia de Fallbacks en Cascada:**
+#### **级联回退策略：**
 
-El sistema intenta múltiples estrategias en orden de preferencia:
+系统会按优先顺序尝试多种策略：
 
-1. **Unstructured con Configuración Óptima**
-   - Usa la configuración específica para el tipo de archivo
-   - Máxima calidad de procesamiento
+1. **非结构化，采用最佳配置**
+- 使用特定文件类型的设置
+- 最高处理质量
 
-2. **Unstructured con Configuración Básica**
-   - Estrategia "fast" para compatibilidad
-   - Procesamiento más simple pero funcional
+2. **非结构化，采用基本配置**
+- “快速”策略，确保兼容性
+- 更简单但功能强大的处理
 
-3. **Cargadores Específicos de LangChain**
-   - Cargadores especializados por tipo de archivo
-   - Último recurso para formatos problemáticos
+3. **语言链专用加载器**
+- 每种文件类型使用专用加载器
+- 针对有问题格式的最后解决方案
 
-#### **Ejemplo de Fallback en Acción:**
+#### **回退示例：**
 
 ```python
 def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
@@ -681,9 +675,9 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
     return "", {}  # Solo si todas las estrategias fallan
 ```
 
-### **C. Metadatos Estructurales Enriquecidos**
+### **C. 丰富的结构元数据**
 
-#### **Información Estructural Capturada:**
+#### **捕获的结构信息：**
 
 ```python
 def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str, Any]:
@@ -707,16 +701,16 @@ metadata = {
     }
 ```
 
-#### **Beneficios de los Metadatos Estructurales:**
+#### **结构化元数据的优势：**
 
-- **Rastreabilidad**: Sabes exactamente qué parte del documento se usó
-- **Calidad**: Información sobre la estructura del contenido
-- **Optimización**: Datos para mejorar el procesamiento futuro
-- **Debugging**: Información detallada para resolver problemas
+- **可追溯性**：您可以准确了解文档的哪个部分被使用
+- **质量**：内容结构信息
+- **优化**：用于改进后续处理的数据
+- **调试**：用于解决问题的详细信息
 
-### **D. División Inteligente de Texto Mejorada**
+### **D. 改进的智能文本断字功能**
 
-#### **Configuración Optimizada:**
+#### **优化配置：**
 
 ```python
 text_splitter = RecursiveCharacterTextSplitter(
@@ -727,19 +721,19 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 ```
 
-#### **Separadores Inteligentes:**
+#### **智能分隔符：**
 
-El sistema busca los mejores puntos de división en este orden:
-1. **`\n\n`** - Párrafos (mejor opción)
-2. **`\n`** - Saltos de línea
-3. **`. `** - Final de oraciones
-4. **`! `** - Final de exclamaciones
-5. **`? `** - Final de preguntas
-6. **` `** - Espacios (último recurso)
+系统会按以下顺序查找最佳断点：
+1. **`\n\n`** - 段落（最佳选择）
+2. **`\n`** - 换行符
+3. **`. `** - 句尾
+4. **`! `** - 感叹号结尾
+5. **`? `** - 疑问句结尾
+6. **` `** - 空格（最后选择）
 
-### **E. Motor de Búsqueda Optimizado**
+### **E. 搜索引擎优化**
 
-#### **Configuración Actual:**
+#### **当前配置：**
 
 ```python
 retriever = vector_store.as_retriever(
@@ -751,15 +745,15 @@ search_kwargs={
 )
 ```
 
-#### **Parámetros Optimizados:**
+#### **优化参数：**
 
-- **`k=5`**: Obtienes información de 5 fuentes diferentes para respuestas más completas
-- **`score_threshold=0.3`**: Garantiza que solo se use información muy relevante (similitud > 70%)
-- **Búsqueda por similitud**: Encuentra el contenido más semánticamente similar
+- **`k=5`**：从 5 个不同来源获取信息，以获得更完整的答案
+- **`score_threshold=0.3`**：确保仅使用高度相关的信息（相似度 > 70%）
+- **相似度搜索**：查找语义上最相似的内容
 
-### **F. Limpieza Automática de Texto**
+### **F. 自动文本清理**
 
-#### **Proceso de Limpieza:**
+#### **清理过程：**
 
 ```python
 def clean_text_for_rag(text: str) -> str:
@@ -785,11 +779,11 @@ def clean_text_for_rag(text: str) -> str:
     return text
 ```
 
-### **G. Sistema de Filtrado de Metadatos Avanzado**
+### **G. 高级元数据过滤系统**
 
-#### **Funcionalidades de Filtrado:**
+#### **过滤功能：**
 
-El sistema ahora incluye capacidades avanzadas de filtrado que permiten búsquedas más precisas y relevantes:
+系统现已包含高级过滤功能，可实现更精确、更相关的搜索：
 
 ```python
 def create_metadata_filter(file_type: str = None, processing_method: str = None,
@@ -812,7 +806,7 @@ def create_metadata_filter(file_type: str = None, processing_method: str = None,
     return {"$and": filters} if len(filters) > 1 else filters[0] if filters else None
 ```
 
-#### **Búsquedas con Filtros:**
+#### **使用过滤器搜索：**
 
 ```python
 def search_with_metadata_filters(vector_store: Chroma, query: str, 
@@ -830,7 +824,7 @@ def search_with_metadata_filters(vector_store: Chroma, query: str,
     return results
 ```
 
-#### **Estadísticas de Base de Conocimientos:**
+#### **知识库统计：**
 
 ```python
 def get_document_statistics(vector_store: Chroma) -> dict:
@@ -870,53 +864,45 @@ def get_document_statistics(vector_store: Chroma) -> dict:
     }
 ```
 
-#### **Casos de Uso de Filtrado:**
+#### **过滤用例：**
 
-1. **Búsqueda por Tipo de Archivo:**
-   ```python
-   # Solo buscar en PDFs
-   pdf_filter = create_metadata_filter(file_type=".pdf")
-   results = search_with_metadata_filters(vector_store, "datos", pdf_filter)
-   ```
+1) 按文件类型过滤 PDF：
+```python
+pdf_filter = create_metadata_filter(file_type=".pdf")
+results = search_with_metadata_filters(vector_store, "datos", pdf_filter)
+```
 
-2. **Búsqueda por Estructura:**
-   ```python
-   # Solo documentos con tablas
-   tables_filter = create_metadata_filter(min_tables=1)
-   results = search_with_metadata_filters(vector_store, "datos tabulares", tables_filter)
-   ```
+2) 仅含表格的文档：
+```python
+tables_filter = create_metadata_filter(min_tables=1)
+results = search_with_metadata_filters(vector_store, "datos tabulares", tables_filter)
+```
 
-3. **Búsqueda por Método de Procesamiento:**
-   ```python
-   # Solo documentos procesados con Unstructured
-   unstructured_filter = create_metadata_filter(processing_method="unstructured_enhanced")
-   results = search_with_metadata_filters(vector_store, "contenido", unstructured_filter)
-   ```
+3) 按处理方法过滤（仅 Unstructured 增强）：
+```python
+unstructured_filter = create_metadata_filter(processing_method="unstructured_enhanced")
+results = search_with_metadata_filters(vector_store, "contenido", unstructured_filter)
+```
 
-4. **Filtros Combinados:**
-   ```python
-   # PDFs con tablas procesados con Unstructured
-   complex_filter = create_metadata_filter(
-       file_type=".pdf", 
-       min_tables=1, 
-       processing_method="unstructured_enhanced"
-   )
-   results = search_with_metadata_filters(vector_store, "datos", complex_filter)
-   ```
+4) 组合过滤：
+```python
+complex_filter = create_metadata_filter(file_type=".pdf", min_tables=1, processing_method="unstructured_enhanced")
+results = search_with_metadata_filters(vector_store, "datos", complex_filter)
+```
 
-### **H. Herramientas MCP Mejoradas**
+### **H. 增强型 MCP 工具**
 
-#### **Nuevas Herramientas Disponibles:**
+#### **新增工具：**
 
-1. **`ask_rag_filtered`**: Búsquedas con filtros de metadatos
-2. **`get_knowledge_base_stats`**: Estadísticas detalladas de la base de conocimientos
+1. **`ask_rag_filtered`**：使用元数据过滤器进行搜索
+2. **`get_knowledge_base_stats`**：详细的知识库统计信息
 
-#### **Integración con Agentes de IA:**
+#### **与 AI 代理集成：**
 
-Las nuevas herramientas están optimizadas para uso por agentes de IA con:
-- **Descripciones detalladas** de parámetros y casos de uso
-- **Ejemplos específicos** de cada herramienta
-- **Manejo de errores inteligente** con sugerencias útiles
-- **Respuestas estructuradas** con información de metadatos
+新工具针对 AI 代理进行了优化，具有以下特点：
+- **参数和用例的详细描述**
+- **每个工具的具体示例**
+- **智能错误处理**并提供实用建议
+- **结构化响应**并提供元数据信息
 
 ---

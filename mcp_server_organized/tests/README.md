@@ -1,196 +1,196 @@
-# 📁 Carpeta `tests/` - Pruebas Unitarias del Servidor MCP
+# 📁 `tests/` 文件夹 - MCP 服务器单元测试
 
-## 🎯 **¿Para qué sirve esta carpeta?**
+## 🎯 **这个文件夹的用途是什么？**
 
-La carpeta `tests/` es una **convención estándar** en proyectos Python para organizar las **pruebas unitarias y de integración**. Su propósito es:
+`tests/` 文件夹是 Python 项目中用于组织**单元测试和集成测试**的**标准惯例**。其用途如下：
 
-### 🔍 **Objetivos principales:**
+### 🔍 **主要目标**
 
-1. **Pruebas Unitarias**: Probar funciones individuales de forma aislada
-2. **Pruebas de Integración**: Verificar que los módulos trabajen juntos correctamente
-3. **Pruebas de Regresión**: Asegurar que cambios no rompan funcionalidad existente
-4. **Documentación Viva**: Las pruebas sirven como documentación del comportamiento esperado
+1. **单元测试**：独立测试各个函数
+2. **集成测试**：验证模块是否能够正常工作
+3. **回归测试**：确保更改不会破坏现有功能
+4. **实时文档**：测试作为预期行为的文档
 
-### 🔄 **Diferencias con otros scripts de prueba:**
+### 🔄 与其他测试脚本的区别
 
-| Tipo de Prueba | Archivo | Propósito |
-|----------------|---------|-----------|
-| **Validación de Sistema** | `test_mcp_server_validation.py` | Pruebas de **sistema completo** y **validación de arquitectura** |
-| **Pruebas Unitarias** | `tests/` | Pruebas **unitarias específicas** y **casos de uso detallados** |
+| 类型 | 文件 | 目的 |
+|------|------|------|
+| 系统验证 | `test_mcp_server_validation.py` | 全链路系统与架构验证 |
+| 单元测试 | `tests/` | 细粒度单测与具体用例 |
 
-## 📋 **Contenido de la carpeta:**
+## 📋 目录内容
 
 ```
 tests/
-├── __init__.py                    # Hace de tests un paquete Python
-├── test_document_tools.py         # Pruebas para herramientas de documentos
-├── test_search_tools.py           # Pruebas para herramientas de búsqueda
-├── test_utility_tools.py          # Pruebas para herramientas de utilidad
-├── run_all_tests.py              # Script para ejecutar todas las pruebas
-└── README.md                     # Este archivo
+├── __init__.py                    # 使 tests 成为 Python 包
+├── test_document_tools.py         # 文档工具测试
+├── test_search_tools.py           # 检索工具测试
+├── test_utility_tools.py          # 工具/维护功能测试
+├── run_all_tests.py              # 运行全部测试的脚本
+└── README.md                     # 本文件
 ```
 
-## 🧪 **Archivos de prueba disponibles:**
+## 🧪 可用测试文件
 
-### 1. **`test_document_tools.py`**
-Prueba las funciones de procesamiento de documentos:
-- ✅ `learn_text()` - Añadir texto manual
-- ✅ `learn_document()` - Procesar archivos
-- ✅ `learn_from_url()` - Procesar URLs
-- ✅ Manejo de errores y casos edge
-- ✅ Configuración de estado RAG
+### 1) `test_document_tools.py`
+覆盖文档处理相关函数：
+- ✅ `learn_text()` 手动添加文本
+- ✅ `learn_document()` 处理文件
+- ✅ `learn_from_url()` 处理 URL
+- ✅ 错误与边界条件处理
+- ✅ RAG 状态配置
 
-### 2. **`test_search_tools.py`**
-Prueba las funciones de búsqueda y consulta:
-- ✅ `ask_rag()` - Preguntas básicas
-- ✅ `ask_rag_filtered()` - Preguntas con filtros
-- ✅ Configuración de retriever y QA chain
-- ✅ Manejo de errores de vector store
-- ✅ Documentos fuente en respuestas
+### 2) `test_search_tools.py`
+覆盖搜索与问答：
+- ✅ `ask_rag()` 基本问答
+- ✅ `ask_rag_filtered()` 带过滤问答
+- ✅ 检索器与 QA 链配置
+- ✅ 向量库错误处理
+- ✅ 回答中的来源文档
 
-### 3. **`test_utility_tools.py`**
-Prueba las funciones de mantenimiento y utilidad:
-- ✅ `get_knowledge_base_stats()` - Estadísticas de la base
-- ✅ `get_embedding_cache_stats()` - Estadísticas del cache
-- ✅ `clear_embedding_cache_tool()` - Limpiar cache
-- ✅ `optimize_vector_database()` - Optimizar BD
-- ✅ `get_vector_database_stats()` - Estadísticas de BD
-- ✅ `reindex_vector_database()` - Reindexar BD
+### 3) `test_utility_tools.py`
+维护与实用功能：
+- ✅ `get_knowledge_base_stats()` 知识库统计
+- ✅ `get_embedding_cache_stats()` 嵌入缓存统计
+- ✅ `clear_embedding_cache_tool()` 清理缓存
+- ✅ `optimize_vector_database()` 优化数据库
+- ✅ `get_vector_database_stats()` 数据库统计
+- ✅ `reindex_vector_database()` 重建索引
 
-## 🚀 **Cómo ejecutar las pruebas:**
+## 🚀 如何运行测试
 
-### **Opción 1: Ejecutar todas las pruebas**
+方式一：全部运行
 ```bash
-# Desde la carpeta mcp_server_organized
+# 于 mcp_server_organized 目录下
 python tests/run_all_tests.py
 ```
 
-### **Opción 2: Ejecutar pruebas específicas**
+### **选项 2：运行特定测试**
 ```bash
-# Pruebas de herramientas de documentos
+# 文档工具测试
 python -m unittest tests.test_document_tools
 
-# Pruebas de herramientas de búsqueda
+# 搜索工具测试
 python -m unittest tests.test_search_tools
 
-# Pruebas de herramientas de utilidad
+# 实用工具测试
 python -m unittest tests.test_utility_tools
 ```
 
-### **Opción 3: Ejecutar con más detalle**
+### **选项 3：更详细地运行**
 ```bash
-# Con verbosidad aumentada
+# 增加详细程度
 python -m unittest tests.test_document_tools -v
 
-# Ejecutar una clase específica
+# 运行特定的课程
 python -m unittest tests.test_document_tools.TestDocumentTools -v
 
-# Ejecutar un método específico
+# 执行特定方法
 python -m unittest tests.test_document_tools.TestDocumentTools.test_learn_text_basic -v
 ```
 
-## 📊 **Tipos de pruebas incluidas:**
+## 📊 **包含的测试类型：**
 
-### **Pruebas Básicas**
-- ✅ Funcionamiento normal de las funciones
-- ✅ Parámetros válidos
-- ✅ Respuestas esperadas
+### **基本测试**
+- ✅ 函数正常运行
+- ✅ 有效参数
+- ✅ 预期响应
 
-### **Pruebas de Error**
-- ✅ Parámetros inválidos
-- ✅ Estado RAG no inicializado
-- ✅ Fallos de vector store
-- ✅ Errores de configuración
+### **错误测试**
+- ✅ 无效参数
+- ✅ 未初始化的 RAG 状态
+- ✅ 向量存储失败
+- ✅ 配置错误
 
-### **Pruebas de Configuración**
-- ✅ Configuración de estado RAG
-- ✅ Persistencia de configuración
-- ✅ Compartir estado entre módulos
+### **配置测试**
+- ✅ RAG 状态配置
+- ✅ 配置持久化
+- ✅ 模块间状态共享
 
-### **Pruebas de Integración**
-- ✅ Flujos de trabajo completos
-- ✅ Interacción entre módulos
-- ✅ Datos realistas
+### **集成测试**
+- ✅ 完整工作流
+- ✅ 模块间交互
+- ✅ 真实数据
 
-### **Pruebas de Casos Edge**
-- ✅ Vector store vacío
-- ✅ Vector store grande
-- ✅ Parámetros extremos
+### **边缘案例测试**
+- ✅ 空向量存储
+- ✅ 大型向量存储
+- ✅ 极端参数
 
-## 🔧 **Características técnicas:**
+## 🔧 **技术特性：**
 
-### **Mocks y Simulación**
-- 🔄 Uso de `unittest.mock` para simular dependencias
-- 🔄 Vector store simulado para pruebas aisladas
-- 🔄 QA chain simulada para respuestas controladas
-- 🔄 Cache de embeddings simulado
+### **模拟和仿真**
+- 🔄 使用 `unittest.mock` 模拟依赖关系
+- 🔄 模拟向量存储隔离测试
+- 🔄 模拟 QA 链，用于控制响应
+- 🔄 模拟嵌入缓存
 
-### **Configuración Automática**
-- 🔄 `setUp()` automático para cada prueba
-- 🔄 Limpieza automática de archivos temporales
-- 🔄 Restauración de estado después de cada prueba
+### **自动配置**
+- 🔄 每次测试自动执行 `setUp()`
+- 🔄 自动清理临时文件
+- 🔄 每次测试后恢复状态
 
-### **Reportes Detallados**
-- 📊 Estadísticas por módulo
-- 📊 Tasa de éxito general
-- 📊 Identificación de problemas específicos
-- 📊 Guardado automático de reportes
+### **详细报告**
+- 📊 每个模块的统计数据
+- 📊 总体成功率
+- 📊 识别具体问题
+- 📊 自动保存报告
 
-## 📈 **Beneficios de las pruebas unitarias:**
+## 📈 **单元测试的优势：**
 
-### **Para el Desarrollo**
-- 🚀 **Detección temprana de errores**
-- 🚀 **Refactoring seguro**
-- 🚀 **Documentación del comportamiento**
-- 🚀 **Confianza en el código**
+### **开发阶段**
+- 🚀 **早期错误检测**
+- 🚀 **安全重构**
+- 🚀 **行为文档**
+- 🚀 **代码信心**
 
-### **Para el Mantenimiento**
-- 🔧 **Identificación rápida de regresiones**
-- 🔧 **Validación de cambios**
-- 🔧 **Base sólida para mejoras**
-- 🔧 **Reducción de bugs en producción**
+### **维护阶段**
+- 🔧 **快速回归识别**
+- 🔧 **变更验证**
+- 🔧 **坚实的改进基础**
+- 🔧 **减少生产环境中的 Bug**
 
-### **Para el Equipo**
-- 👥 **Entendimiento compartido del código**
-- 👥 **Onboarding más fácil**
-- 👥 **Estándares de calidad**
-- 👥 **Colaboración mejorada**
+### **团队阶段**
+- 👥 **代码理解共享**
+- 👥 **更轻松的入职培训**
+- 👥 **质量标准**
+- 👥 **增强协作**
 
-## 🎯 **Cuándo usar estas pruebas:**
+## 🎯 **何时使用这些测试：**
 
-### **Durante el Desarrollo**
-- ✅ Antes de hacer commit
-- ✅ Al añadir nuevas funcionalidades
-- ✅ Al refactorizar código existente
-- ✅ Al corregir bugs
+### **开发阶段**
+- ✅ 开发之前提交
+- ✅ 添加新功能时
+- ✅ 重构现有代码时
+- ✅ 修复错误时
 
-### **En CI/CD**
-- ✅ En cada pull request
-- ✅ Antes de cada release
-- ✅ En builds automatizados
-- ✅ Para validación de calidad
+### **在 CI/CD 中**
+- ✅ 在每个拉取请求中
+- ✅ 每次发布前
+- ✅ 在自动构建中
+- ✅ 用于质量验证
 
-### **Para Validación**
-- ✅ Verificar que el código funciona
-- ✅ Asegurar que no se rompió nada
-- ✅ Validar casos edge
-- ✅ Confirmar comportamiento esperado
+### **用于验证**
+- ✅ 验证代码是否正常运行
+- ✅ 确保没有任何问题
+- ✅ 验证边缘情况
+- ✅ 确认预期行为
 
-## 💡 **Próximos pasos:**
+## 💡 **后续步骤：**
 
-1. **Ejecutar las pruebas** para verificar el estado actual
-2. **Revisar pruebas fallidas** y corregir problemas
-3. **Añadir nuevas pruebas** para funcionalidades adicionales
-4. **Integrar en CI/CD** para automatización
-5. **Documentar casos de uso** específicos
+1. **运行测试**以验证当前状态
+2. **审查失败的测试**并修复问题
+3. **添加新测试**以添加更多功能
+4. **集成到 CI/CD**以实现自动化
+5. **记录具体用例**
 
-## 🔗 **Relación con otros archivos:**
+## 🔗 **与其他文件的关系：**
 
-- **`test_mcp_server_validation.py`**: Pruebas de sistema completo
-- **`src/tools/`**: Código fuente que se está probando
-- **`server.py`**: Servidor MCP principal
-- **`requirements.txt`**: Dependencias necesarias
+- **`test_mcp_server_validation.py`**：系统级测试
+- **`src/tools/`**：被测试的源代码
+- **`server.py`**：MCP 主服务器
+- **`requirements.txt`**：依赖清单
 
 ---
 
-**¡Las pruebas unitarias son la base de un código robusto y mantenible!** 🧪✨ 
+**单元测试是“稳健、可维护”代码的基石！**🧪✨ 

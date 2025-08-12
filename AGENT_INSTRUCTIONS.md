@@ -1,302 +1,332 @@
-# Instrucciones para Agentes de IA - Sistema RAG Mejorado
+# **AI 代理使用说明 - 增强型 RAG 系统**
 
-## 🎯 Propósito del Sistema
+## 🎯 **系统目的**
 
-Este sistema RAG (Retrieval-Augmented Generation) **mejorado** permite a los agentes de IA:
-- **Almacenar información** de forma persistente con procesamiento inteligente
-- **Consultar conocimiento** previamente guardado con metadatos estructurales
-- **Rastrear fuentes** de información con detalles completos
-- **Procesar documentos** automáticamente con más de 25 formatos
-- **Preservar estructura** semántica de documentos (títulos, tablas, listas)
-- **Eliminar ruido** automáticamente (cabeceras, pies de página, contenido irrelevante)
-- **🔍 Realizar búsquedas filtradas** por metadatos para mayor precisión
-- **📊 Obtener estadísticas** detalladas de la base de conocimientos
+该增强型 RAG（检索增强生成）系统可让 AI 代理：
 
-## 🚀 Nuevas Características del Sistema Mejorado
+* **持久存储** 信息并进行智能处理
+* **查询已保存的知识** 并包含结构化元数据
+* **追踪信息来源**，提供完整细节
+* **自动处理** 25+ 种格式的文档
+* **保留文档结构**（标题、表格、列表等）
+* **自动去噪**（去除页眉、页脚、无关内容）
+* **🔍 按元数据筛选搜索**，提高精度
+* **📊 获取知识库的详细统计**
 
-### **🧠 Procesamiento Inteligente con Unstructured**
-- **Preservación de Estructura**: Mantiene títulos, listas, tablas organizadas
-- **Limpieza Automática**: Elimina cabeceras, pies de página y contenido irrelevante
-- **Metadatos Estructurales**: Información detallada sobre la estructura del documento
-- **Sistema de Fallbacks**: Múltiples estrategias garantizan procesamiento exitoso
+## 🚀 **增强系统的新特性**
 
-### **📋 Soporte Expandido de Formatos**
-**Más de 25 formatos soportados:**
-- **Documentos de Office**: PDF, DOCX, PPTX, XLSX, RTF
-- **OpenDocument**: ODT, ODP, ODS
-- **Web y Markup**: HTML, XML, Markdown
-- **Texto y Datos**: TXT, CSV, TSV, JSON, YAML
-- **Imágenes con OCR**: PNG, JPG, TIFF, BMP
-- **Correos Electrónicos**: EML, MSG
+### **🧠 基于 Unstructured 的智能处理**
 
-### **🎯 Chunking Semántico Inteligente**
-- **División Natural**: Respeta la estructura del documento
-- **Overlap Inteligente**: Mantiene continuidad entre fragmentos
-- **Contexto Preservado**: No corta en medio de ideas
+* **结构保留**：保留标题、列表、表格等组织结构
+* **自动清理**：去除页眉、页脚、无关内容
+* **结构化元数据**：记录文档的结构信息
+* **回退机制**：多种策略确保处理成功
 
-### **🔍 Búsquedas Avanzadas con Filtros**
-- **Filtrado por Tipo de Archivo**: Buscar solo en PDFs, DOCX, etc.
-- **Filtrado por Estructura**: Documentos con tablas, títulos específicos
-- **Filtrado por Método de Procesamiento**: Unstructured vs MarkItDown
-- **Filtros Combinados**: Múltiples criterios simultáneos
+### **📋 扩展的格式支持**
 
-### **📈 Estadísticas de Base de Conocimientos**
-- **Análisis de Contenido**: Distribución por tipo de archivo
-- **Métricas Estructurales**: Total de tablas, títulos, listas
-- **Información de Procesamiento**: Métodos utilizados
-- **Insights Automáticos**: Promedios y tendencias
+**支持 25+ 种格式：**
 
-## 🛠️ Herramientas Disponibles
+* **Office 文档**：PDF、DOCX、PPTX、XLSX、RTF
+* **OpenDocument**：ODT、ODP、ODS
+* **网页与标记**：HTML、XML、Markdown
+* **文本与数据**：TXT、CSV、TSV、JSON、YAML
+* **图片 OCR**：PNG、JPG、TIFF、BMP
+* **电子邮件**：EML、MSG
 
-### 🔍 **Búsqueda y Consulta**
-- `ask_rag`: Realiza consultas RAG con el modelo de lenguaje
-- `ask_rag_filtered`: Consultas RAG con filtros de metadatos
+### **🎯 智能语义分块**
 
-### 📊 **Gestión de Base de Datos**
-- `get_knowledge_base_stats`: Obtiene estadísticas detalladas de la base
-- `get_vector_database_stats`: Estadísticas de la base vectorial
+* **自然分割**：遵循文档结构分块
+* **智能重叠**：保留上下文连续性
+* **上下文保留**：避免切断句子或段落
 
-### ⚡ **Optimización y Rendimiento**
-- `optimize_vector_database`: Optimiza la base vectorial
-- `reindex_vector_database`: Reindexa la base con nuevo perfil
+### **🔍 高级过滤搜索**
 
-### 🧠 **Cache de Embeddings**
-- `get_embedding_cache_stats`: Estadísticas del cache de embeddings
-- `clear_embedding_cache_tool`: Limpia el cache de embeddings
+* **按文件类型筛选**：只搜索 PDF、DOCX 等
+* **按结构筛选**：筛选包含表格、特定标题的文档
+* **按处理方式筛选**：Unstructured vs MarkItDown
+* **组合过滤**：多条件同时筛选
 
-### 📝 **Ingesta de Documentos**
-- `learn_text`: Añade texto manual a la base de conocimientos
-- `learn_document`: Procesa y añade documentos con procesamiento inteligente
-- `learn_from_url`: Procesa contenido web o archivos desde URLs
+### **📈 知识库统计**
 
-## 🔄 Flujo de Trabajo Recomendado
+* **内容分析**：按文件类型分布
+* **结构指标**：表格、标题、列表总数
+* **处理信息**：使用的处理方法
+* **自动洞察**：平均值与趋势
 
-### Paso 1: Cargar Información
+## 🛠️ **可用工具**
+
+### 🔍 **搜索与查询**
+
+* `ask_rag`：使用语言模型进行 RAG 查询
+* `ask_rag_filtered`：带元数据过滤的 RAG 查询
+
+### 📊 **数据库管理**
+
+* `get_knowledge_base_stats`：获取知识库详细统计
+* `get_vector_database_stats`：获取向量数据库统计
+
+### ⚡ **优化与性能**
+
+* `optimize_vector_database`：优化向量数据库
+* `reindex_vector_database`：用新配置重建索引
+
+### 🧠 **Embedding 缓存**
+
+* `get_embedding_cache_stats`：获取 Embedding 缓存统计
+* `clear_embedding_cache_tool`：清理 Embedding 缓存
+
+### 📝 **文档摄取**
+
+* `learn_text`：手动添加文本到知识库
+* `learn_document`：智能处理并添加文档
+* `learn_from_url`：处理网页或 URL 文件
+
+## 🔄 **推荐工作流程**
+
+### **步骤 1：加载信息**
+
 ```python
-# Opción A: Texto directo
-learn_text("Información importante...", "mi_fuente")
+# 选项 A：直接输入文本
+learn_text("重要信息...", "my_source")
 
-# Opción B: Documento con procesamiento mejorado
-learn_document("ruta/al/documento.pdf")
+# 选项 B：增强处理的文档
+learn_document("path/to/document.pdf")
 
-# Opción C: Contenido web o archivo desde URL
-learn_from_url("https://example.com/documento.pdf")
+# 选项 C：网页或 URL 文件
+learn_from_url("https://example.com/document.pdf")
 ```
 
-### Paso 2: Explorar el Contenido
+### **步骤 2：探索内容**
+
 ```python
-# Obtener estadísticas para entender qué tenemos
+# 获取统计数据以了解我们拥有什么
 get_knowledge_base_stats()
 ```
 
-### Paso 3: Consultar Información
+### **步骤 3：查询信息**
+
 ```python
-# Búsqueda general
-respuesta = ask_rag("¿Cuál es la información importante?")
+# 普通搜索
+respuesta = ask_rag("关键信息是什么？")
 
-# Búsqueda filtrada para mayor precisión
-respuesta_filtrada = ask_rag_filtered("¿Qué datos tenemos?", file_type=".pdf", min_tables=1)
+# 带过滤条件的精确搜索
+respuesta_filtrada = ask_rag_filtered("我们有哪些数据？", file_type=".pdf", min_tables=1)
 ```
 
-### Paso 4: Verificar Fuentes Mejoradas
-- Las respuestas incluyen metadatos estructurales detallados
-- Información sobre método de procesamiento
-- Nivel de confianza de la respuesta
-- Filtros aplicados (en búsquedas filtradas)
+### **步骤 4：验证增强型来源**
 
-## 📊 Ejemplo de Respuesta Mejorada de `ask_rag`
+* 响应包含详细的结构化元数据
+* 处理方法信息
+* 回答的置信度等级
+* 搜索时的过滤条件（若使用）
+
+## 📊 **ask\_rag 增强型响应示例**
 
 ```
-🤖 **Respuesta:**
-El punto de fusión del titanio es 1,668 °C. Esta propiedad lo hace ideal para aplicaciones aeroespaciales donde se requieren materiales resistentes a altas temperaturas.
+🤖 **回答：**
+钛的熔点是 1,668 °C，这一特性使其非常适合用于需要耐高温的航空航天领域。
 
-📚 **Fuentes de información utilizadas:**
+📚 **使用的来源：**
 
-   1. **material_properties**
-      - **Tipo:** MANUAL_INPUT
-      - **Procesamiento:** Manual Text
-      - **Procesado:** 21/06/2025 17:30
-      - **Fragmento:** 1 de 1
-      - **Fragmento Relevante:**
-        > _La temperatura de fusión del titanio es 1,668°C._
+1. **material_properties**
+   - **类型**：MANUAL_INPUT
+   - **处理方式**：手动文本
+   - **处理时间**：2025-06-21 17:30
+   - **片段**：1/1
+   - **相关内容**：
+     > _钛的熔点是 1,668°C。_
 
-   2. **datasheet_titanium.pdf**
-      - **Ruta:** `D:\Docs\datasheet_titanium.pdf`
-      - **Tipo:** PDF
-      - **Procesamiento:** Unstructured Enhanced
-      - **Estructura:** 12 elementos (2 títulos, 1 tabla, 3 listas)
-      - **Fragmento:** 3 de 5
-      - **Procesado:** 21/06/2025 17:32
-      - **Fragmento Relevante:**
-        > _...el titanio puro tiene un punto de fusión de 1,668 grados Celsius, lo que lo hace ideal para aplicaciones aeroespaciales..._
+2. **datasheet_titanium.pdf**
+   - **路径**：`D:\Docs\datasheet_titanium.pdf`
+   - **类型**：PDF
+   - **处理方式**：Unstructured Enhanced
+   - **结构**：12 个元素（2 个标题，1 张表格，3 个列表）
+   - **片段**：3/5
+   - **处理时间**：2025-06-21 17:32
+   - **相关内容**：
+     > _…纯钛的熔点为 1,668°C，使其非常适合航空航天应用…_
 
-✅ **Alta confianza:** Respuesta basada en múltiples fuentes
-🧠 **Procesamiento inteligente:** 1 fuentes procesadas con Unstructured (preservación de estructura)
+✅ **高置信度**：基于多个来源的回答  
+🧠 **智能处理**：1 个来源通过 Unstructured 结构保留处理  
 ```
 
-## ⚠️ Consideraciones Importantes
+## ⚠️ **重要注意事项**
 
-### Limitaciones
-- **Alcance**: Solo puede acceder a información previamente almacenada
-- **OCR**: Para imágenes con texto, requiere Tesseract OCR instalado
-- **Tamaño**: Los archivos muy grandes pueden tardar en procesarse
-- **Formato**: Algunos formatos muy específicos pueden requerir dependencias adicionales
-- **Filtros**: Los filtros muy restrictivos pueden no devolver resultados
+### **限制**
 
-### Mejores Prácticas
-1. **Usar nombres descriptivos** para las fuentes
-2. **Verificar las rutas** de archivos antes de procesarlos
-3. **Revisar las fuentes** en las respuestas para validar información
-4. **Procesar documentos** antes de hacer preguntas sobre ellos
-5. **Aprovechar metadatos estructurales** para entender mejor el contenido
-6. **Usar chunking semántico** para documentos con estructura compleja
-7. **Explorar estadísticas** antes de hacer búsquedas filtradas
-8. **Combinar filtros** para búsquedas más precisas
-9. **Verifica resultados** de búsquedas filtradas para confirmar relevancia
-10. **Monitorear el cache** usando `get_embedding_cache_stats()` para optimizar rendimiento
-11. **Limpiar cache** cuando sea necesario usando `clear_embedding_cache_tool()`
-12. **Aprovecha la persistencia** del cache en disco entre sesiones
-13. **Optimiza la base vectorial** usando `optimize_vector_database()` cuando las búsquedas sean lentas
-14. **Monitorear estadísticas** de la base vectorial con `get_vector_database_stats()`
-15. **Reindexar cuando sea necesario** usando `reindex_vector_database()` para mejorar rendimiento
+* **范围**：只能访问已存储的信息
+* **OCR**：图片需安装 Tesseract OCR
+* **大小**：大文件处理时间更长
+* **格式**：部分特殊格式需额外依赖
+* **过滤**：过于严格的过滤可能无结果
 
-### Manejo de Errores Mejorado
-- **Archivo no encontrado**: Verificar la ruta del archivo
-- **Formato no soportado**: El sistema soporta más de 25 formatos
-- **Error de OCR**: Instalar Tesseract para procesar imágenes con texto
-- **Error de Unstructured**: Verificar instalación: `pip install 'unstructured[local-inference,all-docs]'`
-- **Sin información**: Asegurarse de que se haya cargado información relevante
-- **Filtros sin resultados**: Usar filtros menos restrictivos o verificar estadísticas
-- **Error en filtros**: Verificar formato de parámetros de filtrado
-- **Cache corrupto**: Usar `clear_embedding_cache_tool()` para limpiar
-- **Baja tasa de aciertos**: Revisar patrones de consulta y optimizar
+### **最佳实践**
 
-## 📝 Ejemplos de Casos de Uso Mejorados
+1. **为数据源使用描述性名称**，便于后续识别
+2. **在处理前验证文件路径**，避免找不到文件
+3. **检查回答中的数据来源**，验证信息的可靠性
+4. **先处理文档**，再针对其内容进行提问
+5. **利用结构化元数据**，更好地理解内容
+6. **对结构复杂的文档使用语义分块**（semantic chunking）
+7. **在做过滤搜索前先查看统计信息**，明确数据库内容
+8. **组合多个过滤条件**，实现更精准的搜索
+9. **验证过滤搜索的结果**，确保与需求相关
+10. **使用 `get_embedding_cache_stats()` 监控缓存**，优化性能
+11. **必要时用 `clear_embedding_cache_tool()` 清理缓存**
+12. **利用缓存持久化功能**，让缓存能跨会话保存
+13. **在搜索变慢时使用 `optimize_vector_database()` 优化向量数据库**
+14. **用 `get_vector_database_stats()` 监控向量数据库统计信息**
+15. **必要时用 `reindex_vector_database()` 重建索引**，提升性能
 
-### Caso 1: Investigación Académica con Documentos Complejos
+### **增强型错误处理**
+
+* **找不到文件**：检查路径
+* **格式不支持**：支持 25+ 格式
+* **OCR 错误**：安装 Tesseract
+* **Unstructured 错误**：运行 `pip install 'unstructured[local-inference,all-docs]'`
+* **无信息**：确保已加载相关数据
+* **过滤无结果**：放宽过滤条件或先看统计
+* **过滤错误**：检查过滤参数格式
+* **缓存损坏**：用 `clear_embedding_cache_tool()` 清理
+* **准确率低**：优化查询模式
+
+## 📝 **增强型使用场景示例**
+
+### **案例 1：处理结构复杂的学术研究文档**
+
 ```python
-# 1. Cargar papers de investigación con estructura compleja
-learn_document("paper_ai_ethics.pdf")  # Preserva títulos, tablas, referencias
-learn_document("survey_machine_learning.docx")  # Mantiene formato y estructura
+# 1. 加载带有复杂结构的研究论文
+learn_document("paper_ai_ethics.pdf")  # 保留标题、表格、参考文献
+learn_document("survey_machine_learning.docx")  # 保留格式和结构
 
-# 2. Explorar el contenido cargado
+# 2. 查看已加载内容的统计信息
 get_knowledge_base_stats()
 
-# 3. Consultar información específica con filtros
-ask_rag_filtered("¿Cuáles son los principales desafíos éticos de la IA?", file_type=".pdf", min_titles=3)
+# 3. 使用过滤条件查询特定信息
+ask_rag_filtered("人工智能的主要伦理挑战有哪些？", file_type=".pdf", min_titles=3)
 ```
 
-### Caso 2: Análisis de Datos con Hojas de Cálculo
+### **案例 2：用电子表格进行数据分析**
+
 ```python
-# 1. Cargar datos y reportes con formato preservado
-learn_document("datos_ventas.xlsx")  # Procesa tablas y datos estructurados
-learn_document("reporte_analisis.pdf")  # Mantiene gráficos y tablas
+# 1. 加载数据和报告，保留原有结构
+learn_document("datos_ventas.xlsx")  # 处理表格和结构化数据
+learn_document("reporte_analisis.pdf")  # 保留图表和表格
 
-# 2. Buscar específicamente datos tabulares
-ask_rag_filtered("¿Cuáles fueron las ventas del Q3?", min_tables=1)
+# 2. 专门搜索表格数据
+ask_rag_filtered("第三季度的销售额是多少？", min_tables=1)
 
-# 3. Verificar qué tipos de datos tenemos
+# 3. 检查我们拥有的数据类型
 get_knowledge_base_stats()
 ```
 
-### Caso 3: Asistente Personal con Documentos Escaneados
+### **案例 3：处理扫描文件的个人助理**
+
 ```python
-# 1. Almacenar información personal y documentos escaneados
-learn_text("Mi dirección es 123 Calle Principal", "personal_info")
-learn_document("documento_identidad_escaneado.png")  # OCR automático
+# 1. 存储个人信息和扫描文档
+learn_text("我的地址是 主街123号", "personal_info")
+learn_document("documento_identidad_escaneado.png")  # 自动OCR识别
 
-# 2. Consultar cuando sea necesario
-ask_rag("¿Cuál es mi información de contacto?")
+# 2. 需要时查询
+ask_rag("我的联系方式是什么？")
 
-# 3. Verificar documentos procesados con OCR
-ask_rag_filtered("¿Qué documentos escaneados tenemos?", processing_method="unstructured_enhanced")
+# 3. 检查OCR处理过的文件
+ask_rag_filtered("我们有哪些扫描文件？", processing_method="unstructured_enhanced")
 ```
 
-### Caso 4: Investigación Web con Descarga de Archivos
-```python
-# 1. Procesar contenido web y descargar documentos
-learn_from_url("https://example.com/articulo")  # Página web
-learn_from_url("https://example.com/informe.pdf")  # Descarga y procesa PDF
+### **案例 4：网页研究与文件下载**
 
-# 2. Explorar contenido web vs documentos
+```python
+# 1. 处理网页内容并下载文档
+learn_from_url("https://example.com/articulo")  # 网页
+learn_from_url("https://example.com/informe.pdf")  # 下载并处理PDF
+
+# 2. 对比网页内容和文件内容
 get_knowledge_base_stats()
 
-# 3. Consultar información combinada con filtros
-ask_rag_filtered("¿Qué información tenemos sobre el tema?", file_type=".pdf")
-ask_rag_filtered("¿Qué contenido web tenemos?", processing_method="markitdown")
+# 3. 结合过滤条件进行查询
+ask_rag_filtered("我们关于该主题有什么信息？", file_type=".pdf")
+ask_rag_filtered("我们有哪些网页内容？", processing_method="markitdown")
 ```
 
-### Caso 5: Gestión de Documentos Empresariales
+### **案例 5：企业文档管理**
+
 ```python
-# 1. Cargar diferentes tipos de documentos empresariales
+# 1. 加载不同类型的企业文档
 learn_document("manual_empleados.docx")
 learn_document("reporte_financiero.pdf")
 learn_document("datos_ventas.xlsx")
 
-# 2. Obtener estadísticas del contenido
+# 2. 获取内容统计信息
 get_knowledge_base_stats()
 
-# 3. Búsquedas específicas por tipo de contenido
-# Solo manuales y guías
-ask_rag_filtered("¿Qué procedimientos tenemos?", file_type=".docx")
+# 3. 按内容类型进行精准搜索
+# 仅限手册和指南
+ask_rag_filtered("我们有哪些流程文档？", file_type=".docx")
 
-# Solo reportes con datos
-ask_rag_filtered("¿Qué datos financieros tenemos?", min_tables=1)
+# 仅限含有数据的报告
+ask_rag_filtered("我们有哪些财务数据？", min_tables=1)
 
-# Solo documentos procesados con método avanzado
-ask_rag_filtered("¿Qué contenido de alta calidad tenemos?", processing_method="unstructured_enhanced")
+# 仅限用高级方法处理的高质量文档
+ask_rag_filtered("我们有哪些高质量内容？", processing_method="unstructured_enhanced")
 ```
 
-## 🎯 Consejos para Agentes Mejorados
+## 🎯 改进型代理的建议
 
-1. **Aprovecha la estructura**: Los documentos mantienen títulos, tablas y listas
-2. **Usa metadatos estructurales**: Para entender mejor el contenido de las fuentes
-3. **Verifica el método de procesamiento**: Unstructured vs MarkItDown
-4. **Confía en el chunking semántico**: Mejor contexto en las respuestas
-5. **Revisa la confianza**: Respuestas con múltiples fuentes son más confiables
-6. **Usa formatos soportados**: Más de 25 formatos disponibles
-7. **Maneja errores específicos**: Cada tipo de error tiene consejos útiles
-8. **Aprovecha OCR**: Para procesar imágenes con texto
-9. **Usa URLs inteligentemente**: El sistema detecta automáticamente archivos vs páginas web
-10. **Valida con fuentes**: Siempre revisa la información de fuentes en las respuestas
-11. **Explora estadísticas**: Usa `get_knowledge_base_stats()` para entender el contenido
-12. **Aplica filtros estratégicamente**: Para búsquedas más precisas y relevantes
-13. **Combina filtros**: Usa múltiples criterios para búsquedas muy específicas
-14. **Verifica resultados de filtros**: Confirma que los filtros devuelven información relevante
-15. **Optimiza consultas**: Usa filtros para reducir ruido en las respuestas
+1. **利用文档结构**：文档会保留标题、表格和列表
+2. **使用结构化元数据**：更好地理解数据源的内容
+3. **确认处理方式**：区分 *Unstructured* 与 *MarkItDown*
+4. **信任语义分块**（semantic chunking）：回答时能获得更好的上下文
+5. **检查置信度**：基于多来源的回答更可靠
+6. **使用支持的格式**：支持 25+ 种文件格式
+7. **处理特定错误**：每类错误都有对应的解决建议
+8. **利用 OCR**：处理含文字的图像文件
+9. **智能使用 URL**：系统会自动区分文件下载与网页内容
+10. **用数据源验证**：始终检查回答引用的来源信息
+11. **查看统计信息**：用 `get_knowledge_base_stats()` 了解内容情况
+12. **策略性应用过滤器**：获取更精准、更相关的结果
+13. **组合过滤器**：多条件叠加实现高度精确的搜索
+14. **验证过滤结果**：确保返回的信息确实相关
+15. **优化查询**：用过滤器减少噪声，提高回答质量
 
-## 🔧 Información Técnica para Agentes
+## 🔧 改进型代理的技术信息
 
-### **Procesamiento de Documentos**
-- **Unstructured Enhanced**: Para la mayoría de formatos con preservación de estructura
-- **MarkItDown**: Para páginas web y contenido HTML
-- **Fallbacks**: Múltiples estrategias garantizan procesamiento exitoso
+### **文档处理方式**
 
-### **Metadatos Estructurales**
-- **total_elements**: Número total de elementos en el documento
-- **titles_count**: Número de títulos identificados
-- **tables_count**: Número de tablas extraídas
-- **lists_count**: Número de listas identificadas
-- **narrative_blocks**: Bloques de texto narrativo
+* **Unstructured Enhanced**：大多数格式的最佳选择，可保留文档结构
+* **MarkItDown**：网页和 HTML 内容处理
+* **Fallbacks**：多策略保障处理成功率
 
-### **Sistema de Filtrado**
-- **Filtros de tipo de archivo**: `.pdf`, `.docx`, `.xlsx`, etc.
-- **Filtros estructurales**: `min_tables`, `min_titles`
-- **Filtros de procesamiento**: `unstructured_enhanced`, `markitdown`
-- **Filtros combinados**: Múltiples criterios simultáneos
+### **结构化元数据**
 
-### **Niveles de Confianza**
-- **Alta confianza**: Respuesta basada en 3+ fuentes
-- **Confianza media**: Respuesta basada en 2 fuentes
-- **Confianza limitada**: Respuesta basada en 1 fuente
+* **total_elements**：文档中元素总数
+* **titles_count**：识别到的标题数量
+* **tables_count**：提取的表格数量
+* **lists_count**：识别到的列表数量
+* **narrative_blocks**：叙述性文本块数量
 
-### **Métodos de Procesamiento**
-- **unstructured_enhanced**: Procesamiento inteligente con preservación de estructura
-- **markitdown**: Procesamiento web tradicional
-- **langchain_fallback**: Cargadores específicos de LangChain
+### **过滤系统**
 
-### **Estadísticas de Base de Conocimientos**
-- **Distribución por tipo**: Porcentaje de cada formato de archivo
-- **Métricas estructurales**: Totales y promedios de elementos
-- **Métodos de procesamiento**: Distribución de estrategias utilizadas
-- **Insights automáticos**: Análisis de calidad del contenido 
+* **文件类型过滤**：`.pdf`、`.docx`、`.xlsx` 等
+* **结构过滤**：`min_tables`、`min_titles`
+* **处理方式过滤**：`unstructured_enhanced`、`markitdown`
+* **组合过滤**：支持多条件同时使用
+
+### **置信度等级**
+
+* **高置信度**：基于 3+ 个来源
+* **中置信度**：基于 2 个来源
+* **低置信度**：基于 1 个来源
+
+### **处理方法**
+
+* **unstructured_enhanced**：保留结构的智能处理
+* **markitdown**：传统网页处理方式
+* **langchain_fallback**：LangChain 专用加载器
+
+### **知识库统计**
+
+* **类型分布**：各文件格式的比例
+* **结构指标**：元素总数与平均数
+* **处理方式统计**：不同策略的使用比例
+* **自动洞察**：内容质量分析

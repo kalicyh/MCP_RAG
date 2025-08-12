@@ -1,215 +1,220 @@
-# 🚀 Bulk Ingest GUI Avanzado - Con Previsualización
+# 🚀 批量导入 GUI 高级版 - 带预览功能
 
-## 🎯 ¿Qué es esta versión avanzada?
+## 🎯 这是什么高级版？
 
-Esta es la **versión mejorada** de la aplicación GUI que incluye **previsualización de documentos** y **selección inteligente** antes de almacenar en la base de datos vectorial. Te permite:
+这是 **改进版** 的 GUI 应用程序，它加入了 **文档预览** 和 **智能选择** 功能，让你在存入向量数据库之前可以：
 
-- **👀 Ver el contenido** convertido a Markdown antes de almacenarlo
-- **✅ Seleccionar qué documentos** quieres incluir en tu base de conocimiento
-- **📊 Revisar la calidad** de la conversión
-- **🎯 Tener control total** sobre qué se almacena
+* **👀 查看内容**（已转换为 Markdown）
+* **✅ 选择你要** 存入知识库的文档
+* **📊 检查转换质量**
+* **🎯 完全掌控** 存储内容
 
-## 🌟 Características Principales
+## 🌟 主要功能特点
 
-### 📋 **Interfaz con Pestañas**
-- **📁 Procesamiento**: Configuración y procesamiento inicial
-- **👀 Revisión**: Previsualización y selección de documentos
-- **💾 Almacenamiento**: Almacenamiento final en la base de datos
+### 📋 **多标签界面**
 
-### 👀 **Previsualización Avanzada**
-- **Vista previa en Markdown** de cada documento
-- **Información detallada** del archivo (tipo, tamaño, etc.)
-- **Navegación fácil** entre documentos
-- **Selección individual** de cada documento
+* **📁 处理**：配置和初始处理
+* **👀 审核**：预览并选择文档
+* **💾 存储**：最终存入数据库
 
-### 🎯 **Control de Calidad**
-- **Revisar conversiones** antes de almacenar
-- **Detectar contenido irrelevante** o mal convertido
-- **Seleccionar solo documentos útiles**
-- **Evitar duplicados** o contenido de baja calidad
+### 👀 **高级预览**
 
-## 🛠️ Instalación y Uso
+* 每个文档的 **Markdown 预览**
+* 文件的 **详细信息**（类型、大小等）
+* **方便的文档切换**
+* **逐个选择** 要存储的文档
 
-### Ejecutar la Aplicación Avanzada
+### 🎯 **质量控制**
 
-#### Opción 1: Usando el archivo batch (Windows)
+* **在存储前检查转换结果**
+* **发现无关或转换不佳的内容**
+* **只选择有用的文档**
+* **避免重复** 或低质量内容
+
+## 🛠️ 安装与运行
+
+### 启动高级应用
+
+#### 方式一：Windows 双击批处理
 ```bash
-# Doble clic en:
+# 双击：
 run_gui_advanced.bat
 ```
 
-#### Opción 2: Desde la línea de comandos
+#### 方式二：命令行
 ```bash
 python bulk_ingest_gui_advanced.py
 ```
 
-## 📖 Guía Visual Paso a Paso
+## 📖 图文引导（Step by Step）
 
-Esta guía te llevará a través de cada pestaña de la aplicación para que saques el máximo provecho de la ingesta masiva de documentos.
+按标签页逐步引导你完成高效的大批量导入。
 
-### 🔄 **Paso 1: Pestaña de Procesamiento - Carga y Conversión**
+### 🔄 步骤 1：处理 - 加载与转换
 
-Esta es la primera pantalla. Aquí es donde le dices a la aplicación qué documentos procesar.
+这是起始界面，用来告诉应用要处理哪些文档。
 
-![Pestaña de Procesamiento](src/images/gui_procesamiento.png)
+![处理标签](src/images/gui_procesamiento.png)
 
-1.  **Selecciona tu carpeta:** Usa el botón `Explorar...` para elegir el directorio que contiene tus documentos.
-2.  **Configura las opciones:** Puedes decidir si quieres `Guardar copias en formato Markdown` para tener un respaldo del contenido convertido.
-3.  **Inicia el Proceso:** Haz clic en `Iniciar Procesamiento`.
-4.  **Monitorea el Progreso:** La barra de progreso te mostrará el estado y el `Registro de Actividad` te dará detalles de cada paso.
-5.  **Avanza:** Una vez finalizado, haz clic en `Ir a Revisión` para continuar.
+1. **选择你的文件夹：** 使用 `浏览...` 按钮，选择包含文档的目录。
+2. **配置选项：** 你可以选择是否 `保存为 Markdown 格式的副本`，以备份转换后的内容。
+3. **开始处理：** 点击 `开始处理` 按钮。
+4. **监控进度：** 进度条会显示当前状态，`活动日志` 会详细记录每一步操作。
+5. **继续下一步：** 处理完成后，点击 `进入审核` 继续。
 
-### 👀 **Paso 2: Pestaña de Revisión - Previsualiza y Selecciona**
+### 👀 步骤 2：复审 - 预览与选择
 
-En esta pestaña tienes el control total. Puedes ver qué se convirtió y decidir qué información es valiosa para tu base de conocimientos.
+此处你拥有全部主动权，可以查看转换结果并挑选有价值的内容。
 
-![Pestaña de Revisión](src/images/gui_revision.png)
+![复审标签](src/images/gui_revision.png)
 
-1.  **Explora los Documentos:** La lista de la izquierda (`Documentos Procesados`) muestra todos los archivos que se convirtieron a Markdown.
-2.  **Previsualiza el Contenido:** Al hacer clic en un archivo de la lista, verás su contenido a la derecha, junto con detalles como su tipo y tamaño. Esto te permite verificar la calidad de la conversión.
-3.  **Toma Decisiones:** Marca la casilla `Incluir en base de datos` para cada documento que quieras añadir.
-4.  **Usa los Controles:** Para agilizar el trabajo, puedes usar `Seleccionar Todos` o `Deseleccionar Todos`. También puedes navegar entre documentos con los botones `Anterior` y `Siguiente`.
+1. **浏览文档：** 左侧列表（`已处理文档`）显示所有已转换为 Markdown 的文件。
+2. **预览内容：** 点击列表中的文件，右侧会显示该文件的内容及其类型、大小等详细信息，方便你检查转换质量。
+3. **做出选择：** 勾选每个文档的 `包含到数据库` 复选框，决定要添加到知识库的文档。
+4. **使用控制按钮：** 为提高效率，可以点击 `全选` 或 `全不选`。也可用 `上一个` 和 `下一个` 按钮在文档间切换。
 
-### 💾 **Paso 3: Pestaña de Almacenamiento - Confirma y Guarda**
+### 💾 步骤 3：存储 - 确认并写入
 
-Este es el último paso. Aquí confirmas tu selección y la guardas permanentemente en la base de datos vectorial para que la IA pueda usarla.
+最后一步，确认你的选择并写入向量数据库，以供智能体使用。
 
-![Pestaña de Almacenamiento en Progreso](src/images/gui_almacenamiento_progreso.png)
+![存储进行中](src/images/gui_almacenamiento_progreso.png)
 
-1.  **Verifica el Resumen:** El `Resumen de Selección` te muestra cuántos documentos vas a guardar y el tamaño total.
-2.  **Confirma la Operación:** Es obligatorio activar la casilla `Confirmar almacenamiento en base de datos`. Esta es una medida de seguridad para evitar acciones accidentales.
-3.  **Inicia el Almacenamiento:** Presiona `Almacenar Seleccionados`.
-4.  **Observa el Progreso:** Al igual que en el procesamiento, una barra de progreso y un registro de actividad te mantendrán informado sobre qué documento se está guardando.
+1. **核对摘要：** “选择摘要”会显示你将保存的文档数量及总大小。
+2. **确认操作：** 必须勾选“确认存储到数据库”复选框，以防止误操作。
+3. **开始存储：** 点击“保存选中文档”按钮。
+4. **查看进度：** 与处理阶段类似，进度条和活动日志会实时显示当前正在保存的文档情况。
 
-![Almacenamiento Completado](src/images/gui_almacenamiento_completado.png)
+![存储完成](src/images/gui_almacenamiento_completado.png)
 
-Una vez que el proceso termina, verás que la barra de progreso se completa y aparecerá un mensaje de confirmación. ¡Y listo! Tus conocimientos ahora forman parte de la memoria de tu IA.
+完成后你会看到 100% 进度与成功提示。至此，知识正式进入你的 AI 记忆。
 
-## 🎯 Ventajas de la Versión Avanzada
+## 🎯 进阶版本优势
 
-### ✅ **Control de Calidad**
-- **Revisar conversiones** antes de almacenar
-- **Detectar problemas** en la conversión
-- **Seleccionar solo contenido relevante**
-- **Evitar contenido duplicado** o irrelevante
+### ✅ **质量控制**
+- **存储前检查转换质量**
+- **发现转换中的问题**
+- **仅选择相关内容**
+- **避免重复或无关内容**
 
-### 📊 **Mejor Organización**
-- **Interfaz con pestañas** para mejor flujo de trabajo
-- **Separación clara** entre procesamiento, revisión y almacenamiento
-- **Navegación intuitiva** entre documentos
-- **Información detallada** de cada archivo
+### 📊 **更好组织**
+- **多标签界面优化工作流程**
+- **处理、审核、存储清晰分离**
+- **文档间导航直观便捷**
+- **每个文件的详细信息**
 
-### 🛡️ **Mayor Seguridad**
-- **Confirmación explícita** antes de almacenar
-- **Revisión manual** de cada documento
-- **Control total** sobre el proceso
-- **Logs detallados** de cada paso
+### 🛡️ **更高安全性**
+- **存储前明确确认**
+- **手动审核每份文档**
+- **过程全程掌控**
+- **详细操作日志**
 
-## 🔍 Cómo Usar la Previsualización
+## 🔍 如何使用预览功能
 
-### 📄 **Información del Documento**
-- **📄 Nombre del archivo**: Nombre original del documento
-- **📁 Tipo**: Extensión del archivo (.pdf, .docx, etc.)
-- **📏 Tamaño**: Número de caracteres en el Markdown
+### 📄 **文档信息**
+- **📄 文件名**：文档原始名称
+- **📁 类型**：文件扩展名（.pdf、.docx 等）
+- **📏 大小**：Markdown 格式下字符数
 
-### 👀 **Previsualización Markdown**
-- **Contenido convertido** a formato Markdown
-- **Estructura del documento** preservada
-- **Texto legible** y bien formateado
-- **Scroll automático** para documentos largos
+### 👀 **Markdown 预览**
+- **转换后的 Markdown 内容**
+- **保留文档结构**
+- **文本清晰可读、格式良好**
+- **长文档自动滚动**
 
-### ✅ **Selección de Documentos**
-- **Checkbox individual** para cada documento
-- **Indicadores visuales** en la lista (✅/❌)
-- **Botones de selección masiva** (Todos/Ninguno)
-- **Actualización en tiempo real** del resumen
+### ✅ **文档选择**
+- **每个文档的单独复选框**
+- **列表中的视觉标记（✅/❌）**
+- **批量选择按钮**（全选/全不选）
+- **实时更新的摘要**
 
-## 🎓 Conceptos Importantes
+## 🎓 重要概念
 
-### ¿Por qué previsualizar?
-La previsualización te permite:
-- **Verificar la calidad** de la conversión
-- **Detectar contenido irrelevante** (páginas en blanco, headers, etc.)
-- **Seleccionar solo documentos útiles** para tu base de conocimiento
-- **Evitar almacenar contenido duplicado** o de baja calidad
+### 为什么要预览？
+预览可以帮助你：
+- **核验转换质量**
+- **发现无关内容**（空白页、标题等）
+- **仅选用对知识库有用的文档**
+- **避免存储重复或低质量内容**
 
-### ¿Qué buscar en la previsualización?
-- **Contenido sustancial** (no solo headers o páginas en blanco)
-- **Estructura clara** y legible
-- **Información relevante** para tu dominio
-- **Conversión correcta** del formato original
+### 预览时关注什么？
+- **实质内容**（非仅标题或空白页）
+- **清晰可读的结构**
+- **与你业务相关的信息**
+- **格式正确转换**
 
-### ¿Cuándo deseleccionar un documento?
-- **Contenido irrelevante** o fuera de tema
-- **Conversión pobre** o ilegible
-- **Documentos duplicados** o muy similares
-- **Archivos de configuración** o metadatos
+### 何时取消选择文档？
+- **内容无关或偏题**
+- **转换质量差或不可读**
+- **重复或高度相似文档**
+- **配置文件或元数据文件**
 
-## 🔧 Funciones Avanzadas
+## 🔧 高级功能
 
-### 📋 **Navegación de Documentos**
-- **⬅️ Anterior**: Ir al documento anterior
-- **➡️ Siguiente**: Ir al siguiente documento
-- **Contador**: Posición actual en la lista
-- **Selección directa**: Hacer clic en la lista
+### 📋 **文档导航**
+- **⬅️ 上一篇**：查看前一文档
+- **➡️ 下一篇**：查看下一文档
+- **计数器**：当前文档在列表中的位置
+- **直接选择**：点击列表快速定位文档
 
-### 🎯 **Selección Inteligente**
-- **Seleccionar Todos**: Marcar todos los documentos
-- **Deseleccionar Todos**: Desmarcar todos los documentos
-- **Selección individual**: Marcar/desmarcar documentos uno por uno
-- **Indicadores visuales**: Ver el estado de selección en la lista
+### 🎯 **智能选择**
+- **全选**：标记所有文档
+- **全不选**：取消所有标记
+- **单独选择**：逐个勾选/取消
+- **视觉指示**：列表中显示选择状态
 
-### 📊 **Resumen en Tiempo Real**
-- **Total procesados**: Número total de documentos
-- **Seleccionados**: Documentos marcados para almacenar
-- **No seleccionados**: Documentos que no se almacenarán
-- **Actualización automática**: Se actualiza al cambiar selecciones
+### 📊 **实时摘要**
+- **处理总数**：所有已处理文档数量
+- **已选文档**：标记存储的文档数
+- **未选文档**：未标记存储的文档数
+- **自动更新**：选择变化时即时刷新
 
-## 🚀 Flujo de Trabajo Recomendado
+## 🚀 推荐工作流
 
-### 1. **Procesamiento Inicial**
+1) 处理：
 ```
-📁 Seleccionar carpeta → ⚙️ Configurar opciones → 🚀 Procesar
-```
-
-### 2. **Revisión Sistemática**
-```
-👀 Revisar lista → 📄 Previsualizar cada documento → ✅ Seleccionar útiles
+📁 选择文件夹 → ⚙️ 配置选项 → 🚀 开始处理
 ```
 
-### 3. **Almacenamiento Final**
+2) 复审：
 ```
-📊 Revisar resumen → 🔒 Confirmar → 💾 Almacenar seleccionados
+👀 浏览列表 → 📄 逐条预览 → ✅ 勾选有用文档
 ```
 
-## 💡 Consejos de Uso
+3) 存储：
+```
+📊 检查摘要 → 🔒 确认操作 → 💾 存储所选
+```
 
-### 🎯 **Para Revisión Eficiente**
-1. **Revisa rápidamente** los primeros documentos
-2. **Identifica patrones** de contenido útil
-3. **Usa selección masiva** para documentos similares
-4. **Presta atención** a la calidad de conversión
+## 💡 使用建议
 
-### 📊 **Para Mejor Calidad**
-1. **Deselecciona documentos** con poco contenido
-2. **Evita archivos de configuración** o metadatos
-3. **Revisa documentos grandes** con más detalle
-4. **Mantén solo contenido relevante** para tu dominio
+### 🎯 **高效审核技巧**
+1. **快速浏览**前几个文档
+2. **识别有用内容的模式**
+3. **对类似文档使用批量选择**
+4. **关注转换质量**
 
-### ⚡ **Para Mayor Velocidad**
-1. **Usa "Seleccionar Todos"** si la mayoría son útiles
-2. **Deselecciona solo** los documentos problemáticos
-3. **Revisa en lotes** por tipo de archivo
-4. **Confía en la conversión** para documentos simples
+### 📊 **提升质量建议**
+1. **取消选择内容较少的文档**
+2. **避免选择配置文件或元数据**
+3. **重点检查大型文档**
+4. **只保留与你领域相关的内容**
+
+### ⚡ **提升速度技巧**
+1. **大多数文档有用时，使用“全选”**
+2. **仅取消选择有问题的文档**
+3. **按文件类型分批审核**
+4. **对简单文档信任转换结果**
+
 
 ---
 
-## 📚 Mini-glosario de términos técnicos
+## 📚 技术术语迷你词汇表
 
-- **Embeddings:** Representaciones numéricas de textos que permiten comparar similitud semántica entre documentos.
-- **Cache:** Espacio temporal donde se guardan datos para acelerar operaciones repetidas.
-- **Vectorial/Base vectorial:** Base de datos que almacena información como vectores para búsquedas semánticas.
-- **Chunking:** Proceso de dividir un texto largo en fragmentos más pequeños para su análisis o almacenamiento.
-- **Markdown:** Formato de texto plano que permite dar formato (negritas, listas, títulos) de manera sencilla.
-- **JSON:** Formato estándar para intercambio de datos, fácil de leer y escribir por humanos y máquinas.
-- **Optimización:** Proceso de mejorar el rendimiento de la base de datos o el sistema.
+- **Embeddings（嵌入）**：文本的数值化表示，用于比较文档之间的语义相似度。
+- **Cache（缓存）**：临时存储空间，用于加速重复操作的数据访问。
+- **Vectorial/Base vectorial（向量库/向量数据库）**：以向量形式存储信息的数据库，支持语义搜索。
+- **Chunking（分块）**：将长文本拆分成更小片段以便分析或存储的过程。
+- **Markdown（标记语言）**：一种简单的纯文本格式，用于轻松实现加粗、列表、标题等格式。
+- **JSON**：一种标准数据交换格式，便于人机阅读和编写。
+- **Optimización（优化）**：提升数据库或系统性能的过程。
+

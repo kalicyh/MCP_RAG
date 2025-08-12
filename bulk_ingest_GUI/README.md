@@ -1,125 +1,119 @@
-# Bulk Ingest GUI - Sistema RAG Modular
+# 批量导入 GUI - 模块化 RAG 系统
 
-## 🚀 Descripción
+## 🚀 简介
 
-Bulk Ingest GUI es una aplicación de escritorio moderna para procesar y almacenar documentos en un sistema RAG (Retrieval-Augmented Generation) modular. Utiliza `rag_core.py` como núcleo del sistema, proporcionando todas las funcionalidades avanzadas de procesamiento, chunking semántico, cache de embeddings y almacenamiento vectorial.
+Bulk Ingest GUI 是一款现代桌面应用，用于在模块化 RAG（检索增强生成）系统中处理与存储文档。它以 `rag_core.py` 为系统核心，提供高级处理、语义分块、嵌入缓存与向量存储等功能。
 
-## 🏗️ Arquitectura
+## 🏗️ 架构
 
-La aplicación sigue el patrón **MVC + Services** con una estructura modular:
+应用遵循 **MVC + Services** 的模块化结构：
 
 ```
 bulk_ingest_GUI/
-├── controllers/          # Controladores (lógica de aplicación)
+├── controllers/          # 控制器（应用逻辑）
 │   └── main_controller.py
-├── models/              # Modelos de datos
+├── models/              # 数据模型
 │   └── document_model.py
-├── services/            # Servicios (lógica de negocio)
+├── services/            # 服务（业务逻辑）
 │   ├── configuration_service.py
 │   └── document_service.py
-├── views/               # Vistas (interfaz gráfica)
+├── views/               # 视图（GUI 界面）
 │   └── main_view.py
-├── widgets/             # Widgets personalizados
+├── widgets/             # 自定义控件
 │   ├── document_preview_widget.py
 │   └── statistics_widget.py
-├── utils/               # Utilidades y constantes
+├── utils/               # 工具与常量
 │   ├── constants.py
 │   └── exceptions.py
-├── main.py              # Punto de entrada principal
-└── run_gui.py           # Script de lanzamiento
+├── main.py              # 主入口
+└── run_gui.py           # 启动脚本
 ```
 
-## 🔧 Características
+## 🔧 功能特性
 
-### ✅ Funcionalidades Principales
-- **Procesamiento de documentos**: Soporta múltiples formatos (PDF, DOCX, TXT, etc.)
-- **Chunking semántico avanzado**: Usa elementos estructurales para mejor calidad
-- **Cache de embeddings**: Optimización de rendimiento con cache en memoria y disco
-- **Almacenamiento vectorial**: Integración completa con ChromaDB
-- **Interfaz moderna**: GUI intuitiva con Tkinter
+### ✅ 核心功能
+- 文档处理：支持多种格式（PDF、DOCX、TXT 等）
+- 高级语义分块：利用结构化元素提升质量
+- 嵌入缓存：内存+磁盘缓存优化性能
+- 向量存储：与 ChromaDB 深度集成
+- 现代界面：基于 Tkinter 的直观 GUI
 
-### ✅ Funcionalidades Avanzadas
-- **Previsualización de documentos**: Widget para ver contenido antes de almacenar
-- **Estadísticas detalladas**: Información sobre procesamiento, cache y base de datos
-- **Filtros y búsqueda**: Encuentra documentos rápidamente
-- **Exportar/Importar**: Guarda y carga listas de documentos
-- **Procesamiento por lotes**: Manejo eficiente de grandes volúmenes
+### ✅ 进阶功能
+- 文档预览：存储前先看内容
+- 详细统计：处理、缓存、数据库状态
+- 筛选与搜索：快速定位文档
+- 导入/导出：保存与加载文档清单
+- 批处理：高效处理大批量数据
 
-## 🚀 Instalación y Uso
+## 🚀 安装与使用
 
-### Requisitos
+### 依赖
 - Python 3.8+
-- Dependencias de `rag_core.py`
-- Tkinter (incluido con Python)
+- `rag_core.py` 的依赖
+- Tkinter（随 Python 提供）
 
-### Instalación
+### 安装
 ```bash
-# Clonar el repositorio
 git clone <repository-url>
 cd MCP_RAG
-
-# Instalar dependencias
 pip install -r requirements.txt
-
-# Ejecutar la GUI
 python bulk_ingest_GUI/run_gui.py
 ```
 
-### Uso Básico
-1. **Seleccionar directorio**: Haz clic en "Examinar" y selecciona la carpeta con documentos
-2. **Procesar**: Haz clic en "Procesar" para extraer contenido de los documentos
-3. **Revisar**: Usa los filtros y previsualización para revisar los documentos
-4. **Seleccionar**: Marca los documentos que quieres almacenar
-5. **Almacenar**: Haz clic en "Almacenar seleccionados" para guardar en la base vectorial
+### 基本用法
+1) 选择目录：点击“浏览”并选中文档文件夹
+2) 处理：点击“处理”提取内容
+3) 复审：用筛选与预览检查文档
+4) 选择：勾选准备存储的文档
+5) 存储：点击“存储所选”写入向量库
 
-## 🔄 Flujo de Datos
+## 🔄 数据流
 
 ```
-1. Usuario selecciona directorio
+1. 用户选择目录
    ↓
-2. MainView llama a MainController
+2. MainView 调用 MainController
    ↓
-3. MainController usa DocumentService
+3. MainController 使用 DocumentService
    ↓
-4. DocumentService llama a rag_core.py
+4. DocumentService 调用 rag_core.py
    ↓
-5. rag_core.py procesa con Unstructured
+5. rag_core.py 通过 Unstructured 进行处理
    ↓
-6. DocumentService almacena con ChromaDB
+6. DocumentService 使用 ChromaDB 存储
    ↓
-7. UI se actualiza con resultados
+7. UI 更新显示结果
 ```
 
-## 🎯 Integración con rag_core.py
+## 🎯 与 rag_core.py 的集成
 
-La aplicación utiliza `rag_core.py` como núcleo, aprovechando todas sus optimizaciones:
+应用以 `rag_core.py` 为核心，复用其优化能力：
 
-- **`load_document_with_elements()`**: Carga documentos con elementos estructurales
-- **`add_text_to_knowledge_base_enhanced()`**: Almacenamiento con chunking semántico
-- **`get_vector_store()`**: Configuración optimizada de ChromaDB
-- **`get_cache_stats()`**: Estadísticas del cache de embeddings
-- **`clear_embedding_cache()`**: Gestión del cache
+- `load_document_with_elements()`：按结构元素加载文档
+- `add_text_to_knowledge_base_enhanced()`：语义分块后的存储
+- `get_vector_store()`：优化配置的 ChromaDB
+- `get_cache_stats()`：嵌入缓存统计
+- `clear_embedding_cache()`：缓存管理
 
-## 📊 Widgets Disponibles
+## � 可用控件
 
 ### DocumentPreviewWidget
-- Muestra contenido de documentos con formato
-- Estadísticas de tamaño y palabras
-- Botón para copiar contenido
-- Scroll automático para documentos largos
+- 以格式化方式展示文档内容
+- 提供大小与词数统计
+- 一键复制内容
+- 长文档自动滚动
 
 ### StatisticsWidget
-- **Pestaña Procesamiento**: Estadísticas de documentos procesados
-- **Pestaña Cache**: Información del cache de embeddings
-- **Pestaña Base de Datos**: Estado de la base vectorial
-- Botones para actualizar y optimizar
+- 处理统计页：处理结果统计
+- 缓存统计页：嵌入缓存信息
+- 数据库页：向量库状态
+- 提供刷新与优化按钮
 
-## 🔧 Configuración
+## 🔧 配置
 
-La aplicación usa `ConfigurationService` para gestionar configuraciones:
+通过 `ConfigurationService` 管理配置：
 
 ```python
-# Ejemplo de configuración
 config = {
     'ui.window_size': '1200x800',
     'processing.max_preview_length': 2000,
@@ -128,53 +122,51 @@ config = {
 }
 ```
 
-## 🐛 Solución de Problemas
+## � 故障排查
 
-### Error de importación
+### 导入错误
 ```bash
-# Asegúrate de estar en el directorio correcto
 cd MCP_RAG
 python bulk_ingest_GUI/run_gui.py
 ```
 
-### Error de dependencias
+### 依赖错误
 ```bash
-# Instalar dependencias faltantes
 pip install -r requirements.txt
 ```
 
-### Error de permisos
+### 权限错误
 ```bash
-# En Windows, ejecutar como administrador si es necesario
-# En Linux/Mac, verificar permisos de escritura
+# Windows：必要时以管理员运行
+# Linux/Mac：检查写权限
 ```
 
-## 🚀 Próximas Mejoras
+## 🚀 后续规划
 
-- [ ] Soporte para más formatos de archivo
-- [ ] Interfaz de consulta RAG integrada
-- [ ] Configuración avanzada de chunking
-- [ ] Exportación a diferentes formatos
-- [ ] Integración con APIs externas
-- [ ] Modo oscuro/claro
-- [ ] Atajos de teclado
-- [ ] Logs detallados en archivo
+- [ ] 更多文件格式支持
+- [ ] 集成 RAG 查询界面
+- [ ] 高级分块配置
+- [ ] 导出多种格式
+- [ ] 对接外部 API
+- [ ] 深/浅色主题
+- [ ] 快捷键支持
+- [ ] 详细日志文件
 
-## 📝 Contribuir
+## 📝 贡献指南
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+1) Fork 项目
+2) 新建分支：`git checkout -b feature/AmazingFeature`
+3) 提交修改：`git commit -m 'Add some AmazingFeature'`
+4) 推送分支：`git push origin feature/AmazingFeature`
+5) 发起 Pull Request
 
-## 📄 Licencia
+## 📄 许可证
 
-Este proyecto está bajo la misma licencia que el proyecto principal.
+与主项目相同的许可证。
 
-## 🤝 Soporte
+## 🤝 支持
 
-Para soporte y preguntas:
-- Revisa la documentación de `rag_core.py`
-- Abre un issue en el repositorio
-- Consulta los logs de la aplicación para más detalles 
+遇到问题请：
+- 查阅 `rag_core.py` 文档
+- 在仓库提交 issue
+- 查看应用日志获取更多细节 
