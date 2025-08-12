@@ -1,44 +1,44 @@
 """
-Archivo principal de la aplicación Bulk Ingest GUI
-Lanza la aplicación y conecta todos los componentes
+主程序文件 - 批量导入 GUI
+启动应用程序并连接所有组件
 """
 
 import sys
 import os
 from pathlib import Path
 
-# Configurar sys.path para importaciones absolutas
+# 配置 sys.path 以支持绝对导入
 current_dir = Path(__file__).parent.resolve()
 project_root = current_dir.parent.resolve()
 sys.path.insert(0, str(current_dir))
 sys.path.insert(0, str(project_root))
 
-# Importar constantes necesarias ANTES de setup_environment
+# 导入常量，确保在 setup_environment 之前
 from gui_utils.constants import APP_NAME, VERSION
 
 def setup_environment():
-    """Configura el entorno de la aplicación"""
-    # Usar directorios del servidor MCP organizado
+    """配置应用程序环境"""
+    # 使用 MCP 服务器的目录
     mcp_server_dir = project_root / "mcp_server_organized"
     
-    # Asegurar que los directorios del servidor MCP existan usando su función
+    # 确保 MCP 服务器目录存在
     try:
-        # Importar la configuración del servidor MCP
+        # 导入 MCP 服务器配置
         from utils.config import Config
         
-        # Asegurar que los directorios existan
+        # 确保目录存在
         Config.ensure_directories()
         
-        print(f"[bold green]✅ Directorios del servidor MCP verificados:[/bold green]")
-        print(f"[bold green]  📁 Documents: {Config.CONVERTED_DOCS_DIR}[/bold green]")
-        print(f"[bold green]  📁 Vector Store: {Config.VECTOR_STORE_DIR}[/bold green]")
-        print(f"[bold green]  📁 Embedding Cache: {Config.EMBEDDING_CACHE_DIR}[/bold green]")
+        print(f"[bold green]✅ MCP 服务器目录已验证:[/bold green]")
+        print(f"[bold green]  📁 文档目录: {Config.CONVERTED_DOCS_DIR}[/bold green]")
+        print(f"[bold green]  📁 向量存储: {Config.VECTOR_STORE_DIR}[/bold green]")
+        print(f"[bold green]  📁 嵌入缓存: {Config.EMBEDDING_CACHE_DIR}[/bold green]")
         
     except ImportError as e:
-        print(f"[bold yellow]⚠️ No se pudo importar la configuración del servidor MCP: {e}[/bold yellow]")
-        print(f"[bold yellow]  Creando directorios manualmente...[/bold yellow]")
+        print(f"[bold yellow]⚠️ 无法导入 MCP 服务器配置: {e}[/bold yellow]")
+        print(f"[bold yellow]  手动创建目录...[/bold yellow]")
         
-        # Fallback: crear directorios manualmente
+        # 备用方案：手动创建目录
         server_directories = {
             "embedding_cache": mcp_server_dir / "embedding_cache",
             "vector_store": mcp_server_dir / "data" / "vector_store",
@@ -47,12 +47,12 @@ def setup_environment():
         
         for name, path in server_directories.items():
             path.mkdir(parents=True, exist_ok=True)
-            print(f"[bold green]✅ Directorio {name}: {path}[/bold green]")
+            print(f"[bold green]✅ 目录 {name}: {path}[/bold green]")
     
-    print(f"[bold green]✅ Entorno configurado para {APP_NAME} v{VERSION}[/bold green]")
-    print(f"[bold blue]📁 Usando directorios del servidor MCP: {mcp_server_dir}[/bold blue]")
+    print(f"[bold green]✅ {APP_NAME} v{VERSION} 环境已配置[/bold green]")
+    print(f"[bold blue]📁 使用 MCP 服务器目录: {mcp_server_dir}[/bold blue]")
 
-# Configurar el entorno ANTES de importar cualquier módulo que use rag_core
+# 在导入任何使用 rag_core 的模块之前配置环境
 setup_environment()
 
 import tkinter as tk
@@ -61,46 +61,46 @@ from controllers.main_controller import MainController
 from views.main_view import MainView
 from gui_utils.exceptions import BulkIngestError
 
-# Importar Rich para mejorar la salida en consola
+# 导入 Rich 以增强控制台输出
 from rich import print
 from rich.panel import Panel
 
 
 def create_application():
-    """Crea y configura la aplicación principal"""
+    """创建并配置主应用程序"""
     try:
-        # Crear ventana principal
+        # 创建主窗口
         root = tk.Tk()
         
-        # Configurar la ventana
+        # 配置窗口
         root.title(f"{APP_NAME} v{VERSION}")
         root.geometry("1200x800")
         root.minsize(1000, 700)
         
-        # Configurar icono si existe
+        # 如果图标存在，设置图标
         icon_path = current_dir / "assets" / "icon.ico"
         if icon_path.exists():
             try:
                 root.iconbitmap(icon_path)
             except:
-                pass  # Ignorar si no se puede cargar el icono
+                pass  # 如果无法加载图标则忽略
         
-        # Crear servicios
+        # 创建服务
         config_service = ConfigurationService()
         
-        # Crear controlador
+        # 创建控制器
         controller = MainController(root, config_service)
         
-        # Crear vista principal
+        # 创建主视图
         main_view = MainView(root, controller)
         
-        # Configurar cierre de ventana
+        # 配置窗口关闭事件
         def on_closing():
             try:
                 controller.cleanup()
                 root.destroy()
             except Exception as e:
-                print(Panel(f"[bold red]Error durante el cierre: {e}[/bold red]", title="[red]Error[/red]"))
+                print(Panel(f"[bold red]关闭时发生错误: {e}[/bold red]", title="[red]错误[/red]"))
                 root.destroy()
         
         root.protocol("WM_DELETE_WINDOW", on_closing)
@@ -108,39 +108,39 @@ def create_application():
         return root, controller, main_view
         
     except Exception as e:
-        print(Panel(f"[bold red]❌ Error creando la aplicación: {e}[/bold red]", title="[red]Error[/red]"))
+        print(Panel(f"[bold red]❌ 创建应用程序时发生错误: {e}[/bold red]", title="[red]错误[/red]"))
         raise
 
 
 def main():
-    """Función principal que lanza la aplicación"""
+    """主函数，启动应用程序"""
     try:
-        print(Panel(f"[bold blue]🚀 Iniciando {APP_NAME} v{VERSION}[/bold blue]", title="[cyan]Inicio[/cyan]"))
+        print(Panel(f"[bold blue]🚀 启动 {APP_NAME} v{VERSION}[/bold blue]", title="[cyan]启动[/cyan]"))
         print("[cyan]" + "=" * 50 + "[/cyan]")
         
-        # Crear aplicación
+        # 创建应用程序
         root, controller, main_view = create_application()
         
-        print("[bold green]✅ Aplicación creada exitosamente[/bold green]")
-        print("[bold magenta]📋 Funcionalidades disponibles:[/bold magenta]")
-        print("[yellow]   • Procesamiento de documentos con rag_core.py[/yellow]")
-        print("[yellow]   • Chunking semántico avanzado[/yellow]")
-        print("[yellow]   • Cache de embeddings optimizado[/yellow]")
-        print("[yellow]   • Almacenamiento en base vectorial[/yellow]")
-        print("[yellow]   • Exportar/importar listas de documentos[/yellow]")
-        print("[yellow]   • Filtros y búsqueda[/yellow]")
+        print("[bold green]✅ 应用程序创建成功[/bold green]")
+        print("[bold magenta]📋 可用功能:[/bold magenta]")
+        print("[yellow]   • 使用 rag_core.py 处理文档[/yellow]")
+        print("[yellow]   • 高级语义分块[/yellow]")
+        print("[yellow]   • 优化的嵌入缓存[/yellow]")
+        print("[yellow]   • 向量存储[/yellow]")
+        print("[yellow]   • 导入/导出文档列表[/yellow]")
+        print("[yellow]   • 过滤与搜索[/yellow]")
         print("[cyan]" + "=" * 50 + "[/cyan]")
         
-        # Iniciar loop principal
+        # 启动主循环
         root.mainloop()
         
     except Exception as e:
-        print(Panel(f"[bold red]💥 Error fatal en la aplicación: {e}[/bold red]", title="[red]Error Fatal[/red]"))
-        print("[red]Detalles del error:[/red]")
+        print(Panel(f"[bold red]💥 应用程序发生致命错误: {e}[/bold red]", title="[red]致命错误[/red]"))
+        print("[red]错误详情:[/red]")
         import traceback
         traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

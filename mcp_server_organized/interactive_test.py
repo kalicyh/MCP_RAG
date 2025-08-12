@@ -1,73 +1,72 @@
 #!/usr/bin/env python3
 """
-Test Interactivo del Servidor MCP
+MCP 服务器交互式测试
 =================================
 
-Este script permite probar interactivamente las herramientas del servidor MCP
-desde tu editor.
+此脚本允许从编辑器交互式测试 MCP 服务器的工具。
 """
 
 import sys
 import os
 
-# Añadir el directorio src al path
+# 将 src 目录添加到路径
 sys.path.insert(0, 'src')
 
 def interactive_test():
-    """Test interactivo del servidor MCP."""
+    """MCP 服务器的交互式测试。"""
     
-    print("🚀 **TEST INTERACTIVO DEL SERVIDOR MCP**")
+    print("🚀 **MCP 服务器交互式测试**")
     print("=" * 50)
     
     try:
-        # Importar el servidor
+        # 导入服务器
         from server import mcp
-        print("✅ Servidor MCP cargado correctamente")
+        print("✅ MCP 服务器加载成功")
         
         while True:
             print("\n" + "="*50)
-            print("OPCIONES DISPONIBLES:")
-            print("1. Añadir texto (learn_text)")
-            print("2. Ver estadísticas (get_knowledge_base_stats)")
-            print("3. Hacer pregunta (ask_rag)")
-            print("4. Ver cache de embeddings (get_embedding_cache_stats)")
-            print("5. Limpiar cache (clear_embedding_cache_tool)")
-            print("6. Salir")
+            print("可用选项:")
+            print("1. 添加文本 (learn_text)")
+            print("2. 查看统计信息 (get_knowledge_base_stats)")
+            print("3. 提问 (ask_rag)")
+            print("4. 查看嵌入缓存 (get_embedding_cache_stats)")
+            print("5. 清理缓存 (clear_embedding_cache_tool)")
+            print("6. 退出")
             print("="*50)
             
-            choice = input("\nSelecciona una opción (1-6): ").strip()
+            choice = input("\n请选择一个选项 (1-6): ").strip()
             
             if choice == "1":
-                text = input("Ingresa el texto a añadir: ")
+                text = input("请输入要添加的文本: ")
                 result = mcp.learn_text(text)
-                print(f"\nResultado: {result}")
+                print(f"\n结果: {result}")
                 
             elif choice == "2":
                 stats = mcp.get_knowledge_base_stats()
-                print(f"\nEstadísticas:\n{stats}")
+                print(f"\n统计信息:\n{stats}")
                 
             elif choice == "3":
-                question = input("Ingresa tu pregunta: ")
+                question = input("请输入您的问题: ")
                 answer = mcp.ask_rag(question)
-                print(f"\nRespuesta:\n{answer}")
+                print(f"\n回答:\n{answer}")
                 
             elif choice == "4":
                 cache_stats = mcp.get_embedding_cache_stats()
-                print(f"\nEstadísticas del cache:\n{cache_stats}")
+                print(f"\n缓存统计信息:\n{cache_stats}")
                 
             elif choice == "5":
                 result = mcp.clear_embedding_cache_tool()
-                print(f"\nResultado: {result}")
+                print(f"\n结果: {result}")
                 
             elif choice == "6":
-                print("👋 ¡Hasta luego!")
+                print("👋 再见！")
                 break
                 
             else:
-                print("❌ Opción no válida. Intenta de nuevo.")
+                print("❌ 无效选项。请重试。")
                 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ 错误: {e}")
 
 if __name__ == "__main__":
-    interactive_test() 
+    interactive_test()

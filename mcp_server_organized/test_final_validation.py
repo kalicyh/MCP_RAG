@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
 """
-Test Final de Validación - Servidor MCP Organizado
+最终验证测试 - MCP 组织化服务器
 ==================================================
 
-Este script realiza una prueba final para verificar que todos los errores
-se han solucionado y el sistema funciona correctamente.
+此脚本执行最终测试以验证所有错误是否已解决，
+并确保系统正常运行。
 """
 
 import sys
 import os
 
-# Añadir el directorio src al path
+# 将 src 目录添加到路径
 sys.path.insert(0, 'src')
 
 def test_final_validation():
-    """Realiza la prueba final de validación."""
+    """执行最终验证测试。"""
     
-    print("🔍 **PRUEBA FINAL DE VALIDACIÓN**")
+    print("🔍 **最终验证测试**")
     print("=" * 50)
     
     try:
-        # 1. Probar importación de modelos
-        print("1. Probando importación de modelos...")
+        # 1. 测试模型导入
+        print("1. 测试模型导入...")
         from models.metadata_model import MetadataModel
         from models.document_model import DocumentModel
-        print("   ✅ Modelos importados correctamente")
+        print("   ✅ 模型导入成功")
         
-        # 2. Probar creación de MetadataModel con todos los campos
-        print("2. Probando MetadataModel con campos completos...")
+        # 2. 测试带有完整字段的 MetadataModel 创建
+        print("2. 测试带有完整字段的 MetadataModel...")
         metadata = MetadataModel(
             source="test",
             input_type="text",
@@ -36,40 +36,40 @@ def test_final_validation():
             structural_info_avg_element_length=150.5,
             converted_to_md=True
         )
-        print("   ✅ MetadataModel creado sin errores")
+        print("   ✅ MetadataModel 创建成功")
         
-        # 3. Probar get_knowledge_base_stats
-        print("3. Probando get_knowledge_base_stats...")
+        # 3. 测试 get_knowledge_base_stats
+        print("3. 测试 get_knowledge_base_stats...")
         from tools.utility_tools import get_knowledge_base_stats
         result = get_knowledge_base_stats()
         
-        if "❌ Error" in result:
-            print(f"   ❌ Error en get_knowledge_base_stats: {result}")
+        if "❌ 错误" in result:
+            print(f"   ❌ get_knowledge_base_stats 出现错误: {result}")
             return False
         else:
-            print("   ✅ get_knowledge_base_stats funcionando correctamente")
+            print("   ✅ get_knowledge_base_stats 正常工作")
         
-        # 4. Probar servidor completo
-        print("4. Probando servidor completo...")
+        # 4. 测试完整服务器
+        print("4. 测试完整服务器...")
         from server import mcp
-        print("   ✅ Servidor importado correctamente")
+        print("   ✅ 服务器导入成功")
         
-        # 5. Verificar que no hay warnings de MetadataModel
-        print("5. Verificando ausencia de warnings...")
-        print("   ✅ No se detectaron warnings de MetadataModel")
+        # 5. 验证 MetadataModel 无警告
+        print("5. 验证无警告...")
+        print("   ✅ 未检测到 MetadataModel 的警告")
         
-        print("\n🎉 **TODAS LAS PRUEBAS PASARON EXITOSAMENTE**")
-        print("✅ Sistema completamente operativo")
-        print("✅ Modelos estructurados funcionando")
-        print("✅ Configuración centralizada integrada")
-        print("✅ Herramientas MCP disponibles")
+        print("\n🎉 **所有测试均通过**")
+        print("✅ 系统完全正常运行")
+        print("✅ 结构化模型正常工作")
+        print("✅ 集中配置已集成")
+        print("✅ MCP 工具可用")
         
         return True
         
     except Exception as e:
-        print(f"❌ Error en prueba final: {e}")
+        print(f"❌ 最终测试出错: {e}")
         return False
 
 if __name__ == "__main__":
     success = test_final_validation()
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)

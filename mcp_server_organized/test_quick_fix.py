@@ -1,43 +1,43 @@
 #!/usr/bin/env python3
 """
-Test rápido para verificar que el fix de ChatOllama funciona
+快速测试以验证 ChatOllama 的修复是否正常工作
 """
 
 import sys
 sys.path.insert(0, 'src')
 
 try:
-    print("🔍 Probando importaciones...")
+    print("🔍 测试导入...")
     
-    # Probar importación de configuración
+    # 测试配置的导入
     from utils.config import Config
-    print("✅ Config importado correctamente")
+    print("✅ Config 导入成功")
     
-    # Probar importación de rag_core
+    # 测试 rag_core 的导入
     from rag_core import get_vector_store, get_qa_chain
-    print("✅ rag_core importado correctamente")
+    print("✅ rag_core 导入成功")
     
-    # Probar que get_vector_store funciona
-    print("🔧 Probando get_vector_store...")
+    # 测试 get_vector_store 是否正常工作
+    print("🔧 测试 get_vector_store...")
     vector_store = get_vector_store()
-    print("✅ get_vector_store funciona correctamente")
+    print("✅ get_vector_store 正常工作")
     
-    # Probar que get_qa_chain funciona (sin crear el modelo real)
-    print("🔧 Probando get_qa_chain...")
+    # 测试 get_qa_chain 是否正常工作（不创建实际模型）
+    print("🔧 测试 get_qa_chain...")
     try:
         qa_chain = get_qa_chain(vector_store)
-        print("✅ get_qa_chain funciona correctamente")
+        print("✅ get_qa_chain 正常工作")
     except Exception as e:
         if "Ollama" in str(e) or "llama3" in str(e):
-            print("⚠️ get_qa_chain funciona pero requiere Ollama (esto es normal)")
+            print("⚠️ get_qa_chain 正常工作但需要 Ollama（这是正常的）")
         else:
-            print(f"❌ Error en get_qa_chain: {e}")
+            print(f"❌ get_qa_chain 出现错误: {e}")
     
-    print("\n🎉 ¡Fix aplicado correctamente!")
-    print("✅ ChatOllama importado correctamente")
-    print("✅ Sistema listo para funcionar")
+    print("\n🎉 修复已成功应用！")
+    print("✅ ChatOllama 导入成功")
+    print("✅ 系统已准备好运行")
     
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"❌ 错误: {e}")
     import traceback
-    traceback.print_exc() 
+    traceback.print_exc()

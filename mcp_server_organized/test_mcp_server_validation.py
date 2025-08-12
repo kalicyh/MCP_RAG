@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Script de validación del servidor MCP organizado.
-Prueba todas las funcionalidades del sistema incluyendo:
-- Arquitectura modular de herramientas
-- Procesamiento avanzado de documentos
-- Cache de embeddings y optimización
-- Herramientas MCP completas
-- Manejo de errores y recuperación
-- Estado del servidor organizado
+MCP 组织化服务器验证脚本。
+测试系统的所有功能，包括：
+- 工具的模块化架构
+- 文档的高级处理
+- 嵌入缓存与优化
+- 完整的 MCP 工具
+- 错误处理与恢复
+- 组织化服务器的状态
 """
 
 import os
@@ -18,7 +18,7 @@ import requests
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 
-# Importar Rich para mejorar la salida en consola
+# 导入 Rich 以增强控制台输出
 from rich import print as rich_print
 from rich.console import Console
 from rich.table import Table
@@ -26,30 +26,30 @@ from rich.panel import Panel
 
 console = Console()
 
-# Añadir el directorio src al path para importar nuestros módulos
+# 将 src 目录添加到路径以导入我们的模块
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
 
 def print_header(title):
-    console.print(Panel(f"[bold blue]{title}[/bold blue]", title="[cyan]Prueba[/cyan]"))
+    console.print(Panel(f"[bold blue]{title}[/bold blue]", title="[cyan]测试[/cyan]"))
 
 def print_section(title):
     console.print(f"\n[bold magenta]{title}[/bold magenta]")
-    console.print("[magenta]" + "-" * 40 + "[/magenta]")
+    console.print("[magenta]" + "-" * 40 + "[magenta]")
 
 def print_result(test_name, success, details=""):
-    status = "[bold green]✅ PASÓ[/bold green]" if success else "[bold red]❌ FALLÓ[/bold red]"
+    status = "[bold green]✅ 通过[/bold green]" if success else "[bold red]❌ 失败[/bold red]"
     console.print(f"{status} [bold]{test_name}[/bold]")
     if details:
         console.print(f"   [yellow]{details}[/yellow]")
 
 def test_modular_architecture():
-    """Prueba la arquitectura modular del servidor MCP."""
-    print_header("ARQUITECTURA MODULAR")
+    """测试 MCP 服务器的模块化架构。"""
+    print_header("模块化架构")
     
     try:
-        print_section("1. Verificación de Módulos")
+        print_section("1. 模块验证")
         
-        # Verificar que los módulos existen
+        # 验证模块是否存在
         modules_to_check = [
             "tools.document_tools",
             "tools.search_tools", 
@@ -60,32 +60,32 @@ def test_modular_architecture():
         for module_name in modules_to_check:
             try:
                 __import__(module_name)
-                print(f"✅ Módulo {module_name} importado correctamente")
+                print(f"✅ 模块 {module_name} 导入成功")
             except ImportError as e:
-                print(f"❌ Error importando {module_name}: {e}")
-                return False, f"Error en módulo {module_name}"
+                print(f"❌ 导入模块 {module_name} 时出错: {e}")
+                return False, f"模块 {module_name} 出错"
         
-        print_section("2. Verificación de Funciones")
+        print_section("2. 函数验证")
         
-        # Verificar funciones en cada módulo
+        # 验证每个模块中的函数
         from tools.document_tools import learn_text, learn_document, learn_from_url
         from tools.search_tools import ask_rag, ask_rag_filtered
         from tools.utility_tools import get_knowledge_base_stats, get_embedding_cache_stats
         
-        print("✅ Funciones de document_tools disponibles")
-        print("✅ Funciones de search_tools disponibles")
-        print("✅ Funciones de utility_tools disponibles")
+        print("✅ document_tools 的函数可用")
+        print("✅ search_tools 的函数可用")
+        print("✅ utility_tools 的函数可用")
         
-        print_section("3. Verificación de Configuración")
+        print_section("3. 配置验证")
         
-        # Verificar función de configuración
+        # 验证配置函数
         from tools import configure_rag_state, ALL_TOOLS, TOOLS_BY_NAME
         
-        print(f"✅ Función configure_rag_state disponible")
-        print(f"✅ ALL_TOOLS contiene {len(ALL_TOOLS)} herramientas")
-        print(f"✅ TOOLS_BY_NAME contiene {len(TOOLS_BY_NAME)} herramientas")
+        print(f"✅ 配置函数 configure_rag_state 可用")
+        print(f"✅ ALL_TOOLS 包含 {len(ALL_TOOLS)} 个工具")
+        print(f"✅ TOOLS_BY_NAME 包含 {len(TOOLS_BY_NAME)} 个工具")
         
-        # Verificar que todas las herramientas están en la lista
+        # 验证所有工具是否在列表中
         expected_tools = [
             "learn_text", "learn_document", "learn_from_url",
             "ask_rag", "ask_rag_filtered",
@@ -96,16 +96,16 @@ def test_modular_architecture():
         
         for tool in expected_tools:
             if tool in TOOLS_BY_NAME:
-                print(f"✅ Herramienta {tool} registrada")
+                print(f"✅ 工具 {tool} 已注册")
             else:
-                print(f"❌ Herramienta {tool} no encontrada")
-                return False, f"Herramienta {tool} faltante"
+                print(f"❌ 工具 {tool} 未找到")
+                return False, f"工具 {tool} 缺失"
         
-        details = f"Arquitectura modular verificada: {len(ALL_TOOLS)} herramientas organizadas"
+        details = f"模块化架构验证成功: {len(ALL_TOOLS)} 个工具已组织"
         return True, details
         
     except Exception as e:
-        error_msg = f"Error en arquitectura modular: {str(e)}"
+        error_msg = f"模块化架构出错: {str(e)}"
         print(f"❌ {error_msg}")
         return False, error_msg
 
@@ -854,4 +854,4 @@ def main():
     print("   • Revisar logs para mejoras continuas")
 
 if __name__ == "__main__":
-    main() 
+    main()

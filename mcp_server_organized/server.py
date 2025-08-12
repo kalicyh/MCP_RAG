@@ -1,10 +1,10 @@
 """
-Servidor MCP Organizado - Main Server
+MCP 服务器 - 主服务器
 =====================================
 
-Este es el servidor principal MCP con arquitectura modular.
-Mantiene toda la funcionalidad existente pero con mejor organización.
-Ahora incluye soporte para modelos estructurados (DocumentModel y MetadataModel).
+这是主要的 MCP 服务器，采用模块化架构。
+保留了所有现有功能，并进行了更好的组织。
+现在支持结构化模型（DocumentModel 和 MetadataModel）。
 """
 
 import os
@@ -15,14 +15,14 @@ from mcp.server.fastmcp import FastMCP
 from markitdown import MarkItDown
 from urllib.parse import urlparse
 
-# Añadir el directorio src al path para importaciones
+# 添加 src 目录到路径以支持导入
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
 
-# Importaciones de utilidades
+# 导入工具
 from utils.logger import log, log_mcp_server
 from utils.config import Config
 
-# Importaciones del núcleo RAG (mantenemos la funcionalidad existente)
+# 导入 RAG 核心功能（保留现有功能）
 from rag_core import (
     add_text_to_knowledge_base,
     add_text_to_knowledge_base_enhanced,
@@ -42,96 +42,95 @@ from rag_core import (
     load_document_with_elements
 )
 
-# Importar modelos estructurados
+# 导入结构化模型
 try:
     from models import DocumentModel, MetadataModel
     MODELS_AVAILABLE = True
-    log_mcp_server("✅ Modelos estructurados (DocumentModel, MetadataModel) disponibles")
+    log_mcp_server("✅ 结构化模型 (DocumentModel, MetadataModel) 可用")
 except ImportError as e:
     MODELS_AVAILABLE = False
-    log_mcp_server(f"⚠️ Modelos estructurados no disponibles: {e}")
+    log_mcp_server(f"⚠️ 结构化模型不可用: {e}")
 
-# --- Inicialización del Servidor y Configuración ---
+# --- 初始化服务器和配置 ---
 load_dotenv()
 mcp = FastMCP(Config.SERVER_NAME)
 
-# El estado ahora incluye información sobre modelos estructurados
+# 状态现在包括有关结构化模型的信息
 rag_state = {
     "models_available": MODELS_AVAILABLE,
     "structured_processing": MODELS_AVAILABLE,
-    "document_models": [],  # Lista de DocumentModel procesados
-    "metadata_cache": {}    # Cache de MetadataModel por documento
+    "document_models": [],  # 已处理的 DocumentModel 列表
+    "metadata_cache": {}    # 每个文档的 MetadataModel 缓存
 }
 
-# Inicializamos el conversor de MarkItDown una sola vez (para URLs)
+# 初始化 MarkItDown 转换器（用于 URL）
 md_converter = MarkItDown()
 
 def warm_up_rag_system():
     """
-    Precarga los componentes pesados del sistema RAG para evitar demoras
-    y conflictos en la primera llamada de una herramienta.
+    预加载 RAG 系统的重型组件，以避免首次调用工具时的延迟和冲突。
     """
     if "warmed_up" in rag_state:
         return
     
-    log_mcp_server("Calentando sistema RAG...")
-    log_mcp_server("Precargando modelo de embedding en memoria...")
+    log_mcp_server("正在预热 RAG 系统...")
+    log_mcp_server("将嵌入模型预加载到内存中...")
     
-    # Esta llamada fuerza la carga del modelo de embedding
+    # 此调用强制加载嵌入模型
     get_vector_store()
     
     rag_state["warmed_up"] = True
-    log_mcp_server("Sistema RAG caliente y listo.")
+    log_mcp_server("RAG 系统已预热并准备就绪。")
 
 def ensure_converted_docs_directory():
-    """Asegura que existe la carpeta para los documentos convertidos."""
+    """确保存在用于存储转换文档的文件夹。"""
     Config.ensure_directories()
     if not os.path.exists(Config.CONVERTED_DOCS_DIR):
         os.makedirs(Config.CONVERTED_DOCS_DIR)
-        log_mcp_server(f"Creada carpeta para documentos convertidos: {Config.CONVERTED_DOCS_DIR}")
+        log_mcp_server(f"已创建转换文档文件夹: {Config.CONVERTED_DOCS_DIR}")
 
 def save_processed_copy(file_path: str, processed_content: str, processing_method: str = "unstructured") -> str:
     """
-    Guarda una copia del documento procesado en formato Markdown.
-    
-    Args:
-        file_path: Ruta original del archivo
-        processed_content: Contenido procesado
-        processing_method: Método de procesamiento usado
-    
-    Returns:
-        Ruta del archivo Markdown guardado
+    保存处理后的文档副本为 Markdown 格式。
+
+    参数：
+        file_path: 原始文件路径
+        processed_content: 处理后的内容
+        processing_method: 使用的处理方法
+
+    返回：
+        保存的 Markdown 文件路径
     """
     ensure_converted_docs_directory()
     
-    # Obtener el nombre del archivo original sin extensión
+    # 获取原始文件名（无扩展名）
     original_filename = os.path.basename(file_path)
     name_without_ext = os.path.splitext(original_filename)[0]
     
-    # Crear el nombre del archivo Markdown con información del método
+    # 创建包含方法信息的 Markdown 文件名
     md_filename = f"{name_without_ext}_{processing_method}.md"
     md_filepath = os.path.join(Config.CONVERTED_DOCS_DIR, md_filename)
     
-    # Guardar el contenido en el archivo Markdown
+    # 保存内容到 Markdown 文件
     try:
         with open(md_filepath, 'w', encoding='utf-8') as f:
             f.write(processed_content)
-        log_mcp_server(f"Copia procesada guardada en: {md_filepath}")
+        log_mcp_server(f"已保存处理后的副本: {md_filepath}")
         return md_filepath
     except Exception as e:
-        log_mcp_server(f"Advertencia: No se pudo guardar copia procesada: {e}")
+        log_mcp_server(f"警告: 无法保存处理后的副本: {e}")
         return ""
 
 def initialize_rag():
     """
-    Inicializa todos los componentes del sistema RAG usando el núcleo.
+    使用核心初始化 RAG 系统的所有组件。
     """
     if "initialized" in rag_state:
         return
 
-    log_mcp_server("Inicializando sistema RAG vía núcleo...")
+    log_mcp_server("通过核心初始化 RAG 系统...")
     
-    # Obtenemos la base de datos y la cadena QA desde nuestro núcleo
+    # 从核心获取向量存储和 QA 链
     vector_store = get_vector_store()
     qa_chain = get_qa_chain(vector_store)
     
@@ -139,25 +138,25 @@ def initialize_rag():
     rag_state["qa_chain"] = qa_chain
     rag_state["initialized"] = True
     
-    # Información sobre el estado de los modelos
+    # 关于模型状态的信息
     if MODELS_AVAILABLE:
-        log_mcp_server("✅ Sistema RAG inicializado con soporte para modelos estructurados")
-        log_mcp_server("🧠 DocumentModel y MetadataModel disponibles para procesamiento avanzado")
+        log_mcp_server("✅ RAG 系统已初始化，支持结构化模型")
+        log_mcp_server("🧠 DocumentModel 和 MetadataModel 可用于高级处理")
     else:
-        log_mcp_server("⚠️ Sistema RAG inicializado sin modelos estructurados (usando diccionarios)")
+        log_mcp_server("⚠️ RAG 系统已初始化，但未启用结构化模型 (使用字典)")
     
-    log_mcp_server("Sistema RAG inicializado exitosamente.")
+    log_mcp_server("RAG 系统初始化成功。")
 
-# --- Inicialización automática del sistema RAG ---
-log_mcp_server("Inicializando sistema RAG automáticamente...")
+# --- 初始化自动化 RAG 系统 ---
+log_mcp_server("自动初始化 RAG 系统...")
 initialize_rag()
 warm_up_rag_system()
-log_mcp_server("Sistema RAG inicializado y listo para usar.")
+log_mcp_server("RAG 系统已初始化并准备就绪。")
 
-# --- Configurar las herramientas modulares DESPUÉS de inicializar RAG ---
+# --- 在初始化 RAG 后配置模块化工具 ---
 from tools import configure_rag_state, ALL_TOOLS
 
-# Configurar el estado RAG en todos los módulos de herramientas
+# 配置工具模块中的 RAG 状态
 configure_rag_state(
     rag_state=rag_state, 
     md_converter=md_converter,
@@ -169,18 +168,16 @@ configure_rag_state(
 @mcp.tool()
 def learn_text(text: str, source_name: str = "manual_input") -> str:
     """
-    Adds a new piece of text to the RAG knowledge base for future reference.
-    Use this when you want to teach the AI new information that it should remember.
-    
-    Examples of when to use:
-    - Adding facts, definitions, or explanations
-    - Storing important information from conversations
-    - Saving research findings or notes
-    - Adding context about specific topics
+    向 RAG 知识库添加一段新文本以供将来参考。
+    使用场景：
+    - 添加事实、定义或解释
+    - 存储对话中的重要信息
+    - 保存研究发现或笔记
+    - 添加特定主题的上下文
 
-    Args:
-        text: The text content to be learned and stored in the knowledge base.
-        source_name: A descriptive name for the source (e.g., "user_notes", "research_paper", "conversation_summary").
+    参数：
+        text: 要学习并存储在知识库中的文本内容。
+        source_name: 来源的描述性名称（例如 "user_notes", "research_paper", "conversation_summary"）。
     """
     from tools.document_tools import learn_text as learn_text_logic
     return learn_text_logic(text, source_name)
@@ -188,32 +185,33 @@ def learn_text(text: str, source_name: str = "manual_input") -> str:
 @mcp.tool()
 def learn_document(file_path: str) -> str:
     """
-    Reads and processes a document file using advanced Unstructured processing with real semantic chunking, and adds it to the knowledge base.
-    Use this when you want to teach the AI from document files with intelligent processing.
-    
-    Supported file types: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, ODT, ODP, ODS, RTF, 
-    images (PNG, JPG, TIFF, BMP with OCR), emails (EML, MSG), and more than 25 formats total.
-    
-    Advanced features:
-    - REAL semantic chunking based on document structure (titles, sections, lists)
-    - Intelligent document structure preservation (titles, lists, tables)
-    - Automatic noise removal (headers, footers, irrelevant content)
-    - Structural metadata extraction
-    - Robust fallback system for any document type
-    - Enhanced context preservation through semantic boundaries
-    
-    Examples of when to use:
-    - Processing research papers or articles with complex layouts
-    - Adding content from reports or manuals with tables and lists
-    - Importing data from spreadsheets with formatting
-    - Converting presentations to searchable knowledge
-    - Processing scanned documents with OCR
-    
-    The document will be intelligently processed with REAL semantic chunking and stored with enhanced metadata.
-    A copy of the processed document is saved for verification.
+    使用高级非结构化处理技术（包含真正的语义分块）读取和处理文档文件，并将其添加到知识库。
+    当您想通过智能处理文档文件来训练人工智能时，可以使用此功能。
 
-    Args:
-        file_path: The absolute or relative path to the document file to process.
+    支持的文件类型：PDF、DOCX、PPTX、XLSX、TXT、HTML、CSV、JSON、XML、ODT、ODP、ODS、RTF、
+    图像（PNG、JPG、TIFF、带 OCR 的 BMP）、电子邮件（EML、MSG）以及超过 25 种格式。
+
+    高级功能：
+    - 基于文档结构（标题、章节、列表）的 REAL 语义分块
+    - 智能文档结构保存（标题、列表、表格）
+    - 自动去噪（页眉、页脚、无关内容）
+    - 结构化元数据提取
+    - 适用于任何文档类型的强大回退系统
+    - 通过语义边界增强上下文保存
+
+    使用示例：
+    - 处理布局复杂的研究论文或文章
+    - 从包含表格和列表的报告或手册中添加内容
+    - 从带格式的电子表格导入数据
+    - 将演示文稿转换为可搜索的知识
+    - 使用 OCR 处理扫描文档
+
+    文档将通过 REAL 语义分块进行智能处理，并与增强的元数据一起存储。
+
+    将保存处理后文档的副本以供验证。
+
+    参数：
+    file_path：要处理的文档文件的绝对路径或相对路径。
     """
     from tools.document_tools import learn_document as learn_document_logic
     return learn_document_logic(file_path)
@@ -221,27 +219,28 @@ def learn_document(file_path: str) -> str:
 @mcp.tool()
 def learn_from_url(url: str) -> str:
     """
-    Procesa contenido de una URL (página web o video de YouTube) y lo añade a la base de conocimientos.
-    Use this when you want to teach the AI from web content without downloading files.
-    
-    Supported URL types:
-    - Web pages (HTML content)
-    - YouTube videos (transcripts)
-    - Any URL that MarkItDown can process
-    - Direct file downloads (PDF, DOCX, etc.) - will use enhanced Unstructured processing
-    
-    Examples of when to use:
-    - Adding content from news articles or blog posts
-    - Processing YouTube video transcripts
-    - Importing information from web pages
-    - Converting web content to searchable knowledge
-    - Processing documents directly from URLs
-    
-    The content will be intelligently processed and stored with enhanced metadata.
-    A copy of the processed content is saved for verification.
+    处理 URL 内容（网页或 YouTube 视频），并添加知识库。
+    当您想通过网页内容训练 AI 而无需下载文件时，请使用此选项。
 
-    Args:
-        url: The URL of the web page or video to process.
+    支持的 URL 类型：
+    - 网页（HTML 内容）
+    - YouTube 视频（文字记录）
+    - MarkItDown 可以处理的任何 URL
+    - 直接下载文件（PDF、DOCX 等）- 将使用增强的非结构化处理
+
+    使用示例：
+    - 从新闻文章或博客文章添加内容
+    - 处理 YouTube 视频文字记录
+    - 从网页导入信息
+    - 将网页内容转换为可搜索的知识
+    - 直接从 URL 处理文档
+
+    内容将被智能处理并与增强的元数据一起存储。
+
+    处理后的内容副本将保存以供验证。
+
+    参数：
+    url：要处理的网页或视频的 URL。
     """
     from tools.document_tools import learn_from_url as learn_from_url_logic
     return learn_from_url_logic(url)
@@ -249,19 +248,15 @@ def learn_from_url(url: str) -> str:
 @mcp.tool()
 def ask_rag(query: str) -> str:
     """
-    Asks a question to the RAG knowledge base and returns an answer based on the stored information.
-    Use this when you want to get information from the knowledge base that has been previously learned.
+    向 RAG 知识库提问，并根据存储的信息返回答案。
+    使用场景：
+    - 询问特定主题或概念
+    - 请求解释或定义
+    - 从处理过的文档中获取信息
+    - 基于学习的文本或文档获取答案
     
-    Examples of when to use:
-    - Asking about specific topics or concepts
-    - Requesting explanations or definitions
-    - Seeking information from processed documents
-    - Getting answers based on learned text or documents
-    
-    The system will search through all stored information and provide the most relevant answer.
-
-    Args:
-        query: The question or query to ask the knowledge base.
+    参数：
+        query: 要向知识库提出的问题或查询。
     """
     from tools.search_tools import ask_rag as ask_rag_logic
     return ask_rag_logic(query)
@@ -269,23 +264,19 @@ def ask_rag(query: str) -> str:
 @mcp.tool()
 def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, min_titles: int = None, processing_method: str = None) -> str:
     """
-    Asks a question to the RAG knowledge base with specific filters to focus the search.
-    Use this when you want to get information from specific types of documents or documents with certain characteristics.
+    向 RAG 知识库提问，并使用特定过滤器聚焦搜索。
+    使用场景：
+    - 仅搜索 PDF 文档：file_type=".pdf"
+    - 查找包含表格的文档：min_tables=1
+    - 查找结构良好的文档：min_titles=5
+    - 搜索增强处理的文档：processing_method="unstructured_enhanced"
     
-    Examples of when to use:
-    - Searching only in PDF documents: file_type=".pdf"
-    - Looking for documents with tables: min_tables=1
-    - Finding well-structured documents: min_titles=5
-    - Searching in enhanced processed documents: processing_method="unstructured_enhanced"
-    
-    This provides more targeted and relevant results by filtering the search scope.
-
-    Args:
-        query: The question or query to ask the knowledge base.
-        file_type: Filter by file type (e.g., ".pdf", ".docx", ".txt")
-        min_tables: Minimum number of tables the document must have
-        min_titles: Minimum number of titles the document must have
-        processing_method: Filter by processing method (e.g., "unstructured_enhanced", "markitdown")
+    参数：
+        query: 要向知识库提出的问题或查询。
+        file_type: 按文件类型过滤（例如 ".pdf", ".docx", ".txt"）。
+        min_tables: 文档必须包含的最小表格数量。
+        min_titles: 文档必须包含的最小标题数量。
+        processing_method: 按处理方法过滤（例如 "unstructured_enhanced", "markitdown"）。
     """
     from tools.search_tools import ask_rag_filtered as ask_rag_filtered_logic
     return ask_rag_filtered_logic(query, file_type, min_tables, min_titles, processing_method)
@@ -293,19 +284,15 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
 @mcp.tool()
 def get_knowledge_base_stats() -> str:
     """
-    Gets comprehensive statistics about the knowledge base, including document types, processing methods, and structural information.
-    Use this to understand what information is available in your knowledge base and how it was processed.
-    
-    Examples of when to use:
-    - Checking how many documents are in the knowledge base
-    - Understanding the distribution of file types
-    - Seeing which processing methods were used
-    - Analyzing the structural complexity of stored documents
-    
-    This helps you make informed decisions about what to search for and how to filter your queries.
+    获取有关知识库的综合统计信息，包括文档类型、处理方法和结构信息。
+    使用场景：
+    - 检查知识库中有多少文档
+    - 了解文件类型的分布
+    - 查看使用了哪些处理方法
+    - 分析存储文档的结构复杂性
 
-    Returns:
-        Detailed statistics about the knowledge base contents.
+    返回：
+        有关知识库内容的详细统计信息。
     """
     from tools.utility_tools import get_knowledge_base_stats as get_knowledge_base_stats_logic
     return get_knowledge_base_stats_logic()
@@ -313,19 +300,15 @@ def get_knowledge_base_stats() -> str:
 @mcp.tool()
 def get_embedding_cache_stats() -> str:
     """
-    Gets detailed statistics about the embedding cache performance.
-    Use this to monitor cache efficiency and understand how the system is performing.
-    
-    Examples of when to use:
-    - Checking cache hit rates to see if the system is working efficiently
-    - Monitoring memory usage of the cache
-    - Understanding how often embeddings are being reused
-    - Debugging performance issues
-    
-    This helps you optimize the system and understand its behavior.
+    获取有关嵌入缓存性能的详细统计信息。
+    使用场景：
+    - 检查缓存命中率以查看系统是否高效工作
+    - 监控缓存的内存使用情况
+    - 了解嵌入的重用频率
+    - 调试性能问题
 
-    Returns:
-        Detailed statistics about the embedding cache performance.
+    返回：
+        有关嵌入缓存性能的详细统计信息。
     """
     from tools.utility_tools import get_embedding_cache_stats as get_embedding_cache_stats_logic
     return get_embedding_cache_stats_logic()
@@ -333,19 +316,15 @@ def get_embedding_cache_stats() -> str:
 @mcp.tool()
 def clear_embedding_cache_tool() -> str:
     """
-    Clears the embedding cache to free up memory and disk space.
-    Use this when you want to reset the cache or free up resources.
-    
-    Examples of when to use:
-    - Freeing up memory when the system is running low on RAM
-    - Resetting the cache after making changes to the embedding model
-    - Clearing old cached embeddings that are no longer needed
-    - Troubleshooting cache-related issues
-    
-    Warning: This will remove all cached embeddings and they will need to be recalculated.
+    清除嵌入缓存以释放内存和磁盘空间。
+    使用场景：
+    - 在系统内存不足时释放内存
+    - 在更改嵌入模型后重置缓存
+    - 清除不再需要的旧缓存嵌入
+    - 排查与缓存相关的问题
 
-    Returns:
-        Confirmation message about the cache clearing operation.
+    返回：
+        有关缓存清理操作的确认消息。
     """
     from tools.utility_tools import clear_embedding_cache_tool as clear_embedding_cache_tool_logic
     return clear_embedding_cache_tool_logic()
@@ -353,16 +332,14 @@ def clear_embedding_cache_tool() -> str:
 @mcp.tool()
 def optimize_vector_database() -> str:
     """
-    Optimiza la base de datos vectorial para mejorar el rendimiento de búsquedas.
-    Esta herramienta reorganiza los índices internos para búsquedas más rápidas.
-    
-    Use esta herramienta cuando:
-    - Las búsquedas son lentas
-    - Se han añadido muchos documentos nuevos
-    - Quieres mejorar el rendimiento general del sistema
-    
-    Returns:
-        Información sobre el proceso de optimización
+    优化向量数据库以提高搜索性能。
+    使用场景：
+    - 搜索速度变慢
+    - 添加了许多新文档
+    - 希望提高系统的整体性能
+
+    返回：
+        有关优化过程的信息。
     """
     from tools.utility_tools import optimize_vector_database as optimize_vector_database_logic
     return optimize_vector_database_logic()
@@ -370,17 +347,15 @@ def optimize_vector_database() -> str:
 @mcp.tool()
 def get_vector_database_stats() -> str:
     """
-    Obtiene estadísticas detalladas de la base de datos vectorial.
-    Incluye información sobre documentos, tipos de archivo y configuración.
-    
-    Use esta herramienta para:
-    - Verificar el estado de la base de datos
-    - Analizar la distribución de documentos
-    - Diagnosticar problemas de rendimiento
-    - Planificar optimizaciones
-    
-    Returns:
-        Estadísticas detalladas de la base de datos vectorial
+    获取向量数据库的详细统计信息。
+    使用场景：
+    - 检查数据库状态
+    - 分析文档分布
+    - 诊断性能问题
+    - 规划优化
+
+    返回：
+        向量数据库的详细统计信息。
     """
     from tools.utility_tools import get_vector_database_stats as get_vector_database_stats_logic
     return get_vector_database_stats_logic()
@@ -388,29 +363,25 @@ def get_vector_database_stats() -> str:
 @mcp.tool()
 def reindex_vector_database(profile: str = 'auto') -> str:
     """
-    Reindexa la base de datos vectorial con una configuración optimizada.
-    Esta herramienta recrea los índices con parámetros optimizados para el tamaño actual.
-    
-    Args:
-        profile: Perfil de configuración ('small', 'medium', 'large', 'auto')
-                 'auto' detecta automáticamente el perfil óptimo
-    
-    Use esta herramienta cuando:
-    - Cambias el perfil de configuración
-    - Las búsquedas son muy lentas
-    - Quieres optimizar para un tamaño específico de base de datos
-    - Hay problemas de rendimiento persistentes
-    
-    ⚠️ **Nota:** Este proceso puede tomar tiempo dependiendo del tamaño de la base de datos.
-    
-    Returns:
-        Información sobre el proceso de reindexado
+    使用优化配置重新索引向量数据库。
+    使用场景：
+    - 更改配置文件
+    - 搜索速度非常慢
+    - 希望针对特定数据库大小进行优化
+    - 存在持续的性能问题
+
+    参数：
+        profile: 配置文件（'small', 'medium', 'large', 'auto'）。
+                 'auto' 会自动检测最佳配置文件
+
+    返回：
+        有关重新索引过程的信息。
     """
     from tools.utility_tools import reindex_vector_database as reindex_vector_database_logic
     return reindex_vector_database_logic(profile)
 
-# --- Punto de Entrada para Correr el Servidor ---
+# --- 启动 MCP RAG 服务器 ---
 if __name__ == "__main__":
-    log_mcp_server("Iniciando servidor MCP RAG organizado...")
-    warm_up_rag_system()  # Calentamos el sistema al arrancar
-    mcp.run(transport='stdio') 
+    log_mcp_server("启动 MCP RAG 服务器...")
+    warm_up_rag_system()  # 启动时预热系统
+    mcp.run(transport='stdio')
