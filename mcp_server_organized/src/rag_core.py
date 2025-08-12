@@ -96,9 +96,28 @@ DEFAULT_CONFIG = {
     'new_after_n_chars': 1500
 }
 
-# 定义 COLLECTION_NAME 和 PERSIST_DIRECTORY
+# 定义默认集合名和持久化目录（集合名将根据嵌入提供商动态派生）
 COLLECTION_NAME = "default_collection"
 PERSIST_DIRECTORY = "./data/vector_store"
+
+def get_collection_name() -> str:
+    """
+    基于嵌入提供商/模型动态生成集合名，避免不同维度嵌入写入同一集合。
+    可通过环境变量 COLLECTION_NAME 覆盖基础前缀。
+    """
+    base = os.getenv("COLLECTION_NAME", COLLECTION_NAME)
+    provider = os.getenv("EMBEDDING_PROVIDER", "HF").upper()
+    if provider == "OPENAI":
+        model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+        suffix = f"openai_{model}"
+    else:
+        # 当前本地默认模型
+        suffix = "hf_all-MiniLM-L6-v2"
+    try:
+        safe_suffix = re.sub(r"[^a-zA-Z0-9_-]+", "-", suffix)
+    except Exception:
+        safe_suffix = suffix
+    return f"{base}-{safe_suffix}"
 
 # --- Sistema de Cache de Embeddings ---
 class EmbeddingCache:
@@ -402,95 +421,109 @@ def get_embedding_function():
         带缓存的嵌入函数
     """
     try:
-        # 嵌入模型配置
-        model_name = "sentence-transformers/all-MiniLM-L6-v2"
-        
-        # 自动检测可用设备
-        try:
-            import torch
-            if torch.cuda.is_available():
-                device = 'cuda'
-                gpu_name = torch.cuda.get_device_name(0)
-                log(f"核心: 检测到 GPU: {gpu_name}")
-                log(f"核心: 使用 GPU 进行 embeddings 计算 (设备: {device})")
-            else:
-                device = 'cpu'
-                log(f"核心: 未检测到 GPU，使用 CPU 进行 embeddings 计算")
-        except ImportError:
-            device = 'cpu'
-            log(f"核心: PyTorch 不可用，使用 CPU 进行 embeddings 计算")
-        except Exception as e:
-            device = 'cpu'
-            log(f"核心警告: 检测 GPU 时出错 ({e}), 使用 CPU 进行 embeddings 计算")
-        
-        # 使用检测到的设备创建基础嵌入
-        base_embeddings = HuggingFaceEmbeddings(
-            model_name=model_name,
-            model_kwargs={'device': device},
-            encode_kwargs={'normalize_embeddings': True}
-        )
-        
-        # 获取缓存
+        provider = os.getenv("EMBEDDING_PROVIDER", "HF").upper()
+        # 获取缓存（跨提供商复用，但我们用命名空间避免串扰）
         cache = get_embedding_cache()
-        
-        # 缓存包装器
+
+        if provider == "OPENAI":
+            try:
+                from langchain_openai import OpenAIEmbeddings
+            except ImportError:
+                os.system("pip install langchain-openai")
+                from langchain_openai import OpenAIEmbeddings
+
+            openai_api_key = os.getenv("OPENAI_API_KEY", "")
+            openai_api_base = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+            model_name = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+
+            log(f"核心: 使用 OpenAI Embeddings: {model_name}，API 地址: {openai_api_base}")
+            base_embeddings = OpenAIEmbeddings(
+                api_key=openai_api_key,
+                base_url=openai_api_base,
+                model=model_name,
+            )
+
+            key_prefix = f"OPENAI:{model_name}"
+            device = "api"
+
+        else:
+            # 本地 HuggingFace 模型
+            model_name = "sentence-transformers/all-MiniLM-L6-v2"
+
+            # 自动检测可用设备
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    device = 'cuda'
+                    gpu_name = torch.cuda.get_device_name(0)
+                    log(f"核心: 检测到 GPU: {gpu_name}")
+                    log(f"核心: 使用 GPU 进行 embeddings 计算 (设备: {device})")
+                else:
+                    device = 'cpu'
+                    log(f"核心: 未检测到 GPU，使用 CPU 进行 embeddings 计算")
+            except ImportError:
+                device = 'cpu'
+                log(f"核心: PyTorch 不可用，使用 CPU 进行 embeddings 计算")
+            except Exception as e:
+                device = 'cpu'
+                log(f"核心警告: 检测 GPU 时出错 ({e}), 使用 CPU 进行 embeddings 计算")
+
+            base_embeddings = HuggingFaceEmbeddings(
+                model_name=model_name,
+                model_kwargs={'device': device},
+                encode_kwargs={'normalize_embeddings': True}
+            )
+            key_prefix = f"HF:{model_name}"
+
+        # 缓存包装器（添加提供商/模型命名空间，避免不同提供商缓存串扰）
         class CachedEmbeddings:
-            def __init__(self, base_embeddings, cache, device):
+            def __init__(self, base_embeddings, cache, device, key_prefix: str):
                 self.base_embeddings = base_embeddings
                 self.cache = cache
                 self.device = device
-            
+                self.key_prefix = key_prefix
+
+            def _cache_key(self, text: str) -> str:
+                return f"[{self.key_prefix}] {text}"
+
             def _cached_embed_query(self, text: str):
-                """查询的缓存嵌入。"""
-                # 尝试从缓存获取
-                cached_embedding = self.cache.get(text)
+                namespaced_text = self._cache_key(text)
+                cached_embedding = self.cache.get(namespaced_text)
                 if cached_embedding is not None:
                     return cached_embedding
-                
-                # 计算新的嵌入
                 embedding = self.base_embeddings.embed_query(text)
-                
-                # 保存到缓存
-                self.cache.set(text, embedding)
-                
+                self.cache.set(namespaced_text, embedding)
                 return embedding
-            
+
             def _cached_embed_documents(self, texts: List[str]):
-                """文档的缓存嵌入。"""
                 embeddings = []
                 uncached_texts = []
                 uncached_indices = []
-                
-                # 验证每个文本的缓存
                 for i, text in enumerate(texts):
-                    cached_embedding = self.cache.get(text)
+                    namespaced_text = self._cache_key(text)
+                    cached_embedding = self.cache.get(namespaced_text)
                     if cached_embedding is not None:
                         embeddings.append(cached_embedding)
                     else:
-                        embeddings.append(None)  # Placeholder
+                        embeddings.append(None)
                         uncached_texts.append(text)
                         uncached_indices.append(i)
-                
-                # 为未缓存的文本计算嵌入
                 if uncached_texts:
                     new_embeddings = self.base_embeddings.embed_documents(uncached_texts)
-                    
-                    # 保存到缓存并更新列表
                     for i, (text, embedding) in enumerate(zip(uncached_texts, new_embeddings)):
-                        self.cache.set(text, embedding)
+                        namespaced_text = self._cache_key(text)
+                        self.cache.set(namespaced_text, embedding)
                         embeddings[uncached_indices[i]] = embedding
-                
                 return embeddings
-            
-            # 暴露基类方法
+
             def embed_query(self, text: str):
                 return self._cached_embed_query(text)
-            
+
             def embed_documents(self, texts: List[str]):
                 return self._cached_embed_documents(texts)
-        
-        return CachedEmbeddings(base_embeddings, cache, device)
-        
+
+        return CachedEmbeddings(base_embeddings, cache, device, key_prefix)
+
     except Exception as e:
         log(f"核心: 初始化 embeddings 时出错: {e}")
         raise
@@ -512,7 +545,7 @@ def get_optimal_vector_store_profile() -> str:
         
         # 创建临时向量存储以计算文档数量
         temp_store = Chroma(
-            collection_name=COLLECTION_NAME,
+            collection_name=get_collection_name(),
             embedding_function=get_embedding_function(),
             persist_directory=PERSIST_DIRECTORY,
             client_settings=chroma_settings
@@ -568,7 +601,7 @@ def get_vector_store(profile: str = 'auto') -> Chroma:
     
     # 使用优化配置创建向量存储
     vector_store = Chroma(
-        collection_name=COLLECTION_NAME,
+        collection_name=get_collection_name(),
         embedding_function=embeddings,
         persist_directory=PERSIST_DIRECTORY,
         client_settings=chroma_settings
@@ -1844,12 +1877,18 @@ def get_vector_store_stats(vector_store: Chroma = None) -> dict:
                 processing_method = meta.get('processing_method', 'unknown')
                 processing_methods[processing_method] = processing_methods.get(processing_method, 0) + 1
         
+        # 估算嵌入维度（一次性探测，结果会被缓存）
+        try:
+            probe_dim = len(get_embedding_function().embed_query("__dim_probe__"))
+        except Exception:
+            probe_dim = "unknown"
+
         return {
             "total_documents": count,
             "file_types": file_types,
             "processing_methods": processing_methods,
             "collection_name": collection.name,
-            "embedding_dimension": "768"  # Dimension estándar para all-mpnet-base-v2
+            "embedding_dimension": str(probe_dim)
         }
         
     except Exception as e:

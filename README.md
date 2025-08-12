@@ -923,3 +923,36 @@ results = search_with_metadata_filters(vector_store, "datos", complex_filter)
 - **结构化响应**并提供元数据信息
 
 ---
+
+## 🧲 向量嵌入提供商切换（HF 本地 vs OpenAI 云端）
+
+系统同时支持两种嵌入方案：
+
+- 本地 HuggingFace（默认 all-MiniLM-L6-v2，768 维）：免费、低延迟，可用 CPU/GPU 计算
+- OpenAI Embeddings（默认 text-embedding-3-large，≈3072 维）：精度高、需网络与费用
+
+在根目录 `.env` 中配置：
+
+```ini
+# 嵌入提供商：HF 或 OPENAI（默认 HF）
+EMBEDDING_PROVIDER=OPENAI
+
+# OpenAI 嵌入模型（可选，默认 text-embedding-3-large）
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+
+# 可选：覆盖集合名前缀（系统会自动派生提供商/模型后缀）
+# COLLECTION_NAME=default_collection
+```
+
+注意事项：
+- 切换提供商/模型会改变嵌入向量维度。为避免维度冲突，系统自动为 Chroma 集合名追加后缀（例如 `default_collection-openai_text-embedding-3-large` 或 `default_collection-hf_all-MiniLM-L6-v2`）。
+- 如需继续使用既有旧集合，可把 EMBEDDING_PROVIDER 切回原值；如果想迁移，请重新入库（re-ingest）。
+- 日志会标明当前嵌入分支：
+    - HF 本地：显示“使用 GPU/CPU 进行 embeddings 计算”
+    - OpenAI：显示“使用 OpenAI Embeddings: text-embedding-3-large …”
+
+常见问题：
+- OpenAI 调用失败：检查 OPENAI_API_KEY、OPENAI_API_BASE（代理/Azure）、网络连通性与配额
+- 维度不匹配错误：确保检索使用与入库一致的提供商/模型，或使用系统自动区分的集合名
+- 性能与成本：HF 免费但精度稍低；OpenAI 精度更高但有调用成本
+
