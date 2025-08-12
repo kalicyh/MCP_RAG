@@ -1444,7 +1444,12 @@ def get_qa_chain(vector_store: Chroma, metadata_filter: dict = None) -> Retrieva
         metadata_filter: 包含元数据过滤器的字典 (例如: {"file_type": ".pdf", "processing_method": "unstructured_enhanced"})
     """
     log(f"核心: 初始化本地语言模型 (Ollama)...")
-    llm = ChatOllama(model="llama3", temperature=0)
+    # 从 .env 读取模型配置
+    load_dotenv()
+    ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
+    ollama_temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
+    llm = ChatOllama(model=ollama_model, temperature=ollama_temperature)
+    log(f"核心: 使用模型: {ollama_model}，温度: {ollama_temperature}")
     log(f"核心: 配置 RAG 链接，改进的源检索...")
     
     # 配置搜索参数

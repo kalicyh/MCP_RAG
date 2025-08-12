@@ -232,17 +232,23 @@ ollama pull mistral
 ollama pull llama3.1:8b
 ```
 
-#### 在系统中配置模型
 
-模型下载完成后，确保 `rag_core.py` 使用了正确的模型：
+#### 在系统中配置模型（推荐使用 .env 文件）
 
+模型下载完成后，请在项目根目录下的 `.env` 文件中设置 Ollama 模型名称和温度：
 
-```python
-# 在 rag_core.py 文件大约第100行，确认使用你的模型：
-llm = ChatOllama(model="llama3", temperature=0)
+```env
+OLLAMA_MODEL=llama3
+OLLAMA_TEMPERATURE=0
 ```
 
-**注意：** 如果你下载了不同的模型，请将 `"llama3"` 改成你所使用模型的名称。
+**注意：** 如果你下载了不同的模型，请将 `OLLAMA_MODEL` 的值改为你所使用模型的名称。
+例如：
+```env
+OLLAMA_MODEL=phi3
+```
+
+系统会自动读取 `.env` 配置，无需手动修改代码。
 
 #### 测试 Ollama
 
