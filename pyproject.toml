@@ -327,3 +327,6 @@ dependencies = [
     "zipp>=3.23.0",
     "zstandard>=0.23.0",
 ]
+
+[project.scripts]
+gui = "bulk_ingest_GUI/run_gui:main"
