@@ -58,8 +58,8 @@ try:
     from chromadb.config import Settings
     from langchain_ollama import ChatOllama
 except ImportError as e:
-    print(f"导入 LangChain 时出错: {e}")
-    print("正在安装依赖项...")
+    print(f"导入 LangChain 时出错: {e}", file=sys.stderr)
+    print("正在安装依赖项...", file=sys.stderr)
     os.system("pip install langchain langchain-community langchain-chroma langchain-ollama")
 
 # Unstructured 导入
@@ -67,15 +67,15 @@ try:
     from unstructured.partition.auto import partition
     from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
 except ImportError as e:
-    print(f"导入 Unstructured 时出错: {e}")
-    print("正在安装依赖项...")
+    print(f"导入 Unstructured 时出错: {e}", file=sys.stderr)
+    print("正在安装依赖项...", file=sys.stderr)
     os.system("pip install unstructured")
 
 # 结构化模型导入
 try:
     from models import MetadataModel
 except ImportError as e:
-    print(f"警告: 无法导入结构化模型: {e}")
+    print(f"警告: 无法导入结构化模型: {e}", file=sys.stderr)
     MetadataModel = None
 
 # =============================================================================

@@ -18,7 +18,7 @@ from utils.logger import log
 try:
     from models import MetadataModel
 except ImportError as e:
-    print(f"警告：无法导入结构化模型：{e}")
+    log(f"警告：无法导入结构化模型：{e}")
     MetadataModel = None
 
 # 必须在服务器中可用的全局变量

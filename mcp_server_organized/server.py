@@ -397,7 +397,7 @@ mcp.reindex_vector_database = reindex_vector_database
 if __name__ == "__main__":
     log_mcp_server("启动 MCP RAG 服务器...")
     warm_up_rag_system()  # 启动时预热系统
-    print("🚀 服务器已启动，运行模式: stdio (如需 Web 服务请设置 host/port)")
+    log_mcp_server("🚀 服务器已启动，运行模式: stdio (如需 Web 服务请设置 host/port)")
     # 将所有工具函数暴露为 mcp 的方法，方便直接调用
     mcp.learn_text = learn_text
     mcp.learn_document = learn_document
