@@ -354,7 +354,7 @@ class MainController:
         if self.ui_callbacks['update_summary']:
             self.ui_callbacks['update_summary']()
     
-    def filter_documents(self, search_text: str = "", file_type_filter: str = "Todos") -> List[DocumentPreview]:
+    def filter_documents(self, search_text: str = "", file_type_filter: str = "全部") -> List[DocumentPreview]:
         """根据条件过滤文档"""
         filtered = []
         for doc in self.processed_documents:
@@ -362,7 +362,7 @@ class MainController:
             if search_text and search_text.lower() not in doc.original_name.lower():
                 continue
             # 按文件类型过滤
-            if file_type_filter != "Todos" and doc.file_type != file_type_filter:
+            if file_type_filter != "全部" and doc.file_type != file_type_filter:
                 continue
             filtered.append(doc)
         return filtered

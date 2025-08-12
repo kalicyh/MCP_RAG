@@ -37,6 +37,9 @@ class MetadataModel:
     lists_count: int = 0
     narrative_blocks: int = 0
     other_elements: int = 0
+    # 新增字段，兼容所有元数据
+    word_count: Optional[int] = None
+    size_bytes: Optional[int] = None
     
     # Información de chunking
     chunking_method: str = "standard"
