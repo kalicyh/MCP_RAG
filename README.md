@@ -148,6 +148,13 @@ MCP_RAG/
 
 得益于井然有序的脚本系统，安装过程极其简单。
 
+#### 使用UV
+
+```bash
+uv run bulk_ingest_GUI/run_gui.py
+uv run mcp_server_organized\server.py
+```
+
 #### **对于用户（推荐）：**
 1. **运行主脚本：`start.bat`
 2. **选择“1”**安装依赖项
