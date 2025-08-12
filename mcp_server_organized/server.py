@@ -380,8 +380,35 @@ def reindex_vector_database(profile: str = 'auto') -> str:
     from tools.utility_tools import reindex_vector_database as reindex_vector_database_logic
     return reindex_vector_database_logic(profile)
 
+# --- 将所有工具函数暴露为 mcp 的方法，方便直接调用（全局作用域，所有函数定义之后） ---
+mcp.learn_text = learn_text
+mcp.learn_document = learn_document
+mcp.learn_from_url = learn_from_url
+mcp.ask_rag = ask_rag
+mcp.ask_rag_filtered = ask_rag_filtered
+mcp.get_knowledge_base_stats = get_knowledge_base_stats
+mcp.get_embedding_cache_stats = get_embedding_cache_stats
+mcp.clear_embedding_cache_tool = clear_embedding_cache_tool
+mcp.optimize_vector_database = optimize_vector_database
+mcp.get_vector_database_stats = get_vector_database_stats
+mcp.reindex_vector_database = reindex_vector_database
+
 # --- 启动 MCP RAG 服务器 ---
 if __name__ == "__main__":
     log_mcp_server("启动 MCP RAG 服务器...")
     warm_up_rag_system()  # 启动时预热系统
+    print("🚀 服务器已启动，运行模式: stdio (如需 Web 服务请设置 host/port)")
+    # 将所有工具函数暴露为 mcp 的方法，方便直接调用
+    mcp.learn_text = learn_text
+    mcp.learn_document = learn_document
+    mcp.learn_from_url = learn_from_url
+    mcp.ask_rag = ask_rag
+    mcp.ask_rag_filtered = ask_rag_filtered
+    mcp.get_knowledge_base_stats = get_knowledge_base_stats
+    mcp.get_embedding_cache_stats = get_embedding_cache_stats
+    mcp.clear_embedding_cache_tool = clear_embedding_cache_tool
+    mcp.optimize_vector_database = optimize_vector_database
+    mcp.get_vector_database_stats = get_vector_database_stats
+    mcp.reindex_vector_database = reindex_vector_database
+    # 如需 Web 服务可改为: mcp.run(host="127.0.0.1", port=8000)
     mcp.run(transport='stdio')

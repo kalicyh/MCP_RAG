@@ -48,15 +48,15 @@ logger = logging.getLogger(__name__)
 # Importaciones de LangChain y ChromaDB
 try:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-    from langchain_community.vectorstores import Chroma
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain_chroma import Chroma
     from langchain.chains import RetrievalQA
     from langchain_community.llms import HuggingFacePipeline
     from langchain.schema import Document
     from langchain.retrievers import ContextualCompressionRetriever
     from langchain.retrievers.document_compressors import LLMChainExtractor
     from chromadb.config import Settings
-    from langchain_community.chat_models import ChatOllama
+    from langchain_ollama import ChatOllama
 except ImportError as e:
     print(f"导入 LangChain 时出错: {e}")
     print("正在安装依赖项...")
@@ -1406,8 +1406,7 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
         vector_store.add_texts(texts, metadatas=metadatas)
     else:
         vector_store.add_texts(texts)
-    vector_store.persist()
-    log(f"核心: {len(texts)} 个片段已添加并保存到知识库")
+    log(f"核心: {len(texts)} 个片段已添加到知识库（自动持久化，无需 persist）")
 
 def add_text_to_knowledge_base(text: str, vector_store: Chroma, source_metadata: dict = None):
     """
