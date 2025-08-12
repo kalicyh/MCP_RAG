@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script de prueba para verificar que el wrapper de rag_core funciona
+用于验证 rag_core 包装器功能的测试脚本
 """
 
 import sys
@@ -8,20 +8,20 @@ import os
 from pathlib import Path
 
 def test_rag_core_wrapper():
-    """Probar el wrapper de rag_core"""
+    """测试 rag_core 包装器"""
     
-    # Configurar paths
+    # 配置路径
     current_dir = Path(__file__).parent.resolve()
     project_root = current_dir.parent.resolve()
     
-    # Cambiar al directorio de la GUI
+    # 切换到 GUI 目录
     os.chdir(current_dir)
     
-    # Configurar sys.path
+    # 配置 sys.path
     sys.path.insert(0, str(current_dir))
     sys.path.insert(0, str(project_root))
     
-    print("🧪 Probando wrapper de rag_core...")
+    print("🧪 正在测试 rag_core 包装器...")
     
     try:
         # Importar el wrapper
@@ -35,30 +35,30 @@ def test_rag_core_wrapper():
             get_vector_store_stats_advanced
         )
         
-        print("✅ Wrapper importado correctamente")
+        print("✅ 成功导入包装器")
         
         # Probar una función simple
         try:
-            log("Prueba del wrapper de rag_core")
-            print("✅ Función log funciona correctamente")
+            log("测试 rag_core 包装器的 log 功能")
+            print("✅ log 功能正常")
         except Exception as e:
             print(f"⚠️ Función log no funciona: {e}")
         
         # Probar obtener estadísticas del cache
         try:
             stats = get_cache_stats()
-            print("✅ Función get_cache_stats funciona correctamente")
-            print(f"   Estadísticas: {stats}")
+            print("✅ get_cache_stats 功能正常")
+            print(f"   统计信息: {stats}")
         except Exception as e:
-            print(f"⚠️ Función get_cache_stats no funciona: {e}")
+            print(f"⚠️ get_cache_stats 功能异常: {e}")
         
         return True
         
     except ImportError as e:
-        print(f"❌ Error importando wrapper: {e}")
+        print(f"❌ 导入包装器错误: {e}")
         return False
     except Exception as e:
-        print(f"❌ Error probando wrapper: {e}")
+        print(f"❌ 测试包装器错误: {e}")
         return False
 
 if __name__ == "__main__":

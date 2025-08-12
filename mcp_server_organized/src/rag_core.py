@@ -19,7 +19,7 @@ RAG 系统 - 核心模块
 """
 
 # =============================================================================
-# IMPORTACIONES PRINCIPALES
+# 主要导入
 # =============================================================================
 
 import os
@@ -40,12 +40,12 @@ import requests
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-# Configuración de logging
+# 日志配置
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Importaciones de LangChain y ChromaDB
+# LangChain 和 ChromaDB 导入
 try:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain_huggingface import HuggingFaceEmbeddings
@@ -62,7 +62,7 @@ except ImportError as e:
     print("正在安装依赖项...")
     os.system("pip install langchain langchain-community langchain-chroma langchain-ollama")
 
-# Importaciones de Unstructured
+# Unstructured 导入
 try:
     from unstructured.partition.auto import partition
     from unstructured.documents.elements import Title, ListItem, Table, NarrativeText
@@ -71,7 +71,7 @@ except ImportError as e:
     print("正在安装依赖项...")
     os.system("pip install unstructured")
 
-# Importaciones de modelos estructurados
+# 结构化模型导入
 try:
     from models import MetadataModel
 except ImportError as e:
@@ -79,16 +79,16 @@ except ImportError as e:
     MetadataModel = None
 
 # =============================================================================
-# CONFIGURACIÓN AVANZADA DE UNSTRUCTURED
+# UNSTRUCTURED 高级配置
 # =============================================================================
 
-# Importar configuración centralizada
+# 导入集中配置
 from utils.config import Config
 
-# Usar la configuración centralizada en lugar de duplicar
+# 使用集中配置而不是重复配置
 UNSTRUCTURED_CONFIGS = Config.UNSTRUCTURED_CONFIGS
 
-# Configuración por defecto para archivos no especificados
+# 未指定文件的默认配置
 DEFAULT_CONFIG = {
     'strategy': 'fast',
     'include_metadata': True,
@@ -103,26 +103,26 @@ PERSIST_DIRECTORY = "./data/vector_store"
 # --- Sistema de Cache de Embeddings ---
 class EmbeddingCache:
     """
-    Sistema de cache para embeddings que mejora significativamente el rendimiento
-    evitando recalcular embeddings para textos ya procesados.
+    嵌入缓存系统，显著提高性能
+    避免为已处理的文本重新计算嵌入。
     """
     
     def __init__(self, cache_dir: str = None, max_memory_size: int = 1000):
         """
-        Inicializa el cache de embeddings.
+        初始化嵌入缓存。
         
         Args:
-            cache_dir: Directorio donde se almacenan los embeddings en disco
-                       Si es None, usa la configuración del servidor MCP
-            max_memory_size: Número máximo de embeddings en memoria (LRU)
+            cache_dir: 磁盘上存储嵌入的目录
+                       如果为 None，使用 MCP 服务器配置
+            max_memory_size: 内存中嵌入的最大数量（LRU）
         """
-        # Si no se especifica cache_dir, usar la configuración del servidor MCP
+        # 如果未指定 cache_dir，使用 MCP 服务器配置
         if cache_dir is None:
             try:
                 from utils.config import Config
                 cache_dir = Config.EMBEDDING_CACHE_DIR
             except ImportError:
-                # Fallback: usar directorio relativo al proyecto
+                # 回退：使用相对于项目的目录
                 import os
                 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
                 cache_dir = os.path.join(project_root, "mcp_server_organized", "embedding_cache")
@@ -144,20 +144,20 @@ class EmbeddingCache:
         log(f"核心: 内存最大大小: {max_memory_size} embeddings")
     
     def _get_cache_key(self, text: str) -> str:
-        """Genera una clave única para el texto usando hash MD5."""
+        """使用 MD5 哈希为文本生成唯一键。"""
         return hashlib.md5(text.encode('utf-8')).hexdigest()
     
     def _get_cache_file_path(self, cache_key: str) -> Path:
-        """Obtiene la ruta del archivo de cache para una clave."""
+        """获取缓存键的缓存文件路径。"""
         return self.cache_dir / f"{cache_key}.pkl"
     
     def _update_access_order(self, key: str):
-        """Actualiza el orden de acceso para implementar LRU."""
+        """更新访问顺序以实现 LRU。"""
         if key in self._access_order:
             self._access_order.remove(key)
         self._access_order.append(key)
         
-        # Mantener solo los elementos más recientes
+        # 仅保留最近的元素
         if len(self._access_order) > self.max_memory_size:
             oldest_key = self._access_order.pop(0)
             if oldest_key in self._memory_cache:
@@ -165,34 +165,34 @@ class EmbeddingCache:
     
     def get(self, text: str):
         """
-        Obtiene el embedding para un texto, primero desde memoria, luego desde disco.
+        获取文本的嵌入，首先从内存获取，然后从磁盘获取。
         
         Args:
-            text: Texto para el cual obtener el embedding
+            text: 要获取嵌入的文本
             
         Returns:
-            Embedding si está en cache, None si no se encuentra
+            如果在缓存中则返回嵌入，否则返回 None
         """
         if not text or not text.strip():
             return None
         
         cache_key = self._get_cache_key(text)
         
-        # 1. Buscar en memoria
+        # 1. 查找内存缓存
         if cache_key in self._memory_cache:
             self.hits += 1
             self._update_access_order(cache_key)
             log(f"核心: 内存缓存命中，文本长度 {len(text)}")
             return self._memory_cache[cache_key]
         
-        # 2. Buscar en disco
+        # 2. 查找磁盘缓存
         cache_file = self._get_cache_file_path(cache_key)
         if cache_file.exists():
             try:
                 with open(cache_file, 'rb') as f:
                     embedding = pickle.load(f)
                 
-                # Mover a memoria
+                # 移动到内存
                 self._memory_cache[cache_key] = embedding
                 self._update_access_order(cache_key)
                 
@@ -201,7 +201,7 @@ class EmbeddingCache:
                 return embedding
             except Exception as e:
                 log(f"核心: 从磁盘加载 embedding 时出错: {e}")
-                # Eliminar archivo corrupto
+                # 删除损坏的文件
                 try:
                     cache_file.unlink()
                 except:
@@ -213,22 +213,22 @@ class EmbeddingCache:
     
     def set(self, text: str, embedding):
         """
-        Almacena un embedding en cache (memoria y disco).
+        在缓存中存储嵌入（内存和磁盘）。
         
         Args:
             text: Texto original
-            embedding: Embedding a almacenar
+            embedding: 要存储的嵌入
         """
         if not text or not text.strip() or embedding is None:
             return
         
         cache_key = self._get_cache_key(text)
         
-        # Almacenar en memoria
+        # 存储到内存
         self._memory_cache[cache_key] = embedding
         self._update_access_order(cache_key)
         
-        # Almacenar en disco
+        # 存储到磁盘
         cache_file = self._get_cache_file_path(cache_key)
         try:
             with open(cache_file, 'wb') as f:
@@ -238,16 +238,16 @@ class EmbeddingCache:
             log(f"核心: 保存 embedding 到磁盘时出错: {e}")
     
     def clear_memory(self):
-        """Limpia el cache en memoria, manteniendo el cache en disco."""
+        """清理内存缓存，保留磁盘缓存。"""
         self._memory_cache.clear()
         self._access_order.clear()
         log("核心: 内存缓存已清空")
     
     def clear_all(self):
-        """Limpia todo el cache (memoria y disco)."""
+        """清理所有缓存（内存和磁盘）。"""
         self.clear_memory()
         
-        # Limpiar archivos de disco
+        # 清理磁盘文件
         try:
             for cache_file in self.cache_dir.glob("*.pkl"):
                 cache_file.unlink()
@@ -256,7 +256,7 @@ class EmbeddingCache:
             log(f"核心: 清理磁盘缓存时出错: {e}")
     
     def get_stats(self) -> Dict[str, Any]:
-        """Obtiene estadísticas del cache."""
+        """获取缓存的统计信息。"""
         total_requests = self.hits + self.misses
         memory_hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
         disk_hit_rate = (self.disk_hits / total_requests * 100) if total_requests > 0 else 0
@@ -276,7 +276,7 @@ class EmbeddingCache:
         }
     
     def print_stats(self):
-        """Imprime las estadísticas del cache."""
+        """打印缓存统计信息。"""
         stats = self.get_stats()
         log("核心: === Embedding 缓存统计信息 ===")
         for key, value in stats.items():
@@ -284,30 +284,30 @@ class EmbeddingCache:
         log("核心: ===========================================")
 
 # =============================================================================
-# FUNCIONES DE UTILIDAD Y GESTIÓN DEL CACHE
+# 缓存实用工具和管理功能
 # =============================================================================
 
-# Variable global para el cache de embeddings
+# 嵌入缓存的全局变量
 _embedding_cache = None
 
 def get_embedding_cache() -> EmbeddingCache:
     """
-    Obtiene la instancia global del cache de embeddings.
+    获取嵌入缓存的全局实例。
     
     Returns:
-        Instancia de EmbeddingCache
+        EmbeddingCache 实例
     """
     global _embedding_cache
     if _embedding_cache is None:
-        # Usar la configuración del archivo config.py
+        # 使用 config.py 文件的配置
         from utils.config import Config
         
-        # Verificar si estamos en la GUI y usar rutas absolutas del servidor MCP
+        # 验证是否在 GUI 中并使用 MCP 服务器的绝对路径
         cache_dir = Config.EMBEDDING_CACHE_DIR
         
-        # Si la ruta es relativa, convertirla a absoluta del servidor MCP
+        # 如果路径是相对路径，转换为 MCP 服务器的绝对路径
         if not os.path.isabs(cache_dir):
-            # Obtener la ruta absoluta del servidor MCP
+            # 获取 MCP 服务器的绝对路径
             current_file = os.path.abspath(__file__)
             mcp_src_dir = os.path.dirname(current_file)
             mcp_server_dir = os.path.dirname(mcp_src_dir)
@@ -318,21 +318,21 @@ def get_embedding_cache() -> EmbeddingCache:
 
 def get_cache_stats() -> Dict[str, Any]:
     """
-    Obtiene estadísticas del cache de embeddings.
+    获取嵌入缓存的统计信息。
     
     Returns:
-        Diccionario con estadísticas del cache
+        包含缓存统计信息的字典
     """
     cache = get_embedding_cache()
     return cache.get_stats()
 
 def print_cache_stats():
-    """Imprime las estadísticas del cache de embeddings."""
+    """打印嵌入缓存的统计信息。"""
     cache = get_embedding_cache()
     cache.print_stats()
 
 def clear_embedding_cache():
-    """Limpia completamente el cache de embeddings."""
+    """完全清理嵌入缓存。"""
     global _embedding_cache
     if _embedding_cache:
         _embedding_cache.clear_all()
@@ -344,14 +344,14 @@ def clear_embedding_cache():
 # =============================================================================
 
 def log(message: str):
-    """Función de logging centralizada con timestamp y colores usando Rich."""
+    """使用 Rich 的集中式日志功能，包含时间戳和颜色。"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}", file=sys.stderr)
-    # Detectar tipo de mensaje para colorear
+    # 检测消息类型以着色
    
-    # if any(word in message.lower() for word in ["error", "falló", "fatal", "excepción"]):
+    # if any(word in message.lower() for word in ["error", "失败", "fatal", "异常"]):
     #     rich_print(f"[bold red][{timestamp}] {message}[/bold red]")
-    # elif any(word in message.lower() for word in ["advertencia", "warning"]):
+    # elif any(word in message.lower() for word in ["警告", "warning"]):
     #     rich_print(f"[bold yellow][{timestamp}] {message}[/bold yellow]")
     # elif any(word in message.lower() for word in ["éxito", "exitosamente", "completado", "ok", "iniciado", "iniciando"]):
     #     rich_print(f"[bold green][{timestamp}] {message}[/bold green]")
@@ -360,12 +360,12 @@ def log(message: str):
 
 def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
     """
-    Descarga un archivo con barra de progreso.
+    下载带进度条的文件。
     
     Args:
-        url: URL del archivo a descargar
-        filename: Nombre del archivo local
-        desc: Descripción para la barra de progreso
+        url: 要下载的文件URL
+        filename: 本地文件名
+        desc: 进度条描述
     """
     try:
         response = requests.get(url, stream=True)
@@ -390,22 +390,22 @@ def download_with_progress(url: str, filename: str, desc: str = "Downloading"):
         raise
 
 # =============================================================================
-# GESTIÓN DE EMBEDDINGS Y MODELOS
+# 嵌入和模型管理
 # =============================================================================
 
 def get_embedding_function():
     """
-    Obtiene la función de embeddings con cache integrado.
-    Detecta automáticamente si hay GPU disponible y la usa cuando es posible.
+    获取集成缓存的嵌入函数。
+    自动检测是否有可用GPU并在可能时使用。
     
     Returns:
-        Función de embeddings con cache
+        带缓存的嵌入函数
     """
     try:
-        # Configuración del modelo de embeddings
+        # 嵌入模型配置
         model_name = "sentence-transformers/all-MiniLM-L6-v2"
         
-        # Detectar automáticamente el dispositivo disponible
+        # 自动检测可用设备
         try:
             import torch
             if torch.cuda.is_available():
@@ -423,17 +423,17 @@ def get_embedding_function():
             device = 'cpu'
             log(f"核心警告: 检测 GPU 时出错 ({e}), 使用 CPU 进行 embeddings 计算")
         
-        # Crear embeddings base con el dispositivo detectado
+        # 使用检测到的设备创建基础嵌入
         base_embeddings = HuggingFaceEmbeddings(
             model_name=model_name,
             model_kwargs={'device': device},
             encode_kwargs={'normalize_embeddings': True}
         )
         
-        # Obtener cache
+        # 获取缓存
         cache = get_embedding_cache()
         
-        # Wrapper con cache
+        # 缓存包装器
         class CachedEmbeddings:
             def __init__(self, base_embeddings, cache, device):
                 self.base_embeddings = base_embeddings
@@ -441,27 +441,27 @@ def get_embedding_function():
                 self.device = device
             
             def _cached_embed_query(self, text: str):
-                """Embedding con cache para consultas."""
-                # Intentar obtener del cache
+                """查询的缓存嵌入。"""
+                # 尝试从缓存获取
                 cached_embedding = self.cache.get(text)
                 if cached_embedding is not None:
                     return cached_embedding
                 
-                # Calcular nuevo embedding
+                # 计算新的嵌入
                 embedding = self.base_embeddings.embed_query(text)
                 
-                # Guardar en cache
+                # 保存到缓存
                 self.cache.set(text, embedding)
                 
                 return embedding
             
             def _cached_embed_documents(self, texts: List[str]):
-                """Embedding con cache para documentos."""
+                """文档的缓存嵌入。"""
                 embeddings = []
                 uncached_texts = []
                 uncached_indices = []
                 
-                # Verificar cache para cada texto
+                # 验证每个文本的缓存
                 for i, text in enumerate(texts):
                     cached_embedding = self.cache.get(text)
                     if cached_embedding is not None:
@@ -471,18 +471,18 @@ def get_embedding_function():
                         uncached_texts.append(text)
                         uncached_indices.append(i)
                 
-                # Calcular embeddings para textos no cacheados
+                # 为未缓存的文本计算嵌入
                 if uncached_texts:
                     new_embeddings = self.base_embeddings.embed_documents(uncached_texts)
                     
-                    # Guardar en cache y actualizar lista
+                    # 保存到缓存并更新列表
                     for i, (text, embedding) in enumerate(zip(uncached_texts, new_embeddings)):
                         self.cache.set(text, embedding)
                         embeddings[uncached_indices[i]] = embedding
                 
                 return embeddings
             
-            # Exponer métodos de la clase base
+            # 暴露基类方法
             def embed_query(self, text: str):
                 return self._cached_embed_query(text)
             
@@ -497,20 +497,20 @@ def get_embedding_function():
 
 def get_optimal_vector_store_profile() -> str:
     """
-    Detecta automáticamente el perfil óptimo basado en el tamaño de la base de datos.
+    根据数据库大小自动检测最佳配置文件。
     
     Returns:
-        Perfil óptimo ('small', 'medium', 'large')
+        最佳配置文件（'small', 'medium', 'large'）
     """
     try:
-        # Configuración básica de ChromaDB
+        # ChromaDB基本配置
         chroma_settings = Settings(
             anonymized_telemetry=False,
             allow_reset=True,
             is_persistent=True
         )
         
-        # Crear vector store temporal para contar documentos
+        # 创建临时向量存储以计算文档数量
         temp_store = Chroma(
             collection_name=COLLECTION_NAME,
             embedding_function=get_embedding_function(),
@@ -518,10 +518,10 @@ def get_optimal_vector_store_profile() -> str:
             client_settings=chroma_settings
         )
         
-        # Contar documentos en la colección
+        # 计算集合中的文档数量
         count = temp_store._collection.count()
         
-        # Determinar perfil basado en el tamaño
+        # 基于大小确定配置文件
         if count < 1000:
             profile = 'small'
         elif count < 10000:
@@ -534,39 +534,39 @@ def get_optimal_vector_store_profile() -> str:
         
     except Exception as e:
         log(f"核心警告: 无法自动检测配置文件: {e}")
-        return 'medium'  # Perfil por defecto
+        return 'medium'  # 默认配置文件
 
 def get_vector_store(profile: str = 'auto') -> Chroma:
     """
-    Crea y retorna una instancia optimizada de la base de datos vectorial.
+    创建并返回优化的向量数据库实例。
     
     Args:
-        profile: Perfil de configuración ('small', 'medium', 'large', 'auto')
-                 'auto' detecta automáticamente el perfil óptimo
+        profile: 配置文件（'small', 'medium', 'large', 'auto'）
+                 'auto' 自动检测最佳配置文件
     
     Returns:
-        Instancia de Chroma con configuración optimizada
+        优化配置的Chroma实例
     """
-    # Detectar perfil automáticamente si se solicita
+    # 如果要求则自动检测配置文件
     if profile == 'auto':
         profile = get_optimal_vector_store_profile()
     
     log(f"核心: 初始化向量数据库，配置文件 '{profile}'...")
     
-    # Obtener información del perfil
+    # 获取配置文件信息
     profile_info = VECTOR_STORE_PROFILES.get(profile, {})
     log(f"核心: 配置文件 '{profile}' - {profile_info.get('description', '标准配置')}")
     
     embeddings = get_embedding_function()
     
-    # Crear configuración de ChromaDB
+    # 创建 ChromaDB 配置
     chroma_settings = Settings(
         anonymized_telemetry=False,
         allow_reset=True,
         is_persistent=True
     )
     
-    # Crear vector store con configuración optimizada
+    # 使用优化配置创建向量存储
     vector_store = Chroma(
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
@@ -581,14 +581,14 @@ def get_vector_store(profile: str = 'auto') -> Chroma:
 
 def fix_duplicated_characters(text: str) -> str:
     """
-    Corrige caracteres duplicados que pueden aparecer por problemas de codificación.
-    NO toca los números para evitar corregir datos legítimos.
+    修正可能因编码问题出现的重复字符。
+    不触碰数字以避免修正合法数据。
     
     Args:
-        text: Texto con posibles caracteres duplicados
+        text: 可能包含重复字符的文本
     
     Returns:
-        Texto con caracteres duplicados corregidos (solo letras y espacios)
+        重复字符已修正的文本（仅字母和空格）
     """
     if not text:
         return ""
@@ -619,7 +619,7 @@ def fix_duplicated_characters(text: str) -> str:
         (',,', ','), (';;', ';'), ('::', ':'),
     ]
     
-    # Aplicar correcciones SEGURAS de patrones duplicados
+    # 应用安全的重复模式修正
     for duplicated, corrected in safe_duplicated_patterns:
         text = text.replace(duplicated, corrected)
     
@@ -631,14 +631,14 @@ def fix_duplicated_characters(text: str) -> str:
         
         # IGNORAR COMPLETAMENTE LOS NÚMEROS
         if char.isdigit():
-            return match.group(0)  # Mantener números tal como están
+            return match.group(0)  # 保持数字原样
         else:
             # Para letras y otros caracteres, ser más agresivo
             if count > 2:
                 return char
             return match.group(0)
     
-    # Aplicar corrección de secuencias largas
+    # 应用长序列修正
     text = re.sub(r'(.)\1{2,}', fix_long_duplications, text)
     
     # Corregir casos específicos de palabras comunes duplicadas
@@ -680,11 +680,11 @@ def normalize_spanish_characters(text: str) -> str:
     # Mapeo de caracteres problemáticos comunes en español
     character_mapping = {
         # Caracteres acentuados mal codificados - casos específicos
-        "M´etodo": "Método",
+        "M´etodo": "方法",
         "An´alisis": "Análisis", 
         "Bisecci´on": "Bisección",
         "Convergencia": "Convergencia",
-        "M´etodos": "Métodos",
+        "M´etodos": "方法",
         "An´alisis": "Análisis",
         
         # Caracteres acentuados mal codificados - patrones generales
@@ -739,11 +739,11 @@ def normalize_spanish_characters(text: str) -> str:
         '\x1f': '',  # Unit separator
     }
     
-    # Aplicar mapeo de caracteres específicos primero
+    # 首先应用特定字符映射
     for old_char, new_char in character_mapping.items():
         text = text.replace(old_char, new_char)
     
-    # Normalizar caracteres Unicode (NFD -> NFC)
+    # 标准化Unicode字符 (NFD -> NFC)
     try:
         text = unicodedata.normalize('NFC', text)
     except Exception as e:
@@ -766,15 +766,15 @@ def normalize_spanish_characters(text: str) -> str:
     
     # Casos específicos de ñ con caracteres Unicode combinados
     # Estos son casos donde la ñ se representa como n + tilde combinada
-    text = text.replace('ñ', 'ñ')  # Normalizar ñ ya correcta
+    text = text.replace('ñ', 'ñ')  # 标准化已正确的ñ
     text = text.replace('ñ', 'ñ')  # n + tilde combinada (U+006E + U+0303)
     text = text.replace('Ñ', 'Ñ')  # N + tilde combinada (U+004E + U+0303)
     
     # Corregir casos específicos de acentos que quedaron mal
-    text = text.replace("M'etodo", "Método")
+    text = text.replace("M'etodo", "方法")
     text = text.replace("An'alisis", "Análisis")
     text = text.replace("Bisecci'on", "Bisección")
-    text = text.replace("M'etodos", "Métodos")
+    text = text.replace("M'etodos", "方法")
     
     # Corregir casos específicos de ñ que quedaron mal
     text = text.replace("espña", "españa")
@@ -798,20 +798,20 @@ def clean_text_for_rag(text: str) -> str:
     if not text:
         return ""
     
-    # Primero normalizar caracteres especiales del español
+    # 首先标准化西班牙语特殊字符
     text = normalize_spanish_characters(text)
     
-    # Eliminar espacios múltiples y saltos de línea excesivos
+    # 删除多个空格和过多的换行符
     text = re.sub(r'\s+', ' ', text)
     
-    # Eliminar caracteres especiales problemáticos pero mantener puntuación importante y caracteres españoles
+    # 删除有问题的特殊字符但保留重要的标点和西班牙语字符
     # Mantener: letras, números, espacios, puntuación básica, caracteres acentuados
     text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\{\}\"\'áéíóúÁÉÍÓÚñÑüÜ]', '', text)
     
-    # Normalizar espacios alrededor de puntuación
+    # 标准化标点符号周围的空格
     text = re.sub(r'\s+([\.\,\!\?\;\:])', r'\1', text)
     
-    # Eliminar líneas vacías múltiples
+    # 删除多个空行
     text = re.sub(r'\n\s*\n', '\n\n', text)
     
     # Limpiar espacios al inicio y final
@@ -832,26 +832,26 @@ def convert_table_to_text(table_element) -> str:
     """
     try:
         if hasattr(table_element, 'text'):
-            # Normalizar caracteres del texto de la tabla
+            # 标准化表格文本的字符
             normalized_text = normalize_spanish_characters(table_element.text)
             return normalized_text
         elif hasattr(table_element, 'metadata') and 'text_as_html' in table_element.metadata:
-            # Si tenemos HTML, extraer el texto
+            # 如果有HTML，提取文本
             html_text = table_element.metadata['text_as_html']
             # Limpiar tags HTML básicos
             clean_text = re.sub(r'<[^>]+>', ' ', html_text)
             clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-            # Normalizar caracteres del texto extraído
+            # 标准化提取文本的字符
             normalized_text = normalize_spanish_characters(clean_text)
             return f"Tabla: {normalized_text}"
         else:
-            # Normalizar caracteres de la representación en string
+            # 标准化字符串表示的字符
             text_representation = str(table_element)
             normalized_text = normalize_spanish_characters(text_representation)
             return normalized_text
     except Exception as e:
         log(f"核心警告: 转换表格时出错: {e}")
-        # Intentar normalizar incluso en caso de error
+        # 即使出错也尝试标准化
         try:
             text_representation = str(table_element)
             return normalize_spanish_characters(text_representation)
@@ -860,14 +860,14 @@ def convert_table_to_text(table_element) -> str:
 
 def process_unstructured_elements(elements: List[Any]) -> str:
     """
-    Procesa elementos de Unstructured de manera inteligente preservando la estructura semántica.
-    Incluye normalización de caracteres especiales del español.
+    智能处理 Unstructured 元素，保持语义结构。
+    包括西班牙语特殊字符的标准化。
     
     Args:
-        elements: Lista de elementos extraídos por Unstructured
+        elements: Unstructured 提取的元素列表
     
     Returns:
-        Texto procesado con estructura preservada y caracteres normalizados
+        保持结构和字符标准化的处理文本
     """
     processed_parts = []
     
@@ -877,32 +877,32 @@ def process_unstructured_elements(elements: List[Any]) -> str:
         if element_type == 'Title':
             # Los títulos van en líneas separadas con formato especial
             if hasattr(element, 'text') and element.text:
-                # Normalizar caracteres del título
+                # 标准化标题字符
                 normalized_text = normalize_spanish_characters(element.text.strip())
                 processed_parts.append(f"\n## {normalized_text}\n")
         elif element_type == 'ListItem':
-            # Las listas mantienen su estructura
+            # 列表保持其结构
             if hasattr(element, 'text') and element.text:
-                # Normalizar caracteres del elemento de lista
+                # 标准化列表元素字符
                 normalized_text = normalize_spanish_characters(element.text.strip())
                 processed_parts.append(f"• {normalized_text}")
         elif element_type == 'Table':
-            # Las tablas se convierten a formato legible
+            # 表格转换为可读格式
             table_text = convert_table_to_text(element)
             if table_text:
-                # Normalizar caracteres de la tabla
+                # 标准化表格字符
                 normalized_table_text = normalize_spanish_characters(table_text)
                 processed_parts.append(f"\n{normalized_table_text}\n")
         elif element_type == 'NarrativeText':
-            # El texto narrativo va tal como está
+            # 叙述文本保持原样
             if hasattr(element, 'text') and element.text:
-                # Normalizar caracteres del texto narrativo
+                # 标准化叙述文本字符
                 normalized_text = normalize_spanish_characters(element.text.strip())
                 processed_parts.append(normalized_text)
         else:
-            # Para otros tipos, usar el texto básico
+            # 对于其他类型，使用基本文本
             if hasattr(element, 'text') and element.text:
-                # Normalizar caracteres de otros elementos
+                # 标准化其他元素的字符
                 normalized_text = normalize_spanish_characters(element.text.strip())
                 processed_parts.append(normalized_text)
     
@@ -910,14 +910,14 @@ def process_unstructured_elements(elements: List[Any]) -> str:
 
 def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str, Any]:
     """
-    Extrae metadatos estructurales del documento.
+    提取文档的结构化元数据。
     
     Args:
-        elements: Lista de elementos extraídos por Unstructured
-        file_path: Ruta del archivo procesado
+        elements: Unstructured 提取的元素列表
+        file_path: 处理文件的路径
     
     Returns:
-        Diccionario con metadatos estructurales o MetadataModel si está disponible
+        结构元数据字典或 MetadataModel（如果可用）
     """
     structural_info = {
         "total_elements": len(elements),
@@ -928,12 +928,12 @@ def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str
         "other_elements": sum(1 for e in elements if type(e).__name__ not in ['Title', 'Table', 'ListItem', 'NarrativeText'])
     }
     
-    # Calcular estadísticas de contenido
+    # 计算内容统计
     total_text_length = sum(len(e.text) for e in elements if hasattr(e, 'text') and e.text)
     structural_info["total_text_length"] = total_text_length
     structural_info["avg_element_length"] = total_text_length / len(elements) if elements else 0
     
-    # Si MetadataModel está disponible, crear un modelo estructurado
+    # 如果 MetadataModel 可用，创建结构化模型
     if MetadataModel is not None:
         try:
             metadata_model = MetadataModel(
@@ -955,7 +955,7 @@ def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str
                 avg_chunk_size=structural_info["avg_element_length"]
             )
             
-            # Actualizar información estructural usando el método del modelo
+            # 使用模型的方法更新结构信息
             metadata_model.update_structural_info(elements)
             
             log(f"核心: 使用 MetadataModel 创建结构化元数据")
@@ -978,7 +978,7 @@ def extract_structural_metadata(elements: List[Any], file_path: str) -> Dict[str
 
 def create_semantic_chunks(elements: List[Any], max_chunk_size: int = 1000, overlap: int = 200) -> List[str]:
     """
-    Crea chunks basados en la estructura semántica del documento.
+    基于文档的语义结构创建块。
     
     Args:
         elements: Lista de elementos extraídos por Unstructured
@@ -996,14 +996,14 @@ def create_semantic_chunks(elements: List[Any], max_chunk_size: int = 1000, over
         element_text = element.text if hasattr(element, 'text') else str(element)
         element_size = len(element_text)
         
-        # Si añadir este elemento excedería el tamaño máximo
+        # 如果添加此元素会超过最大大小
         if current_size + element_size > max_chunk_size and current_chunk:
-            # Guardar el chunk actual
+            # 保存当前块
             chunk_text = "\n\n".join(current_chunk)
             if chunk_text.strip():
                 chunks.append(chunk_text)
             
-            # Crear overlap con elementos anteriores si es posible
+            # 如果可能，与前面的元素创建重叠
             overlap_elements = []
             overlap_size = 0
             for j in range(len(current_chunk) - 1, -1, -1):
@@ -1013,15 +1013,15 @@ def create_semantic_chunks(elements: List[Any], max_chunk_size: int = 1000, over
                 else:
                     break
             
-            # Iniciar nuevo chunk con overlap
+            # 用重叠开始新块
             current_chunk = overlap_elements + [element_text]
             current_size = overlap_size + element_size
         else:
-            # Añadir al chunk actual
+            # 添加到当前块
             current_chunk.append(element_text)
             current_size += element_size
     
-    # Añadir el último chunk si existe
+    # 添加最后一个块（如果存在）
     if current_chunk:
         chunk_text = "\n\n".join(current_chunk)
         if chunk_text.strip():
@@ -1035,10 +1035,10 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
     Incluye normalización de caracteres especiales del español.
     
     Args:
-        file_path: Ruta del archivo a cargar
+        file_path: 要加载的文件路径
     
     Returns:
-        Contenido del archivo como texto normalizado
+        文件内容作为标准化文本
     """
     file_extension = os.path.splitext(file_path)[1].lower()
     
@@ -1047,7 +1047,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(file_path)
             documents = loader.load()
-            # Normalizar cada documento antes de concatenar
+            # 连接前标准化每个文档
             normalized_contents = []
             for doc in documents:
                 normalized_content = normalize_spanish_characters(doc.page_content)
@@ -1058,7 +1058,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import Docx2txtLoader
             loader = Docx2txtLoader(file_path)
             documents = loader.load()
-            # Normalizar cada documento antes de concatenar
+            # 连接前标准化每个文档
             normalized_contents = []
             for doc in documents:
                 normalized_content = normalize_spanish_characters(doc.page_content)
@@ -1069,7 +1069,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import UnstructuredPowerPointLoader
             loader = UnstructuredPowerPointLoader(file_path)
             documents = loader.load()
-            # Normalizar cada documento antes de concatenar
+            # 连接前标准化每个文档
             normalized_contents = []
             for doc in documents:
                 normalized_content = normalize_spanish_characters(doc.page_content)
@@ -1080,7 +1080,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import UnstructuredExcelLoader
             loader = UnstructuredExcelLoader(file_path)
             documents = loader.load()
-            # Normalizar cada documento antes de concatenar
+            # 连接前标准化每个文档
             normalized_contents = []
             for doc in documents:
                 normalized_content = normalize_spanish_characters(doc.page_content)
@@ -1091,7 +1091,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import TextLoader
             loader = TextLoader(file_path, encoding='utf-8')
             documents = loader.load()
-            # Normalizar cada documento antes de concatenar
+            # 连接前标准化每个文档
             normalized_contents = []
             for doc in documents:
                 normalized_content = normalize_spanish_characters(doc.page_content)
@@ -1102,7 +1102,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import BSHTMLLoader
             loader = BSHTMLLoader(file_path)
             documents = loader.load()
-            # Normalizar cada documento antes de concatenar
+            # 连接前标准化每个文档
             normalized_contents = []
             for doc in documents:
                 normalized_content = normalize_spanish_characters(doc.page_content)
@@ -1113,7 +1113,7 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
             from langchain_community.document_loaders import UnstructuredXMLLoader
             loader = UnstructuredXMLLoader(file_path)
             documents = loader.load()
-            # Normalizar cada documento antes de concatenar
+            # 连接前标准化每个文档
             normalized_contents = []
             for doc in documents:
                 normalized_content = normalize_spanish_characters(doc.page_content)
@@ -1195,22 +1195,22 @@ def load_with_langchain_fallbacks(file_path: str) -> str:
 
 def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
     """
-    Carga documento con múltiples estrategias de fallback.
+    使用多种回退策略加载文档。
     
     Args:
-        file_path: Ruta del archivo a cargar
+        file_path: 要加载的文件路径
     
     Returns:
         Tupla con (contenido_texto, metadatos)
     """
     file_extension = os.path.splitext(file_path)[1].lower()
     
-    # Estrategia 1: Unstructured con configuración óptima
+    # 策略1：Unstructured 优化配置
     try:
         log(f"核心: 尝试使用 Unstructured 加载（最佳配置）...")
         config = Config.get_unstructured_config(file_extension)
         
-        # Para PDFs, usar configuración más rápida para evitar colgadas
+        # 对于PDF，使用更快的配置以避免挂起
         if file_extension == '.pdf':
             log(f"核心: 检测到 PDF，使用快速配置以避免超时...")
             config = config.copy()
@@ -1233,7 +1233,7 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
     except Exception as e:
         log(f"核心警告: Unstructured（最佳配置）加载失败: {e}")
     
-    # Estrategia 2: Unstructured con configuración básica
+    # 策略2：Unstructured 基本配置
     try:
         log(f"核心: 尝试使用 Unstructured 加载（基本配置）...")
         elements = partition(filename=file_path, strategy="fast", max_partition=1000)
@@ -1247,7 +1247,7 @@ def load_document_with_fallbacks(file_path: str) -> tuple[str, dict]:
     except Exception as e:
         log(f"核心警告: Unstructured（基本配置）加载失败: {e}")
     
-    # Estrategia 3: Cargadores específicos de LangChain
+    # 策略3：LangChain 特定加载器
     try:
         log(f"核心: 尝试使用 LangChain 特定加载器加载...")
         fallback_text = load_with_langchain_fallbacks(file_path)
@@ -1317,17 +1317,17 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
     Versión mejorada que soporta chunking semántico real y metadatos estructurales.
     
     Args:
-        text: El texto a añadir
-        vector_store: La base de datos vectorial
-        source_metadata: Diccionario con metadatos de la fuente
-        use_semantic_chunking: Si usar chunking semántico en lugar del tradicional
-        structural_elements: Lista de elementos estructurales para chunking semántico
+        text: 要添加的文本
+        vector_store: 向量数据库
+        source_metadata: 包含源元数据的字典
+        use_semantic_chunking: 是否使用语义分块而非传统分块
+        structural_elements: 用于语义分块的结构化元素列表
     """
     if not text or text.isspace():
         log("核心警告: 尝试添加空文本或仅空格的文本.")
         return
 
-    # Limpiar el texto antes de procesarlo
+    # 处理前清理文本
     log(f"核心: 清理和准备文本以进行 RAG 处理...")
     cleaned_text = clean_text_for_rag(text)
     
@@ -1380,14 +1380,14 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
     if source_metadata:
         metadatas = []
         for i in range(len(texts)):
-            # Crear una copia limpia de los metadatos y aplanarlos
+            # 创建元数据的干净副本并展平
             metadata = flatten_metadata(source_metadata)
             
-            # Añadir información del chunk
+            # 添加块信息
             metadata['chunk_index'] = i
             metadata['total_chunks'] = len(texts)
             
-            # Añadir información sobre el tipo de chunking usado
+            # 添加关于使用的分块类型的信息
             if use_semantic_chunking and structural_elements:
                 metadata['chunking_method'] = 'semantic_advanced'
             elif use_semantic_chunking:
@@ -1410,27 +1410,27 @@ def add_text_to_knowledge_base_enhanced(text: str, vector_store: Chroma, source_
 
 def add_text_to_knowledge_base(text: str, vector_store: Chroma, source_metadata: dict = None):
     """
-    Función original para mantener compatibilidad con código existente.
-    Divide el texto, lo añade a la base de datos con metadatos de fuente y lo persiste.
+    保持与现有代码兼容性的原始函数。
+    分割文本，将其与源元数据一起添加到数据库并持久化。
     
     Args:
-        text: El texto a añadir
-        vector_store: La base de datos vectorial
-        source_metadata: Diccionario con metadatos de la fuente (ej: {"source": "archivo.pdf", "author": "Juan Pérez"})
+        text: 要添加的文本
+        vector_store: 向量数据库
+        source_metadata: 包含源元数据的字典 (例如: {"source": "file.pdf", "author": "张三"})
     """
     # Usar la versión mejorada por defecto
     add_text_to_knowledge_base_enhanced(text, vector_store, source_metadata, use_semantic_chunking=False)
 
 def load_document_with_unstructured(file_path: str) -> str:
     """
-    Carga un documento usando el sistema mejorado de Unstructured con fallbacks.
-    Esta función mantiene compatibilidad con el código existente.
+    使用带回退的增强 Unstructured 系统加载文档。
+    此函数保持与现有代码的兼容性。
     
     Args:
-        file_path: Ruta del archivo a cargar
+        file_path: 要加载的文件路径
     
     Returns:
-        Contenido del archivo como texto
+        文件内容作为文本
     """
     content, _ = load_document_with_fallbacks(file_path)
     return content
@@ -1440,27 +1440,27 @@ def get_qa_chain(vector_store: Chroma, metadata_filter: dict = None) -> Retrieva
     Crea y retorna la cadena de Pregunta/Respuesta usando un LLM local.
     
     Args:
-        vector_store: La base de datos vectorial
-        metadata_filter: Diccionario con filtros de metadatos (ej: {"file_type": ".pdf", "processing_method": "unstructured_enhanced"})
+        vector_store: 向量数据库
+        metadata_filter: 包含元数据过滤器的字典 (例如: {"file_type": ".pdf", "processing_method": "unstructured_enhanced"})
     """
     log(f"核心: 初始化本地语言模型 (Ollama)...")
     llm = ChatOllama(model="llama3", temperature=0)
     log(f"核心: 配置 RAG 链接，改进的源检索...")
     
-    # Configurar parámetros de búsqueda
+    # 配置搜索参数
     search_kwargs = {
-        "k": 5,  # Aumentar a 5 fragmentos para más contexto
-        "score_threshold": 0.1,  # Umbral más bajo para obtener resultados
+        "k": 5,  # 增加到 5 个片段以获得更多上下文
+        "score_threshold": 0.1,  # 更低的阈值以获取结果
     }
     
-    # Añadir filtros de metadatos si se proporcionan
+    # 添加元数据过滤器（如果提供）
     if metadata_filter:
         search_kwargs["filter"] = metadata_filter
         log(f"核心: 应用元数据过滤器: {metadata_filter}")
     
-    # Configurar el retriever con parámetros optimizados para mejor recuperación
+    # 配置检索器，使用优化参数以获得更好的检索效果
     retriever = vector_store.as_retriever(
-        search_type="similarity_score_threshold",  # Cambiado para soportar filtrado por score
+        search_type="similarity_score_threshold",  # 更改为支持按分数过滤
         search_kwargs=search_kwargs
     )
     
@@ -1491,18 +1491,18 @@ def search_with_metadata_filters(vector_store: Chroma, query: str, metadata_filt
     """
     log(f"核心: 进行带元数据过滤的搜索...")
     
-    # Configurar parámetros de búsqueda
+    # 配置搜索参数
     search_kwargs = {
         "k": k,
-        "score_threshold": 0.1,  # Umbral más bajo para obtener resultados
+        "score_threshold": 0.1,  # 更低的阈值以获取结果
     }
     
-    # Añadir filtros si se proporcionan
+    # 添加过滤器（如果提供）
     if metadata_filter:
         search_kwargs["filter"] = metadata_filter
         log(f"核心: 应用的过滤器: {metadata_filter}")
     
-    # Realizar búsqueda
+    # 执行搜索
     retriever = vector_store.as_retriever(
         search_type="similarity_score_threshold",
         search_kwargs=search_kwargs
@@ -1520,27 +1520,27 @@ def create_simple_metadata_filter(file_type: str = None, processing_method: str 
     Esta versión maneja mejor los filtros múltiples.
     
     Args:
-        file_type: Tipo de archivo (ej: ".pdf", ".docx")
-        processing_method: Método de procesamiento (ej: "unstructured_enhanced")
-        min_tables: Mínimo número de tablas en el documento
-        min_titles: Mínimo número de títulos en el documento
+        file_type: 文件类型 (例如: ".pdf", ".docx")
+        processing_method: 处理方法 (例如: "unstructured_enhanced")
+        min_tables: 文档中表格的最小数量
+        min_titles: 文档中标题的最小数量
     
     Returns:
-        Diccionario con filtros de metadatos compatibles con ChromaDB
+        与ChromaDB兼容的元数据过滤器字典
     """
     # ChromaDB requiere un formato específico para filtros múltiples
     # Usar operador $and para combinar múltiples condiciones
     
     conditions = []
     
-    # Añadir filtros simples
+    # 添加简单过滤器
     if file_type:
         conditions.append({"file_type": file_type})
     
     if processing_method:
         conditions.append({"processing_method": processing_method})
     
-    # Añadir filtros numéricos - usar los nombres correctos de metadatos aplanados
+    # 添加数值过滤器 - 使用扁平化元数据的正确名称
     if min_tables is not None:
         conditions.append({"structural_info_tables_count": {"$gte": min_tables}})
     
@@ -1562,10 +1562,10 @@ def create_metadata_filter(file_type: str = None, processing_method: str = None,
     Crea un filtro de metadatos para búsquedas específicas.
     
     Args:
-        file_type: Tipo de archivo (ej: ".pdf", ".docx")
-        processing_method: Método de procesamiento (ej: "unstructured_enhanced")
-        min_tables: Mínimo número de tablas en el documento
-        min_titles: Mínimo número de títulos en el documento
+        file_type: 文件类型（例如：".pdf"、".docx"）
+        processing_method: 处理方法（例如："unstructured_enhanced"）
+        min_tables: 文档中表格的最少数量
+        min_titles: 文档中标题的最少数量
         source_contains: Texto que debe contener el nombre de la fuente
     
     Returns:
@@ -1576,18 +1576,18 @@ def create_metadata_filter(file_type: str = None, processing_method: str = None,
 
 def get_document_statistics(vector_store: Chroma) -> dict:
     """
-    Obtiene estadísticas sobre los documentos en la base de datos.
+    获取数据库中文档的统计信息。
     
     Args:
-        vector_store: La base de datos vectorial
+        vector_store: 向量数据库
     
     Returns:
-        Diccionario con estadísticas de la base de datos
+        包含数据库统计信息的字典
     """
     log(f"核心: 获取数据库统计信息...")
     
     try:
-        # Obtener todos los documentos para análisis
+        # 获取所有文档进行分析
         all_docs = vector_store.get()
         
         if not all_docs or not all_docs['documents']:
@@ -1615,11 +1615,11 @@ def get_document_statistics(vector_store: Chroma) -> dict:
         total_lists = 0
         
         for metadata in metadatas:
-            # Contar tipos de archivo
+            # 统计文件类型
             file_type = metadata.get("file_type", "unknown")
             stats["file_types"][file_type] = stats["file_types"].get(file_type, 0) + 1
             
-            # Contar métodos de procesamiento
+            # 统计处理方法
             processing_method = metadata.get("processing_method", "unknown")
             stats["processing_methods"][processing_method] = stats["processing_methods"].get(processing_method, 0) + 1
             
@@ -1663,15 +1663,15 @@ def get_document_statistics(vector_store: Chroma) -> dict:
         log(f"核心错误: 获取统计信息时出错: {e}")
         return {"error": str(e)}
 
-# --- Configuración de Base Vectorial Optimizada ---
+# --- 优化向量数据库配置 ---
 VECTOR_STORE_CONFIG = {
-    # Configuración de persistencia y rendimiento
-    'anonymized_telemetry': False,  # Desactivar telemetría
-    'allow_reset': True,  # Permitir reset de la colección
-    'is_persistent': True,  # Habilitar persistencia
+    # 持久化和性能配置
+    'anonymized_telemetry': False,  # 禁用遥测
+    'allow_reset': True,  # 允许重置集合
+    'is_persistent': True,  # 启用持久化
 }
 
-# Configuración para diferentes tamaños de base de datos
+# 不同数据库大小的配置
 VECTOR_STORE_PROFILES = {
     'small': {  # Para bases pequeñas (< 1000 documentos)
         'description': 'Optimizado para bases pequeñas',
@@ -1710,7 +1710,7 @@ def optimize_vector_store(vector_store: Chroma = None) -> dict:
         
         log("核心: 开始优化向量数据库...")
         
-        # Obtener estadísticas antes de la optimización
+        # 获取优化前的统计信息
         stats_before = get_vector_store_stats(vector_store)
         
         collection = vector_store._collection
@@ -1718,18 +1718,18 @@ def optimize_vector_store(vector_store: Chroma = None) -> dict:
         # En lugar de reindexar, usar métodos nativos de ChromaDB para optimización
         log("核心: 应用 ChromaDB 原生优化...")
         
-        # 1. Forzar persistencia para optimizar almacenamiento
+        # 1. 强制持久化以优化存储
         try:
             collection.persist()
             log("核心: 强制持久化完成")
         except Exception as e:
             log(f"核心警告: 无法强制持久化: {e}")
         
-        # 2. Obtener información de la colección para verificar estado
+        # 2. 获取集合信息以验证状态
         count = collection.count()
         log(f"核心: 检查到 {count} 个文档在集合中")
         
-        # 3. Realizar una consulta de prueba para verificar índices
+        # 3. 执行测试查询以验证索引
         try:
             # Hacer una búsqueda de prueba para activar índices
             test_results = collection.query(
@@ -1740,9 +1740,9 @@ def optimize_vector_store(vector_store: Chroma = None) -> dict:
         except Exception as e:
             log(f"核心警告: 验证索引时出错: {e}")
         
-        # 4. Verificar configuración de la colección
+        # 4. 验证集合配置
         try:
-            # Obtener metadatos de la colección
+            # 获取集合元数据
             collection_metadata = collection.metadata
             log(f"核心: 集合元数据: {collection_metadata}")
         except Exception as e:
@@ -1759,7 +1759,7 @@ def optimize_vector_store(vector_store: Chroma = None) -> dict:
         except Exception as e:
             log(f"核心警告: 压缩时出错: {e}")
         
-        # Obtener estadísticas después de la optimización
+        # 获取优化后的统计信息
         stats_after = get_vector_store_stats(vector_store)
         
         log("核心: 向量数据库优化完成")
@@ -1801,10 +1801,10 @@ def get_vector_store_stats(vector_store: Chroma = None) -> dict:
         
         collection = vector_store._collection
         
-        # Obtener estadísticas básicas
+        # 获取基本统计信息
         count = collection.count()
         
-        # Obtener información de configuración
+        # 获取配置信息
         all_data = collection.get()
         metadata = all_data.get('metadatas', [])
         
@@ -1834,14 +1834,14 @@ def get_vector_store_stats(vector_store: Chroma = None) -> dict:
 
 def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> dict:
     """
-    Reindexa la base vectorial con una configuración optimizada.
-    Detecta automáticamente si es una base grande y usa reindexado incremental.
-    Usa métodos nativos de ChromaDB para evitar límites de batch.
-    Útil cuando se cambia el perfil de configuración.
+    用优化配置重新索引向量数据库。
+    自动检测是否为大型数据库并使用增量重新索引。
+    使用 ChromaDB 原生方法避免批次限制。
+    当配置文件更改时很有用。
     
     Args:
-        vector_store: Instancia de Chroma (si None, se crea una nueva)
-        profile: Perfil de configuración para reindexar
+        vector_store: Chroma 实例（如果为 None，则创建新实例）
+        profile: 重新索引的配置文件
     
     Returns:
         Diccionario con información sobre el reindexado
@@ -1859,7 +1859,7 @@ def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> 
         
         collection = vector_store._collection
         
-        # Obtener estadísticas antes del reindexado
+        # 获取重新索引前的统计信息
         count_before = collection.count()
         log(f"核心: 重建索引前文档数量: {count_before}")
         
@@ -1887,7 +1887,7 @@ def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> 
         except Exception as e:
             log(f"核心警告: 无法强制持久化: {e}")
         
-        # 3. Verificar configuración de la colección
+        # 3. 验证集合配置
         try:
             collection_metadata = collection.metadata
             log(f"核心: 集合元数据: {collection_metadata}")
@@ -1938,14 +1938,14 @@ def reindex_vector_store(vector_store: Chroma = None, profile: str = 'auto') -> 
 
 def reindex_vector_store_large(vector_store: Chroma = None, profile: str = 'auto') -> dict:
     """
-    Reindexado especial para bases de datos muy grandes con procesamiento incremental.
+    适用于超大数据库的特殊重新索引，使用增量处理。
     
     Args:
-        vector_store: Instancia de Chroma (si None, se crea una nueva)
-        profile: Perfil de configuración para reindexar
+        vector_store: Chroma 实例（如果为 None，则创建新实例）
+        profile: 重新索引的配置文件
     
     Returns:
-        Diccionario con información sobre el reindexado
+        包含重新索引信息的字典
     """
     try:
         if vector_store is None:
@@ -2074,7 +2074,7 @@ def get_memory_usage() -> float:
 def optimize_vector_store_large(vector_store: Chroma = None) -> dict:
     """
     Optimización especial para bases de datos muy grandes (>10,000 documentos).
-    Usa procesamiento incremental y checkpoints para evitar problemas de memoria.
+    使用增量处理和检查点避免内存问题。
     
     Args:
         vector_store: Instancia de Chroma (si None, se crea una nueva)

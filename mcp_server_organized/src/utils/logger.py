@@ -1,12 +1,12 @@
 """
-Logger Module para el Servidor MCP
-=================================
+MCP 服务器日志模块
+=================
 
-Este módulo proporciona funcionalidades de logging mejoradas para el servidor MCP,
-utilizando Rich para una salida en consola más atractiva y organizada.
+此模块为 MCP 服务器提供增强的日志功能，
+使用 Rich 获得更具吸引力和组织性的控制台输出。
 """
 
-# Importar Rich para mejorar la salida en consola
+# 导入 Rich 以改善控制台输出
 from rich import print as rich_print
 from rich.panel import Panel
 from datetime import datetime
@@ -14,15 +14,15 @@ import sys
 
 def log(message: str):
     """
-    Imprime un mensaje en la consola usando Rich con formato mejorado.
+    使用 Rich 以改进的格式在控制台打印消息。
     
-    Args:
-        message: El mensaje a imprimir
+    参数：
+        message: 要打印的消息
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}", file=sys.stderr)
 
-    # Detectar el tipo de mensaje basado en palabras clave
+    # 基于关键词检测消息类型
     #if any(word in message.lower() for word in ["error", "falló", "fatal", "excepción", "failed"]):
     #    rich_print(Panel(f"{message}", title="[red]Error[/red]", style="bold red"))
     #elif any(word in message.lower() for word in ["éxito", "exitosamente", "completado", "ok", "success"]):
@@ -36,11 +36,11 @@ def log(message: str):
 
 def log_with_timestamp(message: str, level: str = "INFO"):
     """
-    Imprime un mensaje con timestamp y nivel de log.
+    打印带时间戳和日志级别的消息。
     
-    Args:
-        message: El mensaje a imprimir
-        level: Nivel del log (INFO, WARNING, ERROR, SUCCESS)
+    参数：
+        message: 要打印的消息
+        level: 日志级别（INFO, WARNING, ERROR, SUCCESS）
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}", file=sys.stderr)
@@ -56,36 +56,36 @@ def log_with_timestamp(message: str, level: str = "INFO"):
 
 def log_mcp_server(message: str):
     """
-    Imprime un mensaje específico del servidor MCP.
+    打印 MCP 服务器特定的消息。
     
-    Args:
-        message: El mensaje a imprimir
+    参数：
+        message: 要打印的消息
     """
-    log(f"MCP Server: {message}")
+    log(f"MCP服务器: {message}")
 
 def log_rag_system(message: str):
     """
-    Imprime un mensaje específico del sistema RAG.
+    打印 RAG 系统特定的消息。
     
-    Args:
-        message: El mensaje a imprimir
+    参数：
+        message: 要打印的消息
     """
-    log(f"RAG System: {message}")
+    log(f"RAG系统: {message}")
 
 def log_document_processing(message: str):
     """
-    Imprime un mensaje específico del procesamiento de documentos.
+    打印文档处理特定的消息。
     
-    Args:
-        message: El mensaje a imprimir
+    参数：
+        message: 要打印的消息
     """
-    log(f"Document Processing: {message}")
+    log(f"文档处理: {message}")
 
 def log_vector_store(message: str):
     """
-    Imprime un mensaje específico de la base de datos vectorial.
+    打印向量数据库特定的消息。
     
-    Args:
-        message: El mensaje a imprimir
+    参数：
+        message: 要打印的消息
     """
-    log(f"Vector Store: {message}") 
+    log(f"向量存储: {message}") 

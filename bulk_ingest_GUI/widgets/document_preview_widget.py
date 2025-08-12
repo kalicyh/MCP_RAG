@@ -10,7 +10,7 @@ import sys
 import os
 from pathlib import Path
 
-# Configurar sys.path para importaciones absolutas
+# 配置sys.path用于绝对导入
 current_dir = Path(__file__).parent.resolve()
 project_root = current_dir.parent.parent.resolve()
 sys.path.insert(0, str(current_dir.parent))

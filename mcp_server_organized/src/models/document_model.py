@@ -1,9 +1,8 @@
 """
-Document Model para el Servidor MCP
+MCP 服务器文档模型
 ==================================
 
-Este módulo define las estructuras de datos para documentos
-y metadatos en el sistema RAG.
+此模块为 RAG 系统中的文档和元数据定义数据结构。
 """
 
 from datetime import datetime
@@ -13,39 +12,39 @@ from dataclasses import dataclass, field
 @dataclass
 class DocumentModel:
     """
-    Modelo de datos para representar un documento procesado.
+    表示已处理文档的数据模型。
     """
     
-    # Información básica del documento
+    # 文档基本信息
     file_path: str
     file_name: str
     file_type: str
     file_size: int
     
-    # Contenido procesado
+    # 处理后的内容
     content: str
     processed_content: str
     
-    # Metadatos
+    # 元数据
     metadata: Dict[str, Any] = field(default_factory=dict)
     
-    # Información de procesamiento
+    # 处理信息
     processing_method: str = "unknown"
     processing_date: datetime = field(default_factory=datetime.now)
     
-    # Información estructural
+    # 结构信息
     structural_elements: List[Any] = field(default_factory=list)
     total_elements: int = 0
     titles_count: int = 0
     tables_count: int = 0
     lists_count: int = 0
     
-    # Información de chunking
+    # 分块信息
     chunks: List[str] = field(default_factory=list)
     chunk_count: int = 0
     
     def __post_init__(self):
-        """Inicialización post-construcción del dataclass."""
+        """数据类构造后初始化。"""
         if not self.file_name:
             self.file_name = self.file_path.split('/')[-1] if '/' in self.file_path else self.file_path.split('\\')[-1]
         

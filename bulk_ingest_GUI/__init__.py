@@ -1,15 +1,15 @@
 """
-Bulk Ingest GUI - Sistema Modular Avanzado
+批量导入 GUI - 高级模块化系统
 ==========================================
 
-Sistema de procesamiento y almacenamiento de documentos con arquitectura MVC.
+采用 MVC 架构的文档处理和存储系统。
 """
 
 __version__ = "2.0.0"
 __author__ = "cagudelo"
-__description__ = "Sistema de ingesta masiva de documentos con interfaz gráfica avanzada"
+__description__ = "具有高级图形界面的大量文档导入系统"
 
-# Importar componentes principales
+# 导入主要组件
 from .main import main
 
 __all__ = ['main'] 

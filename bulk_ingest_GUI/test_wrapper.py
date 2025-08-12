@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script de prueba para el nuevo rag_core_wrapper
+用于测试新版 rag_core_wrapper 的脚本
 """
 
 from rag_core_wrapper import (
@@ -14,27 +14,27 @@ from rag_core_wrapper import (
 )
 
 def test_wrapper():
-    """Probar que el wrapper funciona correctamente"""
+    """测试包装器是否正常工作"""
     
-    print("🧪 Probando rag_core_wrapper...")
+    print("🧪 正在测试 rag_core_wrapper...")
     
     try:
-        # Probar la función log
-        log("Prueba del wrapper funcionando correctamente")
-        print("✅ log funcionando")
+        # 测试日志函数
+        log("测试包装器正常工作")
+        print("✅ log 功能正常")
         
-        # Probar get_cache_stats
+        # 测试 get_cache_stats
         stats = get_cache_stats()
-        print(f"✅ get_cache_stats funcionando: {stats}")
+        print(f"✅ get_cache_stats 功能正常: {stats}")
         
-        # Probar get_vector_store_stats_advanced
+        # 测试 get_vector_store_stats_advanced
         vs_stats = get_vector_store_stats_advanced()
-        print(f"✅ get_vector_store_stats_advanced funcionando: {vs_stats}")
+        print(f"✅ get_vector_store_stats_advanced 功能正常: {vs_stats}")
         
-        print("🎉 ¡Todas las funciones del wrapper funcionan correctamente!")
+        print("🎉 包装器所有功能都正常工作！")
         
     except Exception as e:
-        print(f"❌ Error en el wrapper: {e}")
+        print(f"❌ 包装器出错: {e}")
         import traceback
         traceback.print_exc()
 

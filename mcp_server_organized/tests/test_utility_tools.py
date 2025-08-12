@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Pruebas unitarias para las herramientas de utilidad.
-Prueba las funciones de mantenimiento y estadísticas del sistema.
+实用工具单元测试。
+测试系统维护和统计功能。
 """
 
 import unittest
@@ -9,15 +9,15 @@ import sys
 import os
 from unittest.mock import Mock, patch, MagicMock
 
-# Añadir el directorio src al path
+# 将 src 目录添加到路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 class TestUtilityTools(unittest.TestCase):
-    """Pruebas para las herramientas de utilidad."""
+    """实用工具测试。"""
     
     def setUp(self):
-        """Configuración inicial para cada prueba."""
-        # Importar las funciones a probar
+        """每个测试的初始设置。"""
+        # 导入要测试的函数
         from tools.utility_tools import (
             get_knowledge_base_stats, get_embedding_cache_stats,
             clear_embedding_cache_tool, optimize_vector_database,
@@ -31,13 +31,13 @@ class TestUtilityTools(unittest.TestCase):
         self.get_vector_database_stats = get_vector_database_stats
         self.reindex_vector_database = reindex_vector_database
         
-        # Configurar estado RAG simulado
+        # 设置模拟 RAG 状态
         self.mock_rag_state = {
             "vector_store": Mock(),
             "initialized": True
         }
         
-        # Configurar vector store mock
+        # 配置向量存储模拟
         self.mock_vector_store = Mock()
         self.mock_vector_store.get.return_value = {
             "documents": ["doc1", "doc2", "doc3"],
@@ -47,194 +47,194 @@ class TestUtilityTools(unittest.TestCase):
         
         self.mock_rag_state["vector_store"] = self.mock_vector_store
         
-        # Configurar estado
+        # 配置状态
         from tools.utility_tools import set_rag_state
         set_rag_state(self.mock_rag_state)
     
     def test_get_knowledge_base_stats_basic(self):
-        """Prueba básica de get_knowledge_base_stats."""
+        """测试 get_knowledge_base_stats 的基本功能。"""
         result = self.get_knowledge_base_stats()
         
-        # Verificar que se llamó al vector store
+        # 验证是否调用了向量存储
         self.mock_vector_store.get.assert_called_once()
         
-        # Verificar que el resultado contiene estadísticas
+        # 验证结果包含统计信息
         self.assertIsNotNone(result)
-        self.assertIn("estadísticas", result.lower() or "stats" in result.lower())
+        self.assertIn("统计", result.lower() or "stats" in result.lower())
     
     def test_get_knowledge_base_stats_no_rag_state(self):
-        """Prueba get_knowledge_base_stats sin estado RAG configurado."""
+        """测试 get_knowledge_base_stats 处理未配置的RAG状态。"""
         from tools.utility_tools import set_rag_state
-        set_rag_state({})  # Estado vacío
+        set_rag_state({})  # 空状态
         
         result = self.get_knowledge_base_stats()
         
-        # Debería manejar estado RAG no inicializado
+        # 应该处理未初始化的RAG状态
         self.assertIsNotNone(result)
-        self.assertIn("error", result.lower() or "inicializado" in result.lower())
+        self.assertIn("error", result.lower() or "初始化" in result.lower())
     
     def test_get_knowledge_base_stats_vector_store_failure(self):
-        """Prueba get_knowledge_base_stats cuando falla el vector store."""
-        # Configurar mock para que falle
-        self.mock_vector_store.get.side_effect = Exception("Error de base de datos")
+        """测试 get_knowledge_base_stats 处理向量存储失败。"""
+        # 配置模拟对象抛出异常
+        self.mock_vector_store.get.side_effect = Exception("数据库错误")
         
         result = self.get_knowledge_base_stats()
         
-        # Debería manejar error del vector store
+        # 应该处理向量存储错误
         self.assertIsNotNone(result)
         self.assertIn("error", result.lower())
     
     def test_get_embedding_cache_stats_basic(self):
-        """Prueba básica de get_embedding_cache_stats."""
+        """测试 get_embedding_cache_stats 的基本功能。"""
         result = self.get_embedding_cache_stats()
         
-        # Verificar que el resultado contiene estadísticas del cache
+        # 验证结果包含缓存统计信息
         self.assertIsNotNone(result)
-        self.assertIn("cache", result.lower() or "estadísticas" in result.lower())
+        self.assertIn("cache", result.lower() or "统计" in result.lower())
     
     def test_clear_embedding_cache_tool_basic(self):
-        """Prueba básica de clear_embedding_cache_tool."""
+        """测试 clear_embedding_cache_tool 的基本功能。"""
         result = self.clear_embedding_cache_tool()
         
-        # Verificar que el resultado indica limpieza exitosa
+        # 验证结果表示清理成功
         self.assertIsNotNone(result)
-        self.assertIn("limpiado", result.lower() or "cache" in result.lower())
+        self.assertIn("清理", result.lower() or "cache" in result.lower())
     
     def test_optimize_vector_database_basic(self):
-        """Prueba básica de optimize_vector_database."""
+        """测试 optimize_vector_database 的基本功能。"""
         result = self.optimize_vector_database()
         
-        # Verificar que el resultado indica optimización exitosa
+        # 验证结果表示优化成功
         self.assertIsNotNone(result)
-        self.assertIn("optimizada", result.lower() or "optimización" in result.lower())
+        self.assertIn("优化", result.lower() or "优化" in result.lower())
     
     def test_get_vector_database_stats_basic(self):
-        """Prueba básica de get_vector_database_stats."""
+        """测试 get_vector_database_stats 的基本功能。"""
         result = self.get_vector_database_stats()
         
-        # Verificar que el resultado contiene estadísticas de la BD
+        # 验证结果包含数据库统计信息
         self.assertIsNotNone(result)
-        self.assertIn("estadísticas", result.lower() or "stats" in result.lower())
+        self.assertIn("统计", result.lower() or "stats" in result.lower())
     
     def test_reindex_vector_database_basic(self):
-        """Prueba básica de reindex_vector_database."""
+        """测试 reindex_vector_database 的基本功能。"""
         result = self.reindex_vector_database(profile="auto")
         
-        # Verificar que el resultado indica reindexado exitoso
+        # 验证结果表示重建索引成功
         self.assertIsNotNone(result)
-        self.assertIn("reindexado", result.lower() or "reindex" in result.lower())
+        self.assertIn("重建索引", result.lower() or "reindex" in result.lower())
     
     def test_reindex_vector_database_custom_profile(self):
-        """Prueba reindex_vector_database con perfil personalizado."""
+        """测试 reindex_vector_database 使用自定义配置文件。"""
         result = self.reindex_vector_database(profile="large")
         
-        # Verificar que el resultado indica reindexado exitoso
+        # 验证结果表示重建索引成功
         self.assertIsNotNone(result)
-        self.assertIn("reindexado", result.lower() or "reindex" in result.lower())
+        self.assertIn("重建索引", result.lower() or "reindex" in result.lower())
     
     def test_error_handling_optimization_failure(self):
-        """Prueba manejo de errores cuando falla la optimización."""
-        # Simular fallo en optimización
+        """测试优化失败时的错误处理。"""
+        # 模拟优化失败
         with patch('tools.utility_tools.optimize_vector_store') as mock_optimize:
-            mock_optimize.side_effect = Exception("Error de optimización")
+            mock_optimize.side_effect = Exception("优化错误")
             
             result = self.optimize_vector_database()
             
-            # Debería manejar error de optimización
+            # 应该处理优化错误
             self.assertIsNotNone(result)
             self.assertIn("error", result.lower())
     
     def test_error_handling_reindex_failure(self):
-        """Prueba manejo de errores cuando falla el reindexado."""
-        # Simular fallo en reindexado
+        """测试重建索引失败时的错误处理。"""
+        # 模拟重建索引失败
         with patch('tools.utility_tools.reindex_vector_store') as mock_reindex:
-            mock_reindex.side_effect = Exception("Error de reindexado")
+            mock_reindex.side_effect = Exception("重建索引错误")
             
             result = self.reindex_vector_database(profile="auto")
             
-            # Debería manejar error de reindexado
+            # 应该处理重建索引错误
             self.assertIsNotNone(result)
             self.assertIn("error", result.lower())
 
 class TestUtilityToolsConfiguration(unittest.TestCase):
-    """Pruebas para la configuración de las herramientas de utilidad."""
+    """实用工具配置测试。"""
     
     def test_set_rag_state(self):
-        """Prueba la función set_rag_state."""
+        """测试 set_rag_state 函数。"""
         from tools.utility_tools import set_rag_state, rag_state
         
         test_state = {"test": "value", "initialized": True}
         set_rag_state(test_state)
         
-        # Verificar que el estado se configuró correctamente
+        # 验证状态配置正确
         self.assertEqual(rag_state, test_state)
     
     def test_rag_state_persistence(self):
-        """Prueba que el estado RAG persiste entre llamadas."""
+        """测试RAG状态在调用间的持久性。"""
         from tools.utility_tools import set_rag_state, rag_state
         
-        # Configurar estado inicial
+        # 配置初始状态
         initial_state = {"vector_store": "test_store", "initialized": True}
         set_rag_state(initial_state)
         
-        # Verificar que el estado se mantiene
+        # 验证状态保持不变
         self.assertEqual(rag_state, initial_state)
         
-        # Modificar estado
+        # 修改状态
         modified_state = {"vector_store": "new_store", "initialized": True}
         set_rag_state(modified_state)
         
-        # Verificar que el estado se actualizó
+        # 验证状态已更新
         self.assertEqual(rag_state, modified_state)
 
 class TestUtilityToolsIntegration(unittest.TestCase):
-    """Pruebas de integración para las herramientas de utilidad."""
+    """实用工具集成测试。"""
     
     def test_cache_statistics_integration(self):
-        """Prueba integración de estadísticas del cache."""
+        """测试缓存统计集成功能。"""
         from tools.utility_tools import get_embedding_cache_stats, clear_embedding_cache_tool
         
-        # Obtener estadísticas iniciales
+        # 获取初始统计信息
         initial_stats = get_embedding_cache_stats()
         self.assertIsNotNone(initial_stats)
         
-        # Limpiar cache
+        # 清理缓存
         clear_result = clear_embedding_cache_tool()
         self.assertIsNotNone(clear_result)
-        self.assertIn("limpiado", clear_result.lower())
+        self.assertIn("清理", clear_result.lower())
         
-        # Obtener estadísticas después de limpiar
+        # 获取清理后的统计信息
         final_stats = get_embedding_cache_stats()
         self.assertIsNotNone(final_stats)
     
     def test_database_optimization_workflow(self):
-        """Prueba flujo de trabajo de optimización de base de datos."""
+        """测试数据库优化工作流程。"""
         from tools.utility_tools import (
             get_vector_database_stats, 
             optimize_vector_database, 
             reindex_vector_database
         )
         
-        # Obtener estadísticas iniciales
+        # 获取初始统计信息
         initial_stats = get_vector_database_stats()
         self.assertIsNotNone(initial_stats)
         
-        # Optimizar base de datos
+        # 优化数据库
         optimize_result = optimize_vector_database()
         self.assertIsNotNone(optimize_result)
-        self.assertIn("optimizada", optimize_result.lower())
+        self.assertIn("优化", optimize_result.lower())
         
-        # Reindexar base de datos
+        # 重建数据库索引
         reindex_result = reindex_vector_database(profile="auto")
         self.assertIsNotNone(reindex_result)
-        self.assertIn("reindexado", reindex_result.lower())
+        self.assertIn("重建索引", reindex_result.lower())
         
-        # Obtener estadísticas finales
+        # 获取最终统计信息
         final_stats = get_vector_database_stats()
         self.assertIsNotNone(final_stats)
     
     def test_comprehensive_system_maintenance(self):
-        """Prueba mantenimiento completo del sistema."""
+        """测试系统全面维护。"""
         from tools.utility_tools import (
             get_knowledge_base_stats,
             get_embedding_cache_stats,
@@ -244,7 +244,7 @@ class TestUtilityToolsIntegration(unittest.TestCase):
             reindex_vector_database
         )
         
-        # 1. Obtener estadísticas iniciales
+        # 1. 获取初始统计信息
         kb_stats = get_knowledge_base_stats()
         cache_stats = get_embedding_cache_stats()
         db_stats = get_vector_database_stats()
@@ -253,7 +253,7 @@ class TestUtilityToolsIntegration(unittest.TestCase):
         self.assertIsNotNone(cache_stats)
         self.assertIsNotNone(db_stats)
         
-        # 2. Realizar mantenimiento
+        # 2. 执行维护操作
         clear_result = clear_embedding_cache_tool()
         optimize_result = optimize_vector_database()
         reindex_result = reindex_vector_database(profile="auto")
@@ -262,19 +262,19 @@ class TestUtilityToolsIntegration(unittest.TestCase):
         self.assertIsNotNone(optimize_result)
         self.assertIsNotNone(reindex_result)
         
-        # 3. Verificar que todas las operaciones fueron exitosas
-        self.assertIn("limpiado", clear_result.lower())
-        self.assertIn("optimizada", optimize_result.lower())
-        self.assertIn("reindexado", reindex_result.lower())
+        # 3. 验证所有操作都成功
+        self.assertIn("清理", clear_result.lower())
+        self.assertIn("优化", optimize_result.lower())
+        self.assertIn("重建索引", reindex_result.lower())
 
 class TestUtilityToolsEdgeCases(unittest.TestCase):
-    """Pruebas de casos edge para las herramientas de utilidad."""
+    """实用工具边界情况测试。"""
     
     def test_empty_vector_store_stats(self):
-        """Prueba estadísticas con vector store vacío."""
+        """测试空向量存储的统计信息。"""
         from tools.utility_tools import get_knowledge_base_stats, set_rag_state
         
-        # Configurar vector store vacío
+        # 配置空向量存储
         empty_vector_store = Mock()
         empty_vector_store.get.return_value = {
             "documents": [],
@@ -287,15 +287,15 @@ class TestUtilityToolsEdgeCases(unittest.TestCase):
         
         result = get_knowledge_base_stats()
         
-        # Debería manejar vector store vacío
+        # 应该处理空向量存储
         self.assertIsNotNone(result)
-        self.assertIn("0", result or "vacía" in result.lower())
+        self.assertIn("0", result or "空" in result.lower())
     
     def test_large_vector_store_stats(self):
-        """Prueba estadísticas con vector store grande."""
+        """测试大型向量存储的统计信息。"""
         from tools.utility_tools import get_knowledge_base_stats, set_rag_state
         
-        # Configurar vector store grande
+        # 配置大型向量存储
         large_vector_store = Mock()
         large_vector_store.get.return_value = {
             "documents": ["doc" + str(i) for i in range(1000)],
@@ -308,19 +308,19 @@ class TestUtilityToolsEdgeCases(unittest.TestCase):
         
         result = get_knowledge_base_stats()
         
-        # Debería manejar vector store grande
+        # 应该处理大型向量存储
         self.assertIsNotNone(result)
-        self.assertIn("1000", result or "grande" in result.lower())
+        self.assertIn("1000", result or "大" in result.lower())
     
     def test_invalid_profile_reindex(self):
-        """Prueba reindexado con perfil inválido."""
+        """测试使用无效配置文件重建索引。"""
         from tools.utility_tools import reindex_vector_database
         
         result = reindex_vector_database(profile="invalid_profile")
         
-        # Debería manejar perfil inválido
+        # 应该处理无效配置文件
         self.assertIsNotNone(result)
-        # Puede devolver error o usar perfil por defecto
+        # 可能返回错误或使用默认配置文件
         self.assertTrue(len(result) > 0)
 
 if __name__ == '__main__':

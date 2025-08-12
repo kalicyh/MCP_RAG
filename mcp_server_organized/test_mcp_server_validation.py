@@ -110,44 +110,44 @@ def test_modular_architecture():
         return False, error_msg
 
 def test_server_initialization():
-    """Prueba la inicialización del servidor MCP organizado."""
-    print_header("INICIALIZACIÓN DEL SERVIDOR MCP")
+    """测试组织化MCP服务器的初始化。"""
+    print_header("MCP服务器初始化")
     
     try:
-        print_section("1. Importación del Servidor")
+        print_section("1. 服务器导入")
         
-        # Importar el servidor completo
+        # 导入完整服务器
         import server
-        print("✅ Servidor importado correctamente")
+        print("✅ 服务器导入成功")
         
-        print_section("2. Verificación de Componentes")
+        print_section("2. 组件验证")
         
-        # Verificar que el objeto mcp existe
+        # 验证mcp对象存在
         if hasattr(server, 'mcp'):
-            print("✅ Objeto MCP creado")
-            print(f"   • Nombre del servidor: {server.mcp.name}")
+            print("✅ MCP对象已创建")
+            print(f"   • 服务器名称: {server.mcp.name}")
         else:
-            print("❌ Objeto MCP no encontrado")
-            return False, "Objeto MCP faltante"
+            print("❌ 未找到MCP对象")
+            return False, "缺少MCP对象"
         
-        # Verificar estado RAG
+        # 验证RAG状态
         if hasattr(server, 'rag_state'):
-            print("✅ Estado RAG inicializado")
-            print(f"   • Componentes: {list(server.rag_state.keys())}")
+            print("✅ RAG状态已初始化")
+            print(f"   • 组件: {list(server.rag_state.keys())}")
         else:
-            print("❌ Estado RAG no encontrado")
-            return False, "Estado RAG faltante"
+            print("❌ 未找到RAG状态")
+            return False, "缺少RAG状态"
         
         # Verificar conversor MarkItDown
         if hasattr(server, 'md_converter'):
             print("✅ Conversor MarkItDown inicializado")
         else:
-            print("❌ Conversor MarkItDown no encontrado")
-            return False, "Conversor MarkItDown faltante"
+            print("❌ 未找到MarkItDown转换器")
+            return False, "缺少MarkItDown转换器"
         
-        print_section("3. Verificación de Funciones de Inicialización")
+        print_section("3. 初始化函数验证")
         
-        # Verificar funciones de inicialización
+        # 验证初始化函数
         init_functions = [
             'warm_up_rag_system',
             'ensure_converted_docs_directory', 
@@ -157,10 +157,10 @@ def test_server_initialization():
         
         for func_name in init_functions:
             if hasattr(server, func_name):
-                print(f"✅ Función {func_name} disponible")
+                print(f"✅ 函数 {func_name} 可用")
             else:
-                print(f"❌ Función {func_name} no encontrada")
-                return False, f"Función {func_name} faltante"
+                print(f"❌ 函数 {func_name} 未找到")
+                return False, f"缺少函数 {func_name}"
         
         print_section("4. Verificación de Herramientas MCP")
         
@@ -189,16 +189,16 @@ def test_server_initialization():
         return True, details
         
     except Exception as e:
-        error_msg = f"Error en inicialización del servidor: {str(e)}"
+        error_msg = f"服务器初始化错误：{str(e)}"
         print(f"❌ {error_msg}")
         return False, error_msg
 
 def test_tools_configuration():
-    """Prueba la configuración de herramientas modulares."""
-    print_header("CONFIGURACIÓN DE HERRAMIENTAS")
+    """测试模块化工具配置。"""
+    print_header("工具配置")
     
     try:
-        print_section("1. Configuración del Estado RAG")
+        print_section("1. RAG状态配置")
         
         # Importar el servidor para obtener el estado real
         import server
@@ -221,7 +221,7 @@ def test_tools_configuration():
         def test_save_processed_copy(file_path, content, method):
             return f"copia_guardada_{method}.md"
         
-        print_section("2. Aplicar Configuración")
+        print_section("2. 应用配置")
         
         from tools import configure_rag_state
         
@@ -233,9 +233,9 @@ def test_tools_configuration():
             save_processed_copy_func=test_save_processed_copy
         )
         
-        print("✅ Configuración aplicada correctamente")
+        print("✅ 配置应用成功")
         
-        print_section("3. Verificar Configuración en Módulos")
+        print_section("3. 验证模块配置")
         
         # Verificar que los módulos tienen acceso al estado
         from tools.document_tools import rag_state as doc_rag_state
@@ -257,19 +257,19 @@ def test_tools_configuration():
         if utility_rag_state == test_rag_state:
             print("✅ Estado RAG configurado en utility_tools")
         else:
-            print("❌ Estado RAG no configurado en utility_tools")
-            return False, "Estado RAG no compartido en utility_tools"
+            print("❌ utility_tools 中未配置 RAG 状态")
+            return False, "utility_tools 中未共享 RAG 状态"
         
-        details = "Configuración de herramientas verificada: estado RAG compartido entre módulos"
+        details = "工具配置已验证：模块间共享RAG状态"
         return True, details
         
     except Exception as e:
-        error_msg = f"Error en configuración de herramientas: {str(e)}"
+        error_msg = f"工具配置错误：{str(e)}"
         print(f"❌ {error_msg}")
         return False, error_msg
 
 def test_document_tools():
-    """Prueba las herramientas de procesamiento de documentos usando el servidor completo."""
+    """使用完整服务器测试文档处理工具。"""
     print_header("HERRAMIENTAS DE DOCUMENTOS")
     
     try:
@@ -284,39 +284,39 @@ def test_document_tools():
         
         try:
             result = server.learn_text(test_text, test_source)
-            # Verificar si hay errores en el resultado
+            # 检查结果中是否有错误
             if result and "Error" in str(result):
-                print(f"❌ learn_text falló: {result}")
-                return False, f"Error en learn_text: {result}"
-            elif result and ("añadido" in result.lower() or "procesado" in result.lower()):
-                print("✅ learn_text funcionando correctamente")
+                print(f"❌ learn_text 失败：{result}")
+                return False, f"learn_text 错误：{result}"
+            elif result and ("添加" in result.lower() or "处理" in result.lower()):
+                print("✅ learn_text 工作正常")
             else:
-                print(f"⚠️ learn_text ejecutado pero respuesta inesperada: {result}")
-                return False, f"Respuesta inesperada en learn_text: {result}"
+                print(f"⚠️ learn_text 已执行但响应意外：{result}")
+                return False, f"learn_text 响应意外：{result}"
         except Exception as e:
-            print(f"❌ Error en learn_text: {e}")
-            return False, f"Error en learn_text: {e}"
+            print(f"❌ learn_text 错误：{e}")
+            return False, f"learn_text 错误：{e}"
         
-        print_section("2. Prueba de learn_document")
+        print_section("2. learn_document 测试")
         
-        # Crear archivo de prueba
+        # 创建测试文件
         test_content = """
-# Documento de Prueba Modular
+# 模块化测试文档
 
-Este documento prueba las capacidades del sistema RAG organizado.
+此文档测试组织化RAG系统的功能。
 
-## Características Probadas
+## 测试特性
 
-1. **Arquitectura Modular**: Herramientas organizadas en módulos
-2. **Configuración Centralizada**: Estado RAG compartido
-3. **Procesamiento Inteligente**: Uso de Unstructured
-4. **Metadatos Estructurales**: Información detallada
+1. **模块化架构**：工具组织在模块中
+2. **集中配置**：共享RAG状态
+3. **智能处理**：使用Unstructured
+4. **结构化元数据**：详细信息
 
-## Resultados Esperados
+## 预期结果
 
-- Procesamiento exitoso del documento
-- Extracción de metadatos estructurales
-- Integración con el sistema modular
+- 文档处理成功
+- 结构化元数据提取
+- 与模块化系统集成
         """
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
@@ -328,8 +328,8 @@ Este documento prueba las capacidades del sistema RAG organizado.
             result = server.learn_document(test_file)
             # Verificar si hay errores en el resultado
             if result and "Error" in str(result):
-                print(f"❌ learn_document falló: {result}")
-                return False, f"Error en learn_document: {result}"
+                print(f"❌ learn_document 失败：{result}")
+                return False, f"learn_document 错误：{result}"
             elif result and ("procesado" in result.lower() or "añadido" in result.lower()):
                 print("✅ learn_document funcionando correctamente")
             else:
@@ -337,10 +337,10 @@ Este documento prueba las capacidades del sistema RAG organizado.
                 return False, f"Respuesta inesperada en learn_document: {result}"
                 
         except Exception as e:
-            print(f"❌ Error en learn_document: {e}")
-            return False, f"Error en learn_document: {e}"
+            print(f"❌ learn_document 错误：{e}")
+            return False, f"learn_document 错误：{e}"
         finally:
-            # Limpiar archivo temporal
+            # 清理临时文件
             try:
                 os.unlink(test_file)
             except:
@@ -682,18 +682,18 @@ def test_error_handling():
         except Exception as e:
             print(f"❌ Error inesperado: {e}")
         
-        print_section("3. Manejo de Errores de Configuración")
+        print_section("3. 配置错误处理")
         
         try:
             from tools import configure_rag_state
             
-            # Probar configuración con parámetros None
+            # 测试使用None参数的配置
             configure_rag_state(None, None, None, None)
-            print("✅ Configuración con parámetros None manejada correctamente")
+            print("✅ None参数配置处理正确")
         except Exception as e:
-            print(f"❌ Error en configuración con parámetros None: {e}")
+            print(f"❌ None参数配置错误：{e}")
         
-        details = "Manejo de errores validado en arquitectura modular"
+        details = "模块化架构中的错误处理已验证"
         return True, details
         
     except Exception as e:
@@ -718,16 +718,16 @@ def generate_test_report(results, test_details):
 
     # Tabla de resultados detallada
     table = Table(title="Resultados Detallados de Pruebas", show_lines=True, header_style="bold blue")
-    table.add_column("PRUEBA", style="cyan", no_wrap=True)
-    table.add_column("DESCRIPCIÓN", style="white")
-    table.add_column("ESTADO", style="bold")
-    table.add_column("RESULTADO/DETALLES", style="yellow")
+    table.add_column("测试项", style="cyan", no_wrap=True)
+    table.add_column("描述", style="white")
+    table.add_column("状态", style="bold")
+    table.add_column("结果/详情", style="yellow")
 
     for test_name, success in results.items():
         test_info = test_details.get(test_name, {})
-        description = test_info.get('description', 'Sin descripción')
-        result_details = test_info.get('error', '✅ Exitoso') if not success else test_info.get('error', '✅ Exitoso')
-        status = "[green]✅ PASÓ[/green]" if success else "[red]❌ FALLÓ[/red]"
+        description = test_info.get('description', '无描述')
+        result_details = test_info.get('error', '✅ 成功') if not success else test_info.get('error', '✅ 成功')
+        status = "[green]✅ 通过[/green]" if success else "[red]❌ 失败[/red]"
         
         # Truncar descripción y resultado si son muy largos
         if len(description) > 42:
@@ -740,85 +740,85 @@ def generate_test_report(results, test_details):
 
     # Resumen por estado en paneles
     if passed_tests > 0:
-        exitosas = [name for name, ok in results.items() if ok]
-        console.print(Panel("\n".join(f"[green]• {name}[/green]" for name in exitosas), 
-                           title=f"[bold green]PRUEBAS EXITOSAS ({passed_tests})[/bold green]", 
+        passed_names = [name for name, ok in results.items() if ok]
+        console.print(Panel("\n".join(f"[green]• {name}[/green]" for name in passed_names), 
+                           title=f"[bold green]通过的测试 ({passed_tests})[/bold green]", 
                            border_style="green"))
     
     if failed_tests > 0:
-        fallidas = [name for name, ok in results.items() if not ok]
-        console.print(Panel("\n".join(f"[red]• {name}[/red]" for name in fallidas), 
-                           title=f"[bold red]PRUEBAS FALLIDAS ({failed_tests})[/bold red]", 
+        failed_names = [name for name, ok in results.items() if not ok]
+        console.print(Panel("\n".join(f"[red]• {name}[/red]" for name in failed_names), 
+                           title=f"[bold red]失败的测试 ({failed_tests})[/bold red]", 
                            border_style="red"))
 
-    # Estado del sistema
+    # 系统状态
     if passed_tests == total_tests:
         console.print(Panel(
-            "[bold green]🚀 SERVIDOR MCP COMPLETAMENTE OPERATIVO[/bold green]\n"
-            "• Arquitectura modular funcionando correctamente\n"
-            "• Todas las herramientas MCP disponibles\n"
-            "• Listo para uso en producción",
-            title="[green]ESTADO DEL SISTEMA[/green]",
+            "[bold green]🚀 MCP服务器完全可用[/bold green]\n"
+            "• 模块化架构运行正常\n"
+            "• 所有MCP工具可用\n"
+            "• 可用于生产环境",
+            title="[green]系统状态[/green]",
             border_style="green"
         ))
     elif passed_tests >= total_tests * 0.8:
         console.print(Panel(
-            "[bold yellow]✅ SERVIDOR MCP MAYORMENTE OPERATIVO[/bold yellow]\n"
-            "• La mayoría de funcionalidades funcionando\n"
-            "• Revisar pruebas fallidas para optimización",
-            title="[yellow]ESTADO DEL SISTEMA[/yellow]",
+            "[bold yellow]✅ MCP服务器大部分可用[/bold yellow]\n"
+            "• 大部分功能正常\n"
+            "• 请检查失败的测试以优化",
+            title="[yellow]系统状态[/yellow]",
             border_style="yellow"
         ))
     else:
         console.print(Panel(
-            "[bold red]⚠️ SERVIDOR MCP CON PROBLEMAS[/bold red]\n"
-            "• Múltiples funcionalidades con errores\n"
-            "• Requiere revisión y corrección",
-            title="[red]ESTADO DEL SISTEMA[/red]",
+            "[bold red]⚠️ MCP服务器存在问题[/bold red]\n"
+            "• 多个功能存在错误\n"
+            "• 需要检查和修复",
+            title="[red]系统状态[/red]",
             border_style="red"
         ))
 
 def main():
     """Función principal del script de validación."""
     
-    print("🚀 **SERVIDOR MCP ORGANIZADO - VALIDACIÓN COMPLETA**")
+    print("🚀 **MCP组织化服务器 - 完整验证**")
     print("=" * 70)
-    print(f"📅 Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🔧 Versión: Servidor MCP Organizado v1.0")
+    print(f"📅 日期: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🔧 版本: MCP组织化服务器 v1.0")
     print("=" * 70)
     
-    # Definición detallada de las pruebas
+    # 测试定义
     test_definitions = {
-        "Arquitectura Modular": {
-            "description": "Verifica la organización modular de herramientas",
+        "模块化架构": {
+            "description": "验证工具的模块化组织",
             "function": test_modular_architecture
         },
-        "Inicialización del Servidor MCP": {
-            "description": "Prueba la inicialización completa del servidor",
+        "MCP服务器初始化": {
+            "description": "测试服务器的完整初始化",
             "function": test_server_initialization
         },
-        "Configuración de Herramientas": {
-            "description": "Verifica la configuración centralizada de herramientas",
+        "工具配置": {
+            "description": "验证工具的集中配置",
             "function": test_tools_configuration
         },
-        "Herramientas de Documentos": {
-            "description": "Prueba las herramientas de procesamiento de documentos",
+        "文档工具": {
+            "description": "测试文档处理工具",
             "function": test_document_tools
         },
-        "Herramientas de Búsqueda": {
-            "description": "Prueba las herramientas de búsqueda y consulta",
+        "搜索工具": {
+            "description": "测试搜索和查询工具",
             "function": test_search_tools
         },
-        "Herramientas de Utilidad": {
-            "description": "Prueba las herramientas de mantenimiento y utilidad",
+        "维护工具": {
+            "description": "测试维护和实用工具",
             "function": test_utility_tools
         },
-        "Integración del Servidor MCP": {
-            "description": "Verifica la integración completa del servidor MCP",
+        "MCP服务器集成": {
+            "description": "验证服务器的完整集成",
             "function": test_mcp_server_integration
         },
-        "Manejo de Errores": {
-            "description": "Valida el manejo robusto de errores en la arquitectura modular",
+        "错误处理": {
+            "description": "验证模块化架构中的健壮错误处理",
             "function": test_error_handling
         }
     }
@@ -826,10 +826,10 @@ def main():
     results = {}
     test_details = {}
     
-    # Ejecutar todas las pruebas
+    # 执行所有测试
     for test_name, test_info in test_definitions.items():
         try:
-            print(f"\n🧪 Ejecutando: {test_name}")
+            print(f"\n🧪 执行测试: {test_name}")
             success, details = test_info["function"]()
             results[test_name] = success
             test_details[test_name] = {
@@ -837,21 +837,21 @@ def main():
                 "error": details
             }
         except Exception as e:
-            print(f"❌ Error crítico en {test_name}: {e}")
+            print(f"❌ {test_name} 出现严重错误: {e}")
             results[test_name] = False
             test_details[test_name] = {
                 "description": test_info["description"],
                 "error": str(e)
             }
     
-    # Generar reporte final
+    # 生成最终报告
     generate_test_report(results, test_details)
     
-    print(f"\n💡 **PRÓXIMOS PASOS:**")
-    print("   • Usar el servidor MCP organizado con clientes MCP")
-    print("   • Monitorear rendimiento de la arquitectura modular")
-    print("   • Añadir nuevas herramientas en módulos apropiados")
-    print("   • Revisar logs para mejoras continuas")
+    print(f"\n💡 **后续建议:**")
+    print("   • 使用MCP组织化服务器与MCP客户端配合")
+    print("   • 监控模块化架构的性能")
+    print("   • 在合适的模块中添加新工具")
+    print("   • 查看日志以持续优化")
 
 if __name__ == "__main__":
     main()

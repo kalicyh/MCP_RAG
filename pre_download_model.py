@@ -7,9 +7,9 @@ from rich.panel import Panel
 
 def log(message: str):
     """使用 Rich 在控制台中打印消息。"""
-    if any(word in message.lower() for word in ["error", "falló", "fatal", "excepción"]):
+    if any(word in message.lower() for word in ["error", "错误", "fatal", "异常"]):
         rich_print(Panel(f"{message}", title="[red]错误[/red]", style="bold red"))
-    elif any(word in message.lower() for word in ["éxito", "exitosamente", "completado", "ok"]):
+    elif any(word in message.lower() for word in ["成功", "已完成", "ok"]):
         rich_print(f"[bold green]{message}[/bold green]")
     else:
         rich_print(message)

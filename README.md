@@ -32,50 +32,50 @@
 
 ```
 MCP_RAG/
-├── 📁 mcp_server_organized/          # Servidor MCP principal
-│   ├── 📄 server.py                  # Servidor MCP con herramientas RAG
-│   ├── 📄 run_server_organized.bat   # Script para ejecutar el servidor
-│   ├── 📁 src/                       # Código fuente del servidor
-│   │   ├── 📄 rag_core.py            # Lógica principal del RAG
-│   │   ├── 📄 rag_server_bk.py       # Servidor MCP (backup)
-│   │   ├── 📁 models/                # Modelos de datos
-│   │   ├── 📁 services/              # Servicios del servidor
-│   │   ├── 📁 tools/                 # Herramientas MCP
-│   │   └── 📁 utils/                 # Utilidades
-│   ├── 📁 tests/                     # Pruebas del servidor
-│   ├── 📁 data/                      # Datos del servidor
-│   │   ├── 📁 documents/             # Documentos procesados
-│   │   └── 📁 vector_store/          # Base de datos vectorial
-│   └── 📁 embedding_cache/           # Cache de embeddings
+├── 📁 mcp_server_organized/          # MCP主服务器
+│   ├── 📄 server.py                  # MCP服务器，包含RAG工具
+│   ├── 📄 run_server_organized.bat   # 启动服务器脚本
+│   ├── 📁 src/                       # 服务器源代码
+│   │   ├── 📄 rag_core.py            # RAG核心逻辑
+│   │   ├── 📄 rag_server_bk.py       # MCP服务器（备份）
+│   │   ├── 📁 models/                # 数据模型
+│   │   ├── 📁 services/              # 服务器服务
+│   │   ├── 📁 tools/                 # MCP工具
+│   │   └── 📁 utils/                 # 工具类
+│   ├── 📁 tests/                     # 服务器测试
+│   ├── 📁 data/                      # 服务器数据
+│   │   ├── 📁 documents/             # 已处理文档
+│   │   └── 📁 vector_store/          # 向量数据库
+│   └── 📁 embedding_cache/           # 嵌入缓存
 │
-├── 📁 bulk_ingest_GUI/               # Interfaz gráfica de usuario
-│   ├── 📄 main.py                    # Punto de entrada principal
-│   ├── 📄 launch.py                  # Lanzador de la aplicación
-│   ├── 📄 start_app.py               # Inicialización de la app
-│   ├── 📄 rag_core_wrapper.py        # Wrapper para rag_core
-│   ├── 📁 views/                     # Vistas de la interfaz
-│   │   └── 📄 main_view.py           # Vista principal
-│   ├── 📁 controllers/               # Controladores
-│   │   └── 📄 main_controller.py     # Controlador principal
-│   ├── 📁 services/                  # Servicios de la GUI
-│   │   ├── 📄 document_service.py    # Servicio de documentos
-│   │   └── 📄 configuration_service.py # Servicio de configuración
-│   ├── 📁 models/                    # Modelos de la GUI
-│   ├── 📁 widgets/                   # Widgets personalizados
-│   ├── 📁 gui_utils/                 # Utilidades de la GUI
-│   ├── 📁 data/                      # Datos de la GUI
-│   │   ├── 📁 documents/             # Documentos procesados
-│   │   └── 📁 vector_store/          # Base de datos vectorial
-│   └── 📁 embedding_cache/           # Cache de embeddings
+├── 📁 bulk_ingest_GUI/               # 图形用户界面（GUI）
+│   ├── 📄 main.py                    # 主入口
+│   ├── 📄 launch.py                  # 应用启动器
+│   ├── 📄 start_app.py               # 应用初始化
+│   ├── 📄 rag_core_wrapper.py        # rag_core 包装器
+│   ├── 📁 views/                     # 界面视图
+│   │   └── 📄 main_view.py           # 主视图
+│   ├── 📁 controllers/               # 控制器
+│   │   └── 📄 main_controller.py     # 主控制器
+│   ├── 📁 services/                  # GUI服务
+│   │   ├── 📄 document_service.py    # 文档服务
+│   │   └── 📄 configuration_service.py # 配置服务
+│   ├── 📁 models/                    # GUI数据模型
+│   ├── 📁 widgets/                   # 自定义控件
+│   ├── 📁 gui_utils/                 # GUI工具类
+│   ├── 📁 data/                      # GUI数据
+│   │   ├── 📁 documents/             # 已处理文档
+│   │   └── 📁 vector_store/          # 向量数据库
+│   └── 📁 embedding_cache/           # 嵌入缓存
 │
-├── 📄 start.bat                      # Script principal de arranque
-├── 📄 run_gui.bat                    # Script para ejecutar la GUI
-├── 📄 install_requirements.bat       # Instalación de dependencias
-├── 📄 requirements.txt               # Dependencias del proyecto
-├── 📄 README.md                      # Documentación principal
-├── 📄 SCRIPTS_README.md              # Guía de scripts
-├── 📄 GUI_ADVANCED_README.md         # Guía de la GUI para ingesta de documentos masivo
-└── 📄 AGENT_INSTRUCTIONS.md          # Instrucciones para agentes IA
+├── 📄 start.bat                      # 启动脚本
+├── 📄 run_gui.bat                    # 启动GUI脚本
+├── 📄 install_requirements.bat       # 依赖安装脚本
+├── 📄 requirements.txt               # 项目依赖
+├── 📄 README.md                      # 主文档
+├── 📄 SCRIPTS_README.md              # 脚本指南
+├── 📄 GUI_ADVANCED_README.md         # GUI批量文档导入指南
+└── 📄 AGENT_INSTRUCTIONS.md          # AI代理说明
 ```
 
 ### 主要组件
@@ -599,12 +599,12 @@ UNSTRUCTURED_CONFIGS = {
         'new_after_n_chars': 1500    # Nuevo elemento después de N caracteres
     },
     '.docx': {
-        'strategy': 'fast',          # Procesamiento rápido para documentos de Office
+        'strategy': 'fast',          # Office 文档的快速处理
         'include_metadata': True,
         'max_partition': 2000,
         'new_after_n_chars': 1500
     },
-    # ... configuraciones para más de 25 formatos
+    # ... 超过 25 种格式的配置
 }
 ```
 
@@ -612,7 +612,7 @@ UNSTRUCTURED_CONFIGS = {
 
 ```python
 def process_unstructured_elements(elements: List[Any]) -> str:
-    """Procesa elementos de Unstructured preservando estructura semántica."""
+    """处理 Unstructured 元素，保持语义结构。"""
     for element in elements:
         element_type = type(element).__name__
         

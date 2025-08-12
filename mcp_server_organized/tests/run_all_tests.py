@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script para ejecutar todas las pruebas unitarias del servidor MCP organizado.
-Ejecuta las pruebas de manera organizada y genera un reporte detallado.
+MCP组织化服务器单元测试脚本。
+有序执行所有单元测试并生成详细报告。
 """
 
 import unittest
@@ -15,43 +15,43 @@ from rich.panel import Panel
 
 console = Console()
 
-# Añadir el directorio src al path
+# 添加 src 目录到路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 def print_header(title):
-    """Imprime un encabezado con formato."""
-    console.print(Panel(f"[bold blue]{title}[/bold blue]", title="[cyan]Pruebas Unitarias[/cyan]"))
+    """打印格式化标题。"""
+    console.print(Panel(f"[bold blue]{title}[/bold blue]", title="[cyan]单元测试[/cyan]"))
 
 def run_test_suite():
-    """Ejecuta todas las pruebas unitarias."""
-    print_header("EJECUTANDO PRUEBAS UNITARIAS DEL SERVIDOR MCP")
+    """执行所有单元测试。"""
+    print_header("正在执行MCP组织化服务器单元测试")
     
-    # Crear el test loader
+    # 创建测试加载器
     loader = unittest.TestLoader()
     
-    # Descubrir y cargar todas las pruebas
+    # 发现并加载所有测试
     test_suites = []
     test_results = {}
     
-    # Lista de archivos de prueba
+    # 测试文件列表
     test_files = [
         "test_document_tools",
         "test_search_tools", 
         "test_utility_tools"
     ]
     
-    print(f"\n[bold magenta]Descubriendo pruebas en {len(test_files)} módulos...[/bold magenta]")
+    print(f"\n[bold magenta]正在发现 {len(test_files)} 个模块中的测试...[/bold magenta]")
     
     for test_file in test_files:
         try:
-            # Importar el módulo de pruebas
+            # 导入测试模块
             module = __import__(test_file)
             
-            # Cargar las pruebas del módulo
+            # 加载模块中的测试
             suite = loader.loadTestsFromModule(module)
             test_suites.append(suite)
             
-            # Contar pruebas en el módulo
+            # 统计模块中的测试数量
             test_count = suite.countTestCases()
             test_results[test_file] = {
                 "suite": suite,
@@ -59,10 +59,10 @@ def run_test_suite():
                 "status": "loaded"
             }
             
-            console.print(f"✅ [green]{test_file}[/green]: {test_count} pruebas cargadas")
+            console.print(f"✅ [green]{test_file}[/green]: 加载了 {test_count} 个测试")
             
         except ImportError as e:
-            console.print(f"❌ [red]{test_file}[/red]: Error al importar - {e}")
+            console.print(f"❌ [red]{test_file}[/red]: 导入出错 - {e}")
             test_results[test_file] = {
                 "suite": None,
                 "count": 0,
@@ -70,7 +70,7 @@ def run_test_suite():
                 "error": str(e)
             }
         except Exception as e:
-            console.print(f"❌ [red]{test_file}[/red]: Error inesperado - {e}")
+            console.print(f"❌ [red]{test_file}[/red]: 未知错误 - {e}")
             test_results[test_file] = {
                 "suite": None,
                 "count": 0,
@@ -78,8 +78,8 @@ def run_test_suite():
                 "error": str(e)
             }
     
-    # Ejecutar las pruebas
-    print(f"\n[bold magenta]Ejecutando {sum(result['count'] for result in test_results.values() if result['status'] == 'loaded')} pruebas...[/bold magenta]")
+    # 执行测试
+    print(f"\n[bold magenta]正在执行 {sum(result['count'] for result in test_results.values() if result['status'] == 'loaded')} 个测试...[/bold magenta]")
     
     # Crear runner
     runner = unittest.TextTestRunner(verbosity=2, stream=sys.stdout)
@@ -102,9 +102,9 @@ def run_test_suite():
                 }
                 
                 if execution_result.wasSuccessful():
-                    console.print(f"✅ [green]{test_file}[/green]: {execution_result.testsRun} pruebas exitosas")
+                    console.print(f"✅ [green]{test_file}[/green]: {execution_result.testsRun} 个测试全部通过")
                 else:
-                    console.print(f"❌ [red]{test_file}[/red]: {execution_result.testsRun} pruebas, {len(execution_result.failures)} fallos, {len(execution_result.errors)} errores")
+                    console.print(f"❌ [red]{test_file}[/red]: {execution_result.testsRun} 个测试，{len(execution_result.failures)} 失败，{len(execution_result.errors)} 错误")
                 
             except Exception as e:
                 console.print(f"❌ [red]{test_file}[/red]: Error durante ejecución - {e}")
@@ -129,7 +129,7 @@ def run_test_suite():
     return test_results, execution_results
 
 def generate_test_report(test_results, execution_results):
-    """Genera un reporte detallado de las pruebas."""
+    """生成详细测试报告。"""
     print_header("REPORTE DE PRUEBAS UNITARIAS")
     
     # Calcular estadísticas generales
@@ -142,14 +142,14 @@ def generate_test_report(test_results, execution_results):
     
     # Resumen general
     console.print(Panel(
-        f"[bold]Total de módulos:[/bold] [cyan]{total_modules}[/cyan]\n"
-        f"[bold]Módulos exitosos:[/bold] [green]{successful_modules}[/green]\n"
-        f"[bold]Total de pruebas:[/bold] [cyan]{total_tests}[/cyan]\n"
-        f"[bold]Pruebas exitosas:[/bold] [green]{total_tests - total_failures - total_errors}[/green]\n"
-        f"[bold]Fallos:[/bold] [red]{total_failures}[/red]\n"
-        f"[bold]Errores:[/bold] [red]{total_errors}[/red]\n"
-        f"[bold]Omitidas:[/bold] [yellow]{total_skipped}[/yellow]\n"
-        f"[bold]Tasa de éxito:[/bold] [bold yellow]{((total_tests - total_failures - total_errors) / total_tests * 100) if total_tests > 0 else 0:.1f}%[/bold yellow]",
+        f"[bold]模块总数:[/bold] [cyan]{total_modules}[/cyan]\n"
+        f"[bold]成功模块:[/bold] [green]{successful_modules}[/green]\n"
+        f"[bold]测试总数:[/bold] [cyan]{total_tests}[/cyan]\n"
+        f"[bold]成功测试:[/bold] [green]{total_tests - total_failures - total_errors}[/green]\n"
+        f"[bold]失败:[/bold] [red]{total_failures}[/red]\n"
+        f"[bold]错误:[/bold] [red]{total_errors}[/red]\n"
+        f"[bold]跳过:[/bold] [yellow]{total_skipped}[/yellow]\n"
+        f"[bold]成功率:[/bold] [bold yellow]{((total_tests - total_failures - total_errors) / total_tests * 100) if total_tests > 0 else 0:.1f}%[/bold yellow]",
         title="[bold magenta]Resumen General[/bold magenta]",
         border_style="magenta"
     ))
@@ -167,11 +167,11 @@ def generate_test_report(test_results, execution_results):
         successful_tests = result["tests_run"] - result["failures"] - result["errors"]
         
         if result["success"]:
-            status = "[green]✅ EXITOSO[/green]"
+            status = "[green]✅ 成功[/green]"
         elif result["errors"] > 0:
-            status = "[red]❌ ERROR[/red]"
+            status = "[red]❌ 错误[/red]"
         else:
-            status = "[yellow]⚠️ FALLOS[/yellow]"
+            status = "[yellow]⚠️ 失败[/yellow]"
         
         table.add_row(
             module_name,
@@ -205,41 +205,41 @@ def generate_test_report(test_results, execution_results):
     # Estado del sistema
     if successful_modules == total_modules and total_tests > 0:
         console.print(Panel(
-            "[bold green]🚀 TODAS LAS PRUEBAS UNITARIAS EXITOSAS[/bold green]\n"
-            "• Código modular funcionando correctamente\n"
-            "• Funciones individuales validadas\n"
-            "• Listo para integración completa",
-            title="[green]ESTADO DEL SISTEMA[/green]",
+            "[bold green]🚀 所有单元测试均成功[/bold green]\n"
+            "• 模块化代码运行正常\n"
+            "• 各功能已验证\n"
+            "• 可进行完整集成",
+            title="[green]系统状态[/green]",
             border_style="green"
         ))
     elif successful_modules >= total_modules * 0.7:
         console.print(Panel(
-            "[bold yellow]✅ MAYORÍA DE PRUEBAS UNITARIAS EXITOSAS[/bold yellow]\n"
-            "• La mayoría de funciones funcionando correctamente\n"
-            "• Revisar módulos con problemas\n"
-            "• Sistema funcional con algunas advertencias",
-            title="[yellow]ESTADO DEL SISTEMA[/yellow]",
+            "[bold yellow]✅ 大部分单元测试成功[/bold yellow]\n"
+            "• 大部分功能正常运行\n"
+            "• 请检查有问题的模块\n"
+            "• 系统功能正常，有一些警告",
+            title="[yellow]系统状态[/yellow]",
             border_style="yellow"
         ))
     else:
         console.print(Panel(
-            "[bold red]⚠️ MÚLTIPLES PRUEBAS UNITARIAS FALLIDAS[/bold red]\n"
-            "• Varios módulos con problemas\n"
-            "• Requiere revisión y corrección\n"
-            "• Sistema no completamente funcional",
-            title="[red]ESTADO DEL SISTEMA[/red]",
+            "[bold red]⚠️ 多个单元测试失败[/bold red]\n"
+            "• 多个模块存在问题\n"
+            "• 需要检查和修正\n"
+            "• 系统功能不完全",
+            title="[red]系统状态[/red]",
             border_style="red"
         ))
 
 def save_test_report(test_results, execution_results):
-    """Guarda el reporte de pruebas en un archivo."""
+    """将测试报告保存到文件。"""
     try:
         report_filename = f"unit_tests_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         
         with open(report_filename, 'w', encoding='utf-8') as f:
-            f.write("REPORTE DE PRUEBAS UNITARIAS - SERVIDOR MCP ORGANIZADO\n")
+            f.write("MCP组织化服务器单元测试报告\n")
             f.write("=" * 70 + "\n")
-            f.write(f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write(f"日期: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
             
             # Estadísticas generales
             total_tests = sum(result["tests_run"] for result in execution_results.values())
@@ -248,7 +248,7 @@ def save_test_report(test_results, execution_results):
             successful_modules = sum(1 for result in execution_results.values() if result["success"])
             total_modules = len(execution_results)
             
-            f.write(f"RESUMEN GENERAL:\n")
+            f.write(f"总览:\n")
             f.write(f"  Total de módulos: {total_modules}\n")
             f.write(f"  Módulos exitosos: {successful_modules}\n")
             f.write(f"  Total de pruebas: {total_tests}\n")
@@ -257,7 +257,7 @@ def save_test_report(test_results, execution_results):
             f.write(f"  Errores: {total_errors}\n\n")
             
             # Resultados por módulo
-            f.write("RESULTADOS POR MÓDULO:\n")
+            f.write("各模块结果:\n")
             f.write("-" * 50 + "\n")
             
             for module_name, result in execution_results.items():
@@ -299,7 +299,7 @@ def main():
     console.print(f"\n💡 **PRÓXIMOS PASOS:**")
     console.print("   • Revisar pruebas fallidas para correcciones")
     console.print("   • Ejecutar pruebas de integración")
-    console.print("   • Validar funcionalidad completa del sistema")
+    console.print("   • 验证系统完整功能")
     console.print("   • Documentar casos de uso específicos")
 
 if __name__ == "__main__":

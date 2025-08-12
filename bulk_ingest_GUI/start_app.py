@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script de inicio para Bulk Ingest GUI
-Funciona sin importaciones relativas
+批量导入 GUI 启动脚本
+无需相对导入即可运行
 """
 
 import sys
@@ -11,23 +11,23 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 def setup_paths():
-    """Configura los paths para las importaciones"""
-    # Obtener rutas absolutas
+    """配置导入路径"""
+    # 获取绝对路径
     script_path = Path(__file__).resolve()
     gui_dir = script_path.parent
     project_root = gui_dir.parent
     
-    # Añadir al path de Python
+    # 添加到 Python 路径
     sys.path.insert(0, str(gui_dir))
     sys.path.insert(0, str(project_root))
     
     return gui_dir, project_root
 
 def create_simple_app():
-    """Crea una aplicación simple para probar que todo funciona"""
-    print("🚀 Creando aplicación simple...")
+    """创建简单应用程序进行测试"""
+    print("🚀 创建简单应用程序...")
     
-    # Crear ventana principal
+    # 创建主窗口
     root = tk.Tk()
     root.title("Bulk Ingest GUI - Prueba")
     root.geometry("800x600")
@@ -65,53 +65,53 @@ def create_simple_app():
     def test_rag_core():
         try:
             import rag_core
-            messagebox.showinfo("Éxito", "✅ rag_core.py importado correctamente")
+            messagebox.showinfo("成功", "✅ rag_core.py 导入成功")
         except Exception as e:
-            messagebox.showerror("Error", f"❌ Error importando rag_core: {e}")
+            messagebox.showerror("错误", f"❌ 导入 rag_core 错误: {e}")
     
-    test_button = ttk.Button(main_frame, text="Probar rag_core.py", command=test_rag_core)
+    test_button = ttk.Button(main_frame, text="测试 rag_core.py", command=test_rag_core)
     test_button.pack(pady=10)
     
-    # Botón para cerrar
+    # 关闭按钮
     def close_app():
         root.destroy()
     
-    close_button = ttk.Button(main_frame, text="Cerrar", command=close_app)
+    close_button = ttk.Button(main_frame, text="关闭", command=close_app)
     close_button.pack(pady=10)
     
     return root
 
 def main():
-    """Función principal"""
+    """主函数"""
     global gui_dir, project_root, rag_core_path
     
-    print("🚀 Iniciando Bulk Ingest GUI...")
+    print("🚀 启动批量导入 GUI...")
     
-    # Configurar paths
+    # 配置路径
     gui_dir, project_root = setup_paths()
     rag_core_path = project_root / "rag_core.py"
     
-    print(f"✅ Entorno configurado:")
-    print(f"   📁 GUI Directory: {gui_dir}")
-    print(f"   📁 Project Root: {project_root}")
+    print(f"✅ 环境已配置:")
+    print(f"   📁 GUI 目录: {gui_dir}")
+    print(f"   📁 项目根目录: {project_root}")
     print(f"   🔍 rag_core.py: {rag_core_path.exists()}")
     
     if not rag_core_path.exists():
-        print("❌ Error: No se encontró rag_core.py")
+        print("❌ 错误: 未找到 rag_core.py")
         sys.exit(1)
     
     try:
-        # Crear aplicación simple
+        # 创建简单应用程序
         root = create_simple_app()
         
-        print("✅ Aplicación creada exitosamente")
-        print("🎉 Iniciando interfaz gráfica...")
+        print("✅ 应用程序创建成功")
+        print("🎉 启动图形界面...")
         
-        # Ejecutar aplicación
+        # 运行应用程序
         root.mainloop()
         
     except Exception as e:
-        print(f"💥 Error ejecutando la aplicación: {e}")
+        print(f"💥 运行应用程序时出错: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

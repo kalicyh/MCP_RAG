@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script de diagnóstico para rag_core
+rag_core 诊断脚本
 """
 
 import sys
@@ -8,62 +8,62 @@ import os
 from pathlib import Path
 
 def debug_rag_core():
-    """Diagnosticar problemas con rag_core"""
+    """诊断 rag_core 问题"""
     
-    print("🔍 Diagnóstico de rag_core...")
+    print("🔍 诊断 rag_core...")
     
-    # Configurar paths
+    # 配置路径
     current_dir = Path(__file__).parent.resolve()
     project_root = current_dir.parent.resolve()
     mcp_src_dir = project_root / "mcp_server_organized" / "src"
     
-    print(f"📁 Directorio actual: {current_dir}")
-    print(f"📁 Directorio proyecto: {project_root}")
-    print(f"📁 Directorio MCP src: {mcp_src_dir}")
-    print(f"📁 MCP src existe: {mcp_src_dir.exists()}")
+    print(f"📁 当前目录: {current_dir}")
+    print(f"📁 项目目录: {project_root}")
+    print(f"📁 MCP src 目录: {mcp_src_dir}")
+    print(f"📁 MCP src 存在: {mcp_src_dir.exists()}")
     
-    # Verificar archivos
+    # 验证文件
     rag_core_path = mcp_src_dir / "rag_core.py"
     utils_config_path = mcp_src_dir / "utils" / "config.py"
     
-    print(f"📄 rag_core.py existe: {rag_core_path.exists()}")
-    print(f"📄 utils/config.py existe: {utils_config_path.exists()}")
+    print(f"📄 rag_core.py 存在: {rag_core_path.exists()}")
+    print(f"📄 utils/config.py 存在: {utils_config_path.exists()}")
     
-    # Configurar path
+    # 配置路径
     if mcp_src_dir.exists():
         sys.path.insert(0, str(mcp_src_dir))
-        print(f"✅ Path configurado: {mcp_src_dir}")
+        print(f"✅ 路径已配置: {mcp_src_dir}")
     
-    # Probar importación de utils.config
+    # 测试 utils.config 导入
     try:
-        # Importar directamente desde el servidor MCP
+        # 从 MCP 服务器直接导入
         import utils.config
-        print("✅ utils.config importado correctamente")
+        print("✅ utils.config 导入成功")
     except ImportError as e:
-        print(f"❌ Error importando utils.config: {e}")
+        print(f"❌ 导入 utils.config 错误: {e}")
     
-    # Probar importación de rag_core
+    # 测试 rag_core 导入
     try:
         import rag_core
-        print("✅ rag_core importado correctamente")
-        
-        # Probar funciones específicas
+        print("✅ 成功导入 rag_core")
+
+        # 测试特定函数
         try:
             from rag_core import load_document_with_elements
-            print("✅ load_document_with_elements importado")
+            print("✅ 成功导入 load_document_with_elements")
         except ImportError as e:
-            print(f"❌ Error importando load_document_with_elements: {e}")
+            print(f"❌ 导入 load_document_with_elements 错误: {e}")
         
         try:
             from rag_core import log
-            print("✅ log importado")
-            log("Prueba de diagnóstico")
+            print("✅ 成功导入 log")
+            log("诊断测试")
         except ImportError as e:
-            print(f"❌ Error importando log: {e}")
+            print(f"❌ 导入 log 错误: {e}")
         
     except ImportError as e:
-        print(f"❌ Error importando rag_core: {e}")
-        print(f"   sys.path: {sys.path[:5]}...")  # Mostrar solo los primeros 5 elementos
+        print(f"❌ 导入 rag_core 错误: {e}")
+        print(f"   sys.path: {sys.path[:5]}...")  # 仅显示前 5 个元素
 
 if __name__ == "__main__":
     debug_rag_core() 

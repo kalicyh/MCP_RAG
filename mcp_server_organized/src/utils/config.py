@@ -1,46 +1,46 @@
 """
-Config Module para el Servidor MCP
+MCP 服务器配置模块
 =================================
 
-Este módulo maneja toda la configuración del servidor MCP,
-incluyendo rutas, configuraciones de Unstructured, y parámetros del sistema.
+此模块处理 MCP 服务器的所有配置，
+包括路径、Unstructured 配置和系统参数。
 """
 
 import os
 from dotenv import load_dotenv
 from typing import Dict, Any
 
-# Cargar variables de entorno
+# 加载环境变量
 load_dotenv()
 
 class Config:
     """
-    Clase de configuración centralizada para el servidor MCP.
+    MCP 服务器的集中配置类。
     """
     
-    # Configuración del servidor
+    # 服务器配置
     SERVER_NAME = "ragmcp"
     SERVER_VERSION = "1.0.0"
     
-    # Rutas de datos
+    # 数据路径
     CONVERTED_DOCS_DIR = "./data/documents"
     VECTOR_STORE_DIR = "./data/vector_store"
     EMBEDDING_CACHE_DIR = "./embedding_cache"
     
-    # Configuración de modelos
+    # 模型配置
     EMBEDDING_MODEL = "all-MiniLM-L6-v2"
     DEVICE = "cpu"
     
-    # Configuración de chunking
+    # 分块配置
     DEFAULT_CHUNK_SIZE = 1000
     DEFAULT_CHUNK_OVERLAP = 200
     
-    # Configuración de cache
+    # 缓存配置
     MAX_CACHE_SIZE = 1000
     
-    # Configuraciones optimizadas para diferentes tipos de documentos
+    # 针对不同文档类型的优化配置
     UNSTRUCTURED_CONFIGS = {
-        # Documentos de Office
+        # Office 文档
         '.pdf': {
             'strategy': 'hi_res',
             'include_metadata': True,
@@ -91,7 +91,7 @@ class Config:
             'new_after_n_chars': 1500
         },
         
-        # Documentos OpenDocument
+        # OpenDocument 文档
         '.odt': {
             'strategy': 'fast',
             'include_metadata': True,
@@ -111,7 +111,7 @@ class Config:
             'new_after_n_chars': 1500
         },
         
-        # Formatos web y markup
+        # Web 和标记格式
         '.html': {
             'strategy': 'fast',
             'include_metadata': True,
@@ -137,7 +137,7 @@ class Config:
             'new_after_n_chars': 1500
         },
         
-        # Formatos de texto plano
+        # 纯文本格式
         '.txt': {
             'strategy': 'fast',
             'include_metadata': True,
@@ -157,7 +157,7 @@ class Config:
             'new_after_n_chars': 1500
         },
         
-        # Formatos de datos
+        # 数据格式
         '.json': {
             'strategy': 'fast',
             'include_metadata': True,
@@ -177,7 +177,7 @@ class Config:
             'new_after_n_chars': 1500
         },
         
-        # Imágenes (requieren OCR)
+        # 图像（需要 OCR）
         '.png': {
             'strategy': 'hi_res',
             'include_metadata': True,
@@ -209,7 +209,7 @@ class Config:
             'new_after_n_chars': 1500
         },
         
-        # Correos electrónicos
+        # 电子邮件
         '.eml': {
             'strategy': 'fast',
             'include_metadata': True,
@@ -227,13 +227,13 @@ class Config:
     @classmethod
     def get_unstructured_config(cls, file_extension: str) -> Dict[str, Any]:
         """
-        Obtiene la configuración de Unstructured para un tipo de archivo específico.
+        获取特定文件类型的 Unstructured 配置。
         
         Args:
-            file_extension: Extensión del archivo (ej: '.pdf')
+            file_extension: 文件扩展名（例如：'.pdf'）
             
         Returns:
-            Configuración de Unstructured para el tipo de archivo
+            文件类型的 Unstructured 配置
         """
         return cls.UNSTRUCTURED_CONFIGS.get(file_extension.lower(), {
             'strategy': 'fast',
@@ -245,7 +245,7 @@ class Config:
     @classmethod
     def ensure_directories(cls):
         """
-        Asegura que todos los directorios necesarios existan.
+        确保所有必要的目录都存在。
         """
         directories = [
             cls.CONVERTED_DOCS_DIR,
@@ -260,13 +260,13 @@ class Config:
     @classmethod
     def get_env_var(cls, key: str, default: str = None) -> str:
         """
-        Obtiene una variable de entorno con valor por defecto.
+        获取环境变量并提供默认值。
         
         Args:
-            key: Nombre de la variable de entorno
-            default: Valor por defecto si no existe
+            key: 环境变量名称
+            default: 如果不存在的默认值
             
         Returns:
-            Valor de la variable de entorno o el valor por defecto
+            环境变量的值或默认值
         """
         return os.getenv(key, default) 

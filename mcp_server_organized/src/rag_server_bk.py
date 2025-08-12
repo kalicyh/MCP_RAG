@@ -5,20 +5,20 @@ from mcp.server.fastmcp import FastMCP
 from markitdown import MarkItDown
 from urllib.parse import urlparse
 
-# --- Importaciones de nuestro núcleo RAG ---
+# --- 导入 RAG 核心模块 ---
 from rag_core import (
-    add_text_to_knowledge_base,           # Función para añadir texto a la base
-    add_text_to_knowledge_base_enhanced,  # Función mejorada para añadir texto
-    load_document_with_fallbacks,         # Nueva función de carga con fallbacks
-    get_qa_chain,                         # Función para obtener la cadena QA
-    get_vector_store,                     # Función para obtener la base vectorial
-    search_with_metadata_filters,         # Nueva función de búsqueda con filtros
-    create_metadata_filter,               # Nueva función para crear filtros
-    get_document_statistics,              # Nueva función para estadísticas
-    get_cache_stats,                      # Nueva función para estadísticas del cache
-    print_cache_stats,                    # Nueva función para imprimir estadísticas del cache
-    clear_embedding_cache,                # Nueva función para limpiar cache
-    log,  # Importamos nuestra nueva función de log
+    add_text_to_knowledge_base,           # 将文本添加到知识库的函数
+    add_text_to_knowledge_base_enhanced,  # 增强版文本添加函数
+    load_document_with_fallbacks,         # 带回退机制的文档加载函数
+    get_qa_chain,                         # 获取问答链的函数
+    get_vector_store,                     # 获取向量存储的函数
+    search_with_metadata_filters,         # 带元数据过滤器的搜索函数
+    create_metadata_filter,               # 创建元数据过滤器的函数
+    get_document_statistics,              # 获取文档统计信息的函数
+    get_cache_stats,                      # 获取缓存统计信息的函数
+    print_cache_stats,                    # 打印缓存统计信息的函数
+    clear_embedding_cache,                # 清除嵌入缓存的函数
+    log,  # 导入日志函数
     optimize_vector_store,
     get_vector_store_stats,
     reindex_vector_store,
@@ -26,297 +26,287 @@ from rag_core import (
     load_document_with_elements
 )
 
-# --- Inicialización del Servidor y Configuración ---
+# --- 服务器初始化与配置 ---
 load_dotenv()
 mcp = FastMCP("ragmcp")
 
-# El estado ahora solo guarda los componentes listos para usar
-rag_state = {}
+rag_state = {}  # 状态只保存已就绪的组件
 
-# Inicializamos el conversor de MarkItDown una sola vez (para URLs)
-md_converter = MarkItDown()
+md_converter = MarkItDown()  # 初始化 MarkItDown 转换器（用于 URL 处理）
 
-# Carpeta donde se guardarán las copias en Markdown
+# 用于保存 Markdown 副本的文件夹
 CONVERTED_DOCS_DIR = "./converted_docs"
 
 def warm_up_rag_system():
     """
-    Precarga los componentes pesados del sistema RAG para evitar demoras
-    y conflictos en la primera llamada de una herramienta.
+    预加载 RAG 系统的重型组件，避免首次调用工具时的延迟和冲突。
     """
     if "warmed_up" in rag_state:
         return
     
-    log("MCP Server: Calentando sistema RAG...")
-    log("MCP Server: Precargando modelo de embedding en memoria...")
+    log("MCP服务器: 正在预热RAG系统...")
+    log("MCP服务器: 正在预加载嵌入模型到内存...")
     
-    # Esta llamada fuerza la carga del modelo de embedding
+    # 此调用强制加载嵌入模型
     get_vector_store()
     
     rag_state["warmed_up"] = True
-    log("MCP Server: Sistema RAG caliente y listo.")
+    log("MCP服务器: RAG系统已预热并准备就绪。")
 
 def ensure_converted_docs_directory():
-    """Asegura que existe la carpeta para los documentos convertidos."""
+    """确保存在用于存储转换文档的文件夹。"""
     if not os.path.exists(CONVERTED_DOCS_DIR):
         os.makedirs(CONVERTED_DOCS_DIR)
-        log(f"MCP Server: Creada carpeta para documentos convertidos: {CONVERTED_DOCS_DIR}")
+        log(f"MCP服务器: 已创建转换文档文件夹: {CONVERTED_DOCS_DIR}")
 
-def save_processed_copy(file_path: str, processed_content: str, processing_method: str = "unstructured") -> str:
+def save_processed_copy(file_path: str, processed_content: str, processing_method: str = "非结构化") -> str:
     """
-    Guarda una copia del documento procesado en formato Markdown.
+    保存处理后的文档副本为 Markdown 格式。
     
-    Args:
-        file_path: Ruta original del archivo
-        processed_content: Contenido procesado
-        processing_method: Método de procesamiento usado
+    参数：
+        file_path: 原始文件路径
+        processed_content: 处理后的内容
+        processing_method: 使用的处理方法
     
-    Returns:
-        Ruta del archivo Markdown guardado
+    返回：
+        保存的 Markdown 文件路径
     """
     ensure_converted_docs_directory()
     
-    # Obtener el nombre del archivo original sin extensión
+    # 获取原始文件名（无扩展名）
     original_filename = os.path.basename(file_path)
     name_without_ext = os.path.splitext(original_filename)[0]
     
-    # Crear el nombre del archivo Markdown con información del método
+    # 创建包含方法信息的 Markdown 文件名
     md_filename = f"{name_without_ext}_{processing_method}.md"
     md_filepath = os.path.join(CONVERTED_DOCS_DIR, md_filename)
     
-    # Guardar el contenido en el archivo Markdown
+    # 保存内容到 Markdown 文件
     try:
         with open(md_filepath, 'w', encoding='utf-8') as f:
             f.write(processed_content)
-        log(f"MCP Server: Copia procesada guardada en: {md_filepath}")
+        log(f"MCP服务器: 已保存处理后的副本: {md_filepath}")
         return md_filepath
     except Exception as e:
-        log(f"MCP Server Advertencia: No se pudo guardar copia procesada: {e}")
+        log(f"MCP服务器警告: 无法保存处理后的副本: {e}")
         return ""
 
 def initialize_rag():
     """
-    Inicializa todos los componentes del sistema RAG usando el núcleo.
+    使用核心初始化 RAG 系统的所有组件。
     """
     if "initialized" in rag_state:
         return
 
-    log("MCP Server: Inicializando sistema RAG vía núcleo...")
+    log("MCP服务器: 通过核心初始化RAG系统...")
     
-    # Obtenemos la base de datos y la cadena QA desde nuestro núcleo
+    # 从核心获取向量存储和 QA 链
     vector_store = get_vector_store()
     qa_chain = get_qa_chain(vector_store)
     
     rag_state["vector_store"] = vector_store
     rag_state["qa_chain"] = qa_chain
     rag_state["initialized"] = True
-    log("MCP Server: Sistema RAG inicializado exitosamente.")
+    log("MCP服务器: RAG系统初始化成功。")
 
-# --- Implementación de las Herramientas ---
+# --- 工具实现 ---
 
 @mcp.tool()
-def learn_text(text: str, source_name: str = "manual_input") -> str:
+def learn_text(text: str, source_name: str = "手动输入") -> str:
     """
-    Adds a new piece of text to the RAG knowledge base for future reference.
-    Use this when you want to teach the AI new information that it should remember.
-    
-    Examples of when to use:
-    - Adding facts, definitions, or explanations
-    - Storing important information from conversations
-    - Saving research findings or notes
-    - Adding context about specific topics
+    向 RAG 知识库添加一段新文本以供将来参考。
+    使用场景：
+    - 添加事实、定义或解释
+    - 存储对话中的重要信息
+    - 保存研究发现或笔记
+    - 添加特定主题的上下文
 
-    Args:
-        text: The text content to be learned and stored in the knowledge base.
-        source_name: A descriptive name for the source (e.g., "user_notes", "research_paper", "conversation_summary").
+    参数：
+        text: 要学习并存储在知识库中的文本内容。
+        source_name: 来源的描述性名称（例如 "用户笔记", "研究论文", "对话摘要"）。
     """
-    log(f"MCP Server: Procesando texto de {len(text)} caracteres de la fuente: {source_name}")
+    log(f"MCP服务器: 正在处理来自 {source_name} 的文本，共 {len(text)} 字符")
     initialize_rag()
     
     try:
-        # Crear metadatos de fuente
+        # 创建源元数据
         source_metadata = {
             "source": source_name,
-            "input_type": "manual_text",
+            "input_type": "手动文本",
             "processed_date": datetime.now().isoformat()
         }
-        
-        # Usamos la función del núcleo para añadir el texto con metadatos
+        # 使用核心函数添加文本及元数据
         add_text_to_knowledge_base(text, rag_state["vector_store"], source_metadata)
-        log(f"MCP Server: Texto añadido exitosamente a la base de conocimientos")
-        return f"Texto añadido exitosamente a la base de conocimientos. Fragmento: '{text[:70]}...' (Fuente: {source_name})"
+        log(f"MCP服务器: 文本已成功添加到知识库")
+        return f"文本已成功添加到知识库。片段: '{text[:70]}...' (来源: {source_name})"
     except Exception as e:
-        log(f"MCP Server: Error al añadir texto: {e}")
-        return f"Error al añadir texto: {e}"
+        log(f"MCP服务器: 添加文本时出错: {e}")
+        return f"添加文本时出错: {e}"
 
 @mcp.tool()
 def learn_document(file_path: str) -> str:
     """
-    Reads and processes a document file using advanced Unstructured processing with real semantic chunking, and adds it to the knowledge base.
-    Use this when you want to teach the AI from document files with intelligent processing.
-    
-    Supported file types: PDF, DOCX, PPTX, XLSX, TXT, HTML, CSV, JSON, XML, ODT, ODP, ODS, RTF, 
-    images (PNG, JPG, TIFF, BMP with OCR), emails (EML, MSG), and more than 25 formats total.
-    
-    Advanced features:
-    - REAL semantic chunking based on document structure (titles, sections, lists)
-    - Intelligent document structure preservation (titles, lists, tables)
-    - Automatic noise removal (headers, footers, irrelevant content)
-    - Structural metadata extraction
-    - Robust fallback system for any document type
-    - Enhanced context preservation through semantic boundaries
-    
-    Examples of when to use:
-    - Processing research papers or articles with complex layouts
-    - Adding content from reports or manuals with tables and lists
-    - Importing data from spreadsheets with formatting
-    - Converting presentations to searchable knowledge
-    - Processing scanned documents with OCR
-    
-    The document will be intelligently processed with REAL semantic chunking and stored with enhanced metadata.
-    A copy of the processed document is saved for verification.
+    读取并处理文档文件，采用高级 Unstructured 处理和真实语义分块，并将其添加到知识库。
+    使用场景：
+    - 处理复杂布局的论文或文章
+    - 添加包含表格和列表的报告或手册内容
+    - 导入带格式的电子表格数据
+    - 将演示文稿转换为可搜索知识
+    - 处理带 OCR 的扫描文档
 
-    Args:
-        file_path: The absolute or relative path to the document file to process.
+    支持的文件类型：PDF、DOCX、PPTX、XLSX、TXT、HTML、CSV、JSON、XML、ODT、ODP、ODS、RTF、
+    图像（PNG、JPG、TIFF、BMP，带 OCR）、邮件（EML、MSG）等 25+ 种格式。
+
+    高级功能：
+    - 基于文档结构（标题、章节、列表）的真实语义分块
+    - 智能文档结构保存（标题、列表、表格）
+    - 自动去噪（页眉、页脚、无关内容）
+    - 结构化元数据提取
+    - 强大回退系统，适用于任何文档类型
+    - 通过语义边界增强上下文保存
+
+    文档将通过真实语义分块智能处理，并与增强元数据一起存储。
+    处理后的副本将保存以供验证。
+
+    参数：
+        file_path：要处理的文档文件的绝对路径或相对路径。
     """
-    log(f"MCP Server: Iniciando procesamiento avanzado de documento: {file_path}")
-    log(f"MCP Server: DEBUG - Ruta recibida: {repr(file_path)}")
-    log(f"MCP Server: DEBUG - Verificando existencia de ruta absoluta: {os.path.abspath(file_path)}")
-    initialize_rag()  # Asegura que el sistema RAG esté listo
+    log(f"MCP服务器: 开始高级文档处理: {file_path}")
+    log(f"MCP服务器: 调试 - 接收到路径: {repr(file_path)}")
+    log(f"MCP服务器: 调试 - 检查绝对路径是否存在: {os.path.abspath(file_path)}")
+    initialize_rag()  # 确保 RAG 系统已就绪
     
     try:
         if not os.path.exists(file_path):
-            log(f"MCP Server: Archivo no encontrado en la ruta: {file_path}")
-            return f"Error: Archivo no encontrado en '{file_path}'"
+            log(f"MCP服务器: 未找到文件路径: {file_path}")
+            return f"错误: 未找到文件 '{file_path}'"
 
-        log(f"MCP Server: Procesando documento con sistema Unstructured avanzado...")
-        
-        # Usar el nuevo sistema de procesamiento con elementos estructurales
+        log(f"MCP服务器: 正在用高级Unstructured系统处理文档...")
+
+        # 使用新系统处理结构化元素
         processed_content, metadata, structural_elements = load_document_with_elements(file_path)
 
         if not processed_content or processed_content.isspace():
-            log(f"MCP Server: Advertencia: Documento procesado pero no se pudo extraer contenido: {file_path}")
-            return f"Advertencia: El documento '{file_path}' fue procesado, pero no se pudo extraer contenido de texto."
+            log(f"MCP服务器: 警告: 文档已处理但未能提取内容: {file_path}")
+            return f"警告: 文档 '{file_path}' 已处理，但未能提取文本内容。"
 
-        log(f"MCP Server: Documento procesado exitosamente ({len(processed_content)} caracteres)")
-        
-        # Guardar copia procesada
-        log(f"MCP Server: Guardando copia procesada...")
-        processing_method = metadata.get("processing_method", "unknown")
+        log(f"MCP服务器: 文档处理成功（{len(processed_content)} 字符）")
+
+        # 保存处理副本
+        log(f"MCP服务器: 正在保存处理副本...")
+        processing_method = metadata.get("processing_method", "未知")
         saved_copy_path = save_processed_copy(file_path, processed_content, processing_method)
-        
-        # Añadir contenido a la base de conocimientos con chunking semántico real
-        log(f"MCP Server: Añadiendo contenido a la base de conocimientos con metadatos estructurales...")
-        
-        # Usar la función mejorada con elementos estructurales para chunking semántico real
+
+        # 添加内容到知识库，使用真实语义分块
+        log(f"MCP服务器: 正在添加内容到知识库（含结构化元数据）...")
+
+        # 使用结构化元素进行真实语义分块
         add_text_to_knowledge_base_enhanced(
-            processed_content, 
-            rag_state["vector_store"], 
-            metadata, 
+            processed_content,
+            rag_state["vector_store"],
+            metadata,
             use_semantic_chunking=True,
             structural_elements=structural_elements
         )
-        
-        log(f"MCP Server: Proceso completado - Documento procesado con éxito")
-        
-        # Preparar respuesta informativa
+
+        log(f"MCP服务器: 处理完成 - 文档已成功处理")
+
+        # 构建详细响应
         file_name = os.path.basename(file_path)
-        file_type = metadata.get("file_type", "unknown")
-        processing_method = metadata.get("processing_method", "unknown")
-        
-        # Información sobre el chunking usado
+        file_type = metadata.get("file_type", "未知")
+        processing_method = metadata.get("processing_method", "未知")
+
+        # 分块信息
         chunking_info = ""
         if structural_elements and len(structural_elements) > 1:
-            chunking_info = f"🧠 **Chunking Semántico Avanzado** con {len(structural_elements)} elementos estructurales"
+            chunking_info = f"🧠 **高级语义分块**，共 {len(structural_elements)} 个结构化元素"
         elif metadata.get("structural_info", {}).get("total_elements", 0) > 1:
-            chunking_info = f"📊 **Chunking Semántico Mejorado** basado en metadatos estructurales"
+            chunking_info = f"📊 **增强语义分块**，基于结构化元数据"
         else:
-            chunking_info = f"📝 **Chunking Tradicional** optimizado"
-        
-        return f"""✅ **Documento procesado exitosamente**
-📄 **Archivo:** {file_name}
-📋 **Tipo:** {file_type.upper()}
-🔧 **Método:** {processing_method}
+            chunking_info = f"📝 **传统分块** 优化"
+
+        return f"""✅ **文档处理成功**
+📄 **文件:** {file_name}
+📋 **类型:** {file_type.upper()}
+🔧 **处理方法:** {processing_method}
 {chunking_info}
-📊 **Caracteres procesados:** {len(processed_content):,}
-💾 **Copia guardada:** {saved_copy_path if saved_copy_path else "No disponible"}"""
+📊 **处理字符数:** {len(processed_content):,}
+💾 **副本保存路径:** {saved_copy_path if saved_copy_path else "无"}"""
 
     except Exception as e:
-        log(f"MCP Server: Error procesando documento '{file_path}': {e}")
-        return f"Error procesando documento: {e}"
+        log(f"MCP服务器: 处理文档 '{file_path}' 时出错: {e}")
+        return f"处理文档时出错: {e}"
 
 @mcp.tool()
 def learn_from_url(url: str) -> str:
     """
-    Procesa contenido de una URL (página web o video de YouTube) y lo añade a la base de conocimientos.
-    Use this when you want to teach the AI from web content without downloading files.
-    
-    Supported URL types:
-    - Web pages (HTML content)
-    - YouTube videos (transcripts)
-    - Any URL that MarkItDown can process
-    - Direct file downloads (PDF, DOCX, etc.) - will use enhanced Unstructured processing
-    
-    Examples of when to use:
-    - Adding content from news articles or blog posts
-    - Processing YouTube video transcripts
-    - Importing information from web pages
-    - Converting web content to searchable knowledge
-    - Processing documents directly from URLs
-    
-    The content will be intelligently processed and stored with enhanced metadata.
-    A copy of the processed content is saved for verification.
+    处理 URL 内容（网页或 YouTube 视频），并添加到知识库。
+    使用场景：
+    - 添加新闻文章或博客内容
+    - 处理 YouTube 视频文字记录
+    - 从网页导入信息
+    - 将网页内容转换为可搜索知识
+    - 直接从 URL 处理文档
 
-    Args:
-        url: The URL of the web page or video to process.
+    支持的 URL 类型：
+    - 网页（HTML 内容）
+    - YouTube 视频（文字记录）
+    - MarkItDown 可处理的任何 URL
+    - 直接下载文件（PDF、DOCX 等）- 使用增强的 Unstructured 处理
+
+    内容将被智能处理并与增强元数据一起存储。
+    处理后的内容副本将保存以供验证。
+
+    参数：
+        url：要处理的网页或视频的 URL。
     """
-    log(f"MCP Server: Iniciando procesamiento de URL: {url}")
+    log(f"MCP服务器: 开始处理URL: {url}")
     initialize_rag()
     
     try:
-        # Verificar si es una URL de descarga directa de archivo
+        # 检查是否为直接文件下载链接
         parsed_url = urlparse(url)
         file_extension = os.path.splitext(parsed_url.path)[1].lower()
         
-        # Lista de extensiones que soportan procesamiento mejorado
+        # 支持增强处理的扩展名列表
         enhanced_extensions = ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', 
                               '.txt', '.html', '.htm', '.csv', '.json', '.xml', '.rtf',
                               '.odt', '.odp', '.ods', '.md', '.yaml', '.yml']
         
         if file_extension in enhanced_extensions:
-            log(f"MCP Server: Detectado archivo descargable ({file_extension}), usando procesamiento mejorado...")
+            log(f"MCP服务器: 检测到可下载文件（{file_extension}），使用增强处理...")
             
-            # Crear nombre de archivo temporal
+            # 创建临时文件名
             import tempfile
             import requests
             import signal
             
-            # Configurar timeout para la descarga
+            # 配置下载超时
             timeout_seconds = 30
             
-            # Descargar el archivo con timeout
-            log(f"MCP Server: Descargando archivo con timeout de {timeout_seconds} segundos...")
+            # 下载文件并设置超时
+            log(f"MCP服务器: 正在下载文件，超时时间 {timeout_seconds} 秒...")
             response = requests.get(url, stream=True, timeout=timeout_seconds)
             response.raise_for_status()
             
-            # Crear archivo temporal
+            # 创建临时文件
             with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
                 for chunk in response.iter_content(chunk_size=8192):
                     temp_file.write(chunk)
                 temp_file_path = temp_file.name
             
-            log(f"MCP Server: Archivo descargado temporalmente en: {temp_file_path}")
+            log(f"MCP服务器: 文件已临时下载到: {temp_file_path}")
             
             try:
-                # Usar el procesamiento mejorado con timeout
-                log(f"MCP Server: Iniciando procesamiento con Unstructured (puede tomar varios minutos para PDFs grandes)...")
+                # 使用增强处理并设置超时
+                log(f"MCP服务器: 正在用Unstructured处理（大PDF可能需数分钟）...")
                 
-                # Para PDFs, usar configuración más rápida para evitar colgadas
+                # 针对PDF使用更快配置避免超时
                 if file_extension == '.pdf':
-                    log(f"MCP Server: PDF detectado, usando configuración optimizada para evitar timeouts...")
+                    log(f"MCP服务器: 检测到PDF，使用优化配置避免超时...")
                     
-                    # Opción 1: Intentar con PyPDF2 directamente (más rápido para Cursor)
-                    log(f"MCP Server: Intentando con PyPDF2 directo para mayor velocidad...")
+                    # 选项1：直接使用PyPDF2（对Cursor更快）
+                    log(f"MCP服务器: 尝试用PyPDF2直接处理以提升速度...")
                     try:
                         import PyPDF2
                         with open(temp_file_path, 'rb') as file:
@@ -325,10 +315,10 @@ def learn_from_url(url: str) -> str:
                             for page_num, page in enumerate(pdf_reader.pages):
                                 page_text = page.extract_text()
                                 if page_text:
-                                    processed_content += f"\n--- Página {page_num + 1} ---\n{page_text}\n"
+                                    processed_content += f"\n--- 第{page_num + 1}页 ---\n{page_text}\n"
                             
                             if processed_content.strip():
-                                log(f"MCP Server: PyPDF2 directo exitoso, {len(processed_content)} caracteres extraídos")
+                                log(f"MCP服务器: PyPDF2直接处理成功，提取了{len(processed_content)}字符")
                                 metadata = {
                                     "source": os.path.basename(temp_file_path),
                                     "file_path": temp_file_path,
@@ -346,17 +336,17 @@ def learn_from_url(url: str) -> str:
                                         "avg_element_length": len(processed_content) / len(pdf_reader.pages) if pdf_reader.pages else 0
                                     }
                                 }
-                                log(f"MCP Server: Procesamiento con PyPDF2 directo completado")
+                                log(f"MCP服务器: PyPDF2直接处理完成")
                             else:
-                                # Si PyPDF2 no extrae texto, intentar con Unstructured
-                                log(f"MCP Server: PyPDF2 no extrajo texto, intentando con Unstructured...")
-                                raise Exception("PyPDF2 no extrajo texto")
+                                # 如果PyPDF2无法提取文本，尝试Unstructured
+                                log(f"MCP服务器: PyPDF2未提取到文本，尝试Unstructured...")
+                                raise Exception("PyPDF2未提取到文本")
                     except Exception as e:
-                        log(f"MCP Server: PyPDF2 directo falló: {e}")
-                        log(f"MCP Server: Intentando con Unstructured con timeout...")
+                        log(f"MCP服务器: PyPDF2直接处理失败: {e}")
+                        log(f"MCP服务器: 尝试用Unstructured并设置超时...")
                         
-                        # Opción 2: Unstructured con timeout (fallback)
-                        # Usar threading con timeout para evitar colgadas
+                        # 选项2：使用Unstructured并设置超时（回退方案）
+                        # 使用线程控制超时以避免卡死
                         import threading
                         import time
                         
@@ -367,58 +357,58 @@ def learn_from_url(url: str) -> str:
                             nonlocal elements, processing_error
                             try:
                                 from rag_core import partition
-                                log(f"MCP Server: Iniciando partición del PDF con strategy='fast'...")
-                                log(f"MCP Server: Procesando archivo: {os.path.basename(temp_file_path)}")
+                                log(f"MCP服务器: 开始用strategy='fast'进行PDF分区...")
+                                log(f"MCP服务器: 处理文件: {os.path.basename(temp_file_path)}")
                                 elements = partition(filename=temp_file_path, strategy="fast", max_partition=1000)
-                                log(f"MCP Server: Partición completada, {len(elements)} elementos extraídos")
+                                log(f"MCP服务器: 分区完成，提取了{len(elements)}个元素")
                             except Exception as e:
                                 processing_error = e
-                                log(f"MCP Server: Error en partición: {e}")
+                                log(f"MCP服务器: 分区出错: {e}")
                         
-                        # Ejecutar procesamiento en hilo separado con timeout
+                        # 在独立线程中执行处理并设置超时
                         thread = threading.Thread(target=process_pdf)
                         thread.daemon = True
                         thread.start()
                         
-                        # Esperar máximo 30 segundos para el procesamiento
-                        timeout_seconds = 30  # Reducido de 60 a 30 segundos para Cursor
+                        # 最多等待30秒处理完成
+                        timeout_seconds = 30  # 从60秒降到30秒（适合Cursor）
                         
-                        # Logs de progreso durante la espera
-                        log(f"MCP Server: Esperando procesamiento (timeout: {timeout_seconds}s)...")
+                        # 处理期间显示进度日志
+                        log(f"MCP服务器: 等待处理（超时: {timeout_seconds}秒）...")
                         
-                        # Esperar con logs de progreso cada 10 segundos
+                        # 每10秒显示一次进度
                         for i in range(0, timeout_seconds, 10):
-                            thread.join(10)  # Esperar 10 segundos
+                            thread.join(10)  # 等待10秒
                             if not thread.is_alive():
                                 break
-                            log(f"MCP Server: Procesamiento en progreso... ({i+10}/{timeout_seconds}s)")
+                            log(f"MCP服务器: 处理进行中... ({i+10}/{timeout_seconds}秒)")
                         
-                        # Verificar si terminó o si necesitamos esperar más
+                        # 检查是否完成或需要继续等待
                         if thread.is_alive():
                             remaining_time = timeout_seconds - (timeout_seconds // 10) * 10
                             if remaining_time > 0:
                                 thread.join(remaining_time)
                         
                         if thread.is_alive():
-                            log(f"MCP Server: Timeout en procesamiento de PDF después de {timeout_seconds} segundos")
-                            # Intentar con configuración mínima
-                            log(f"MCP Server: Intentando con configuración mínima...")
+                            log(f"MCP服务器: PDF处理在{timeout_seconds}秒后超时")
+                            # 尝试使用最小配置
+                            log(f"MCP服务器: 尝试最小配置...")
                             try:
                                 from rag_core import partition
                                 elements = partition(filename=temp_file_path, strategy="fast", max_partition=500)
-                                log(f"MCP Server: Partición mínima completada, {len(elements)} elementos extraídos")
+                                log(f"MCP服务器: 最小分区完成，提取了{len(elements)}个元素")
                             except Exception as e:
-                                log(f"MCP Server: Error en partición mínima: {e}")
-                                return f"❌ **Error de timeout:** El procesamiento del PDF tardó demasiado.\n\n💡 **Consejos:**\n- El PDF puede ser muy grande o complejo\n- Intenta con un PDF más pequeño\n- Verifica que el archivo no esté corrupto"
+                                log(f"MCP服务器: 最小分区出错: {e}")
+                                return f"❌ **超时错误:** PDF处理时间过长。\n\n💡 **建议：**\n- PDF可能过大或复杂\n- 尝试较小的PDF\n- 检查文件是否损坏"
                         
                         if processing_error:
-                            log(f"MCP Server: Error en procesamiento: {processing_error}")
-                            return f"❌ **Error procesando PDF:** {processing_error}\n\n💡 **Consejos:**\n- El archivo puede estar corrupto\n- Intenta con un PDF diferente\n- Verifica que el archivo sea accesible"
+                            log(f"MCP服务器: 处理出错: {processing_error}")
+                            return f"❌ **PDF处理错误:** {processing_error}\n\n💡 **建议：**\n- 文件可能损坏\n- 尝试其他PDF\n- 确保文件可访问"
                         
                         if not elements:
-                            log(f"MCP Server: No se pudieron extraer elementos del PDF")
-                            # Intentar con PyPDF2 como fallback
-                            log(f"MCP Server: Intentando con PyPDF2 como fallback...")
+                            log(f"MCP服务器: 无法从PDF中提取元素")
+                            # 尝试使用PyPDF2作为回退方案
+                            log(f"MCP服务器: 尝试用PyPDF2作为回退方案...")
                             try:
                                 import PyPDF2
                                 with open(temp_file_path, 'rb') as file:
@@ -427,10 +417,10 @@ def learn_from_url(url: str) -> str:
                                     for page_num, page in enumerate(pdf_reader.pages):
                                         page_text = page.extract_text()
                                         if page_text:
-                                            processed_content += f"\n--- Página {page_num + 1} ---\n{page_text}\n"
+                                            processed_content += f"\n--- 第{page_num + 1}页 ---\n{page_text}\n"
                                     
                                     if processed_content.strip():
-                                        log(f"MCP Server: PyPDF2 fallback exitoso, {len(processed_content)} caracteres extraídos")
+                                        log(f"MCP服务器: PyPDF2回退成功，提取了{len(processed_content)}字符")
                                         metadata = {
                                             "source": os.path.basename(temp_file_path),
                                             "file_path": temp_file_path,
@@ -449,34 +439,34 @@ def learn_from_url(url: str) -> str:
                                             }
                                         }
                                     else:
-                                        return f"❌ **Error:** No se pudo extraer texto del PDF con ningún método.\n\n💡 **Consejos:**\n- El PDF puede estar escaneado (solo imágenes)\n- El archivo puede estar corrupto\n- Intenta con un PDF diferente"
+                                        return f"❌ **错误:** 无法用任何方法从PDF中提取文本。\n\n💡 **建议:**\n- PDF可能为扫描版（仅图像）\n- 文件可能损坏\n- 尝试其他PDF"
                             except ImportError:
-                                log(f"MCP Server: PyPDF2 no disponible")
-                                return f"❌ **Error:** No se pudieron extraer elementos del PDF.\n\n💡 **Consejos:**\n- El archivo puede estar vacío o corrupto\n- Intenta con un PDF diferente"
+                                log(f"MCP服务器: PyPDF2 不可用")
+                                return f"❌ **错误:** 无法从PDF中提取元素。\n\n💡 **建议:**\n- 文件可能为空或损坏\n- 尝试其他PDF"
                             except Exception as e:
-                                log(f"MCP Server: Error en PyPDF2 fallback: {e}")
-                                return f"❌ **Error:** No se pudieron extraer elementos del PDF.\n\n💡 **Consejos:**\n- El archivo puede estar vacío o corrupto\n- Intenta con un PDF diferente"
+                                log(f"MCP服务器: PyPDF2回退失败: {e}")
+                                return f"❌ **错误:** 无法从PDF中提取任何文本。\n\n💡 **建议:**\n- PDF可能为扫描版（仅图像）\n- 文件可能损坏\n- 尝试其他PDF"
                         else:
-                            log(f"MCP Server: Procesando elementos extraídos...")
+                            log(f"MCP服务器: 正在处理提取的元素...")
                             from rag_core import process_unstructured_elements, extract_structural_metadata
                             processed_content = process_unstructured_elements(elements)
-                            log(f"MCP Server: Elementos procesados, {len(processed_content)} caracteres extraídos")
+                            log(f"MCP服务器: 元素处理完成，提取了{len(processed_content)}字符")
                             
                             metadata = extract_structural_metadata(elements, temp_file_path)
                             metadata["processing_method"] = "unstructured_fast_pdf"
-                            log(f"MCP Server: Metadatos estructurales extraídos")
+                            log(f"MCP服务器: 结构化元数据提取完成")
                 else:
-                    # Para otros formatos, usar el procesamiento normal
+                    # 对于其他格式，使用正常处理
                     processed_content, metadata = load_document_with_fallbacks(temp_file_path)
                 
                 if not processed_content or processed_content.isspace():
-                    log(f"MCP Server: Advertencia: Archivo descargado pero no se pudo extraer contenido: {url}")
-                    return f"Advertencia: El archivo de la URL '{url}' fue descargado, pero no se pudo extraer contenido de texto."
+                    log(f"MCP服务器: 警告: 文件已下载但未能提取内容: {url}")
+                    return f"警告: URL '{url}' 的文件已下载，但未能提取文本内容。"
                 
-                log(f"MCP Server: Archivo descargado y procesado exitosamente ({len(processed_content)} caracteres)")
+                log(f"MCP服务器: 文件下载并处理成功（{len(processed_content)} 字符）")
                 
-                # Guardar copia procesada
-                log(f"MCP Server: Guardando copia procesada...")
+                # 保存处理后的副本
+                log(f"MCP服务器: 正在保存处理副本...")
                 processing_method = metadata.get("processing_method", "unstructured_enhanced")
                 domain = parsed_url.netloc.replace('.', '_')
                 path = parsed_url.path.replace('/', '_').replace('.', '_')
@@ -491,12 +481,12 @@ def learn_from_url(url: str) -> str:
                     ensure_converted_docs_directory()
                     with open(processed_filepath, 'w', encoding='utf-8') as f:
                         f.write(processed_content)
-                    log(f"MCP Server: Copia procesada guardada en: {processed_filepath}")
+                    log(f"MCP服务器: 已保存处理副本: {processed_filepath}")
                 except Exception as e:
-                    log(f"MCP Server Advertencia: No se pudo guardar copia procesada: {e}")
+                    log(f"MCP服务器警告: 无法保存处理副本: {e}")
                     processed_filepath = ""
                 
-                # Enriquecer metadatos
+                # 丰富元数据
                 enhanced_metadata = metadata.copy()
                 enhanced_metadata.update({
                     "source": url,
@@ -506,8 +496,8 @@ def learn_from_url(url: str) -> str:
                     "server_processed_date": datetime.now().isoformat()
                 })
                 
-                # Usar procesamiento mejorado
-                log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
+                # 使用增强处理
+                log(f"MCP服务器: 正在添加内容到知识库...")
                 add_text_to_knowledge_base_enhanced(
                     processed_content, 
                     rag_state["vector_store"], 
@@ -515,94 +505,92 @@ def learn_from_url(url: str) -> str:
                     use_semantic_chunking=True
                 )
                 
-                # Construir respuesta informativa
+                # 构建信息性回答
                 structural_info = enhanced_metadata.get("structural_info", {})
                 
                 response_parts = [
-                    f"✅ **Archivo descargado y procesado exitosamente**",
+                    f"✅ **文件下载并处理成功**",
                     f"🌐 **URL:** {url}",
-                    f"📄 **Archivo:** {os.path.basename(parsed_url.path)}",
-                    f"📋 **Tipo:** {file_extension.upper()}",
-                    f"🔧 **Método:** {processing_method.replace('_', ' ').title()}"
+                    f"📄 **文件:** {os.path.basename(parsed_url.path)}",
+                    f"📋 **类型:** {file_extension.upper()}",
+                    f"🔧 **方法:** {processing_method.replace('_', ' ').title()}"
                 ]
                 
-                # Añadir información estructural si está disponible
+                # 如果有结构信息则添加
                 if structural_info:
                     response_parts.extend([
-                        f"📊 **Estructura del documento:**",
-                        f"   • Elementos totales: {structural_info.get('total_elements', 'N/A')}",
-                        f"   • Títulos: {structural_info.get('titles_count', 'N/A')}",
-                        f"   • Tablas: {structural_info.get('tables_count', 'N/A')}",
-                        f"   • Listas: {structural_info.get('lists_count', 'N/A')}",
-                        f"   • Bloques narrativos: {structural_info.get('narrative_blocks', 'N/A')}"
+                        f"📊 **文档结构:**",
+                        f"   • 总元素: {structural_info.get('total_elements', 'N/A')}",
+                        f"   • 标题: {structural_info.get('titles_count', 'N/A')}",
+                        f"   • 表格: {structural_info.get('tables_count', 'N/A')}",
+                        f"   • 列表: {structural_info.get('lists_count', 'N/A')}",
+                        f"   • 叙述块: {structural_info.get('narrative_blocks', 'N/A')}"
                     ])
                 
                 if processed_filepath:
-                    response_parts.append(f"💾 **Copia guardada:** {processed_filepath}")
+                    response_parts.append(f"💾 **副本已保存:** {processed_filepath}")
                 
-                response_parts.append(f"📚 **Estado:** Añadido a la base de conocimientos con chunking semántico")
+                response_parts.append(f"📚 **状态:** 已通过语义分块添加到知识库")
                 
-                log(f"MCP Server: Procesamiento de URL completado exitosamente")
+                log(f"MCP服务器: URL处理完成")
                 return "\n".join(response_parts)
                 
             finally:
-                # Limpiar archivo temporal
+                # 清理临时文件
                 try:
                     os.unlink(temp_file_path)
-                    log(f"MCP Server: Archivo temporal eliminado: {temp_file_path}")
+                    log(f"MCP服务器: 临时文件已删除: {temp_file_path}")
                 except Exception as e:
-                    log(f"MCP Server Advertencia: No se pudo eliminar archivo temporal: {e}")
+                    log(f"MCP服务器警告: 无法删除临时文件: {e}")
         
         else:
-            # Procesamiento tradicional para páginas web
-            log(f"MCP Server: Procesando contenido web con MarkItDown...")
+            # 网页的传统处理
+            log(f"MCP服务器: 正在用MarkItDown处理网页内容...")
             
-            # Usar MarkItDown para procesar la URL directamente con timeout
+            # 使用MarkItDown直接处理URL并设置超时
             try:
                 result = md_converter.convert_url(url)
                 markdown_content = result.text_content
             except Exception as e:
-                log(f"MCP Server: Error con MarkItDown, intentando descarga directa: {e}")
-                # Fallback: intentar descarga directa
+                log(f"MCP服务器: MarkItDown处理失败，尝试直接下载: {e}")
+                # 回退：尝试直接下载
                 import requests
                 response = requests.get(url, timeout=30)
                 response.raise_for_status()
                 markdown_content = response.text
 
             if not markdown_content or markdown_content.isspace():
-                log(f"MCP Server: Advertencia: URL procesada pero no se pudo extraer contenido: {url}")
-                return f"Advertencia: La URL '{url}' fue procesada, pero no se pudo extraer contenido de texto."
+                log(f"MCP服务器: 警告: URL已处理但未能提取内容: {url}")
+                return f"警告: URL '{url}' 已处理，但未能提取文本内容。"
 
-            log(f"MCP Server: Contenido de URL convertido exitosamente ({len(markdown_content)} caracteres)")
+            log(f"MCP服务器: URL内容转换成功（{len(markdown_content)} 字符）")
             
-            # Guardar copia en Markdown
-            log(f"MCP Server: Guardando copia Markdown...")
-            
-            # Crear nombre de archivo basado en la URL
+            # 保存Markdown副本
+            log(f"MCP服务器: 正在保存Markdown副本...")            # Crear nombre de archivo basado en la URL
             domain = parsed_url.netloc.replace('.', '_')
             path = parsed_url.path.replace('/', '_').replace('.', '_')
             if not path or path == '_':
                 path = 'homepage'
             
-            # Crear nombre de archivo único
+            # 创建唯一文件名
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{domain}_{path}_{timestamp}_markitdown.md"
             md_filepath = os.path.join(CONVERTED_DOCS_DIR, filename)
             
-            # Guardar el contenido
+            # 保存内容
             try:
                 ensure_converted_docs_directory()
                 with open(md_filepath, 'w', encoding='utf-8') as f:
                     f.write(markdown_content)
-                log(f"MCP Server: Copia Markdown guardada en: {md_filepath}")
+                log(f"MCP服务器: 已保存Markdown副本: {md_filepath}")
             except Exception as e:
-                log(f"MCP Server Advertencia: No se pudo guardar copia Markdown: {e}")
+                log(f"MCP服务器警告: 无法保存Markdown副本: {e}")
                 md_filepath = ""
             
-            # Añadir contenido a la base de conocimientos
-            log(f"MCP Server: Añadiendo contenido a la base de conocimientos...")
+            # 添加内容到知识库
+            log(f"MCP服务器: 正在添加内容到知识库...")
             
-            # Crear metadatos específicos de la URL
+            # 创建URL特定的元数据
             url_metadata = {
                 "source": url,
                 "domain": parsed_url.netloc,
@@ -612,157 +600,152 @@ def learn_from_url(url: str) -> str:
                 "converted_to_md": md_filepath if md_filepath else "No"
             }
             
-            # Añadir directamente con metadatos
+            # 直接添加元数据
             add_text_to_knowledge_base(markdown_content, rag_state["vector_store"], url_metadata)
             
-            # Información sobre el proceso completado
+            # 完成过程的信息
             response_parts = [
-                f"✅ **Contenido web procesado exitosamente**",
+                f"✅ **网页内容处理成功**",
                 f"🌐 **URL:** {url}",
-                f"🌍 **Dominio:** {parsed_url.netloc}",
-                f"🔧 **Método:** MarkItDown"
+                f"🌍 **域名:** {parsed_url.netloc}",
+                f"🔧 **方法:** MarkItDown"
             ]
             
             if md_filepath:
-                response_parts.append(f"💾 **Copia guardada:** {md_filepath}")
+                response_parts.append(f"💾 **副本已保存:** {md_filepath}")
             
-            response_parts.append(f"📚 **Estado:** Añadido a la base de conocimientos")
+            response_parts.append(f"📚 **状态:** 已添加到知识库")
             
-            log(f"MCP Server: Procesamiento de URL completado exitosamente")
+            log(f"MCP服务器: URL处理完成")
             return "\n".join(response_parts)
 
     except requests.exceptions.Timeout:
-        log(f"MCP Server: Timeout al procesar URL: {url}")
-        return f"❌ **Error de timeout:** La URL '{url}' tardó demasiado en responder.\n\n💡 **Consejos:**\n- Verifica tu conexión a internet\n- Intenta más tarde\n- La URL puede estar temporalmente lenta"
-    
+        log(f"MCP服务器: 处理URL超时: {url}")
+        return f"❌ **超时错误:** URL '{url}' 响应过慢。\n\n💡 **建议：**\n- 检查网络连接\n- 稍后重试\n- 目标网站可能临时缓慢"
     except requests.exceptions.ConnectionError:
-        log(f"MCP Server: Error de conexión al procesar URL: {url}")
-        return f"❌ **Error de conexión:** No se pudo conectar a la URL '{url}'.\n\n💡 **Consejos:**\n- Verifica tu conexión a internet\n- La URL puede no estar disponible\n- Intenta más tarde"
-    
+        log(f"MCP服务器: 处理URL时连接错误: {url}")
+        return f"❌ **连接错误:** 无法连接到 URL '{url}'。\n\n💡 **建议：**\n- 检查网络连接\n- 目标网站可能不可用\n- 稍后重试"
     except Exception as e:
-        log(f"MCP Server: Error procesando URL '{url}': {e}")
-        error_msg = f"❌ **Error procesando URL '{url}':** {e}"
-        
-        # Proporcionar información más útil para el agente
+        log(f"MCP服务器: 处理URL '{url}' 时出错: {e}")
+        error_msg = f"❌ **处理 URL '{url}' 时出错:** {e}"
+        # 提供更有用的建议
         if "404" in str(e) or "Not Found" in str(e):
-            error_msg += "\n\n💡 **Consejo:** La URL no existe o no es accesible. Verifica que la URL sea correcta."
+            error_msg += "\n\n💡 **建议：** URL 不存在或无法访问，请检查链接是否正确。"
         elif "timeout" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** La página tardó demasiado en cargar. Intenta más tarde o verifica tu conexión a internet."
+            error_msg += "\n\n💡 **建议：** 页面加载过慢，请稍后重试或检查网络。"
         elif "permission" in str(e).lower() or "403" in str(e):
-            error_msg += "\n\n💡 **Consejo:** No tienes permisos para acceder a esta página. Algunas páginas bloquean el acceso automático."
+            error_msg += "\n\n💡 **建议：** 没有访问权限，部分网站禁止自动访问。"
         elif "youtube" in url.lower() and "transcript" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** Este video de YouTube no tiene transcripción disponible o está deshabilitada."
+            error_msg += "\n\n💡 **建议：** 此 YouTube 视频无可用字幕或已禁用。"
         elif "ssl" in str(e).lower() or "certificate" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** Problema con el certificado SSL de la página. Intenta con una URL diferente."
+            error_msg += "\n\n💡 **建议：** SSL 证书问题，请尝试其他链接。"
         elif "download" in str(e).lower() or "connection" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** Error al descargar el archivo. Verifica que la URL sea accesible y el archivo exista."
+            error_msg += "\n\n💡 **建议：** 下载文件出错，请确认链接可访问且文件存在。"
         elif "unstructured" in str(e).lower():
-            error_msg += "\n\n💡 **Consejo:** Error en el procesamiento del documento. El archivo puede estar corrupto o ser muy grande."
-        
+            error_msg += "\n\n💡 **建议：** 文档处理出错，文件可能损坏或过大。"
         return error_msg
 
 @mcp.tool()
 def ask_rag(query: str) -> str:
     """
-    Asks a question to the RAG knowledge base and returns an answer based on the stored information.
-    Use this when you want to get information from the knowledge base that has been previously learned.
-    
-    Examples of when to use:
-    - Asking about specific topics or concepts
-    - Requesting explanations or definitions
-    - Seeking information from processed documents
-    - Getting answers based on learned text or documents
-    
-    The system will search through all stored information and provide the most relevant answer.
+    向 RAG 知识库提问，并根据存储的信息返回答案。
+    使用场景：
+    - 询问特定主题或概念
+    - 请求解释或定义
+    - 从处理过的文档获取信息
+    - 基于已学习的文本或文档获取答案
 
-    Args:
-        query: The question or query to ask the knowledge base.
+    系统将搜索所有存储的知识，并返回最相关的结果。
+
+    参数：
+        query: 要向知识库提出的问题或查询。
     """
-    log(f"MCP Server: Procesando pregunta: {query}")
+    log(f"MCP服务器: 正在处理问题: {query}")
     initialize_rag()
     
     try:
-        # Usar la cadena QA estándar (sin filtros)
+        # 使用标准QA链（无过滤器）
         qa_chain = get_qa_chain(rag_state["vector_store"])
         response = qa_chain.invoke({"query": query})
         
         answer = response.get("result", "")
         source_documents = response.get("source_documents", [])
         
-        # Verificar si realmente tenemos información relevante
+        # 检查是否真的有相关信息
         if not source_documents:
-            # No hay fuentes - el LLM probablemente está alucinando
-            enhanced_answer = f"🤖 **Respuesta:**\n\n❌ **No se encontró información relevante en la base de conocimientos para responder tu pregunta.**\n\n"
-            enhanced_answer += "💡 **Sugerencias:**\n"
-            enhanced_answer += "• Verifica que hayas cargado documentos relacionados con tu pregunta\n"
-            enhanced_answer += "• Intenta reformular tu pregunta con términos más específicos\n"
-            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué información está disponible\n"
-            enhanced_answer += "• Considera cargar más documentos sobre el tema que te interesa\n\n"
-            enhanced_answer += "⚠️ **Nota:** El sistema solo puede responder basándose en la información que ha sido previamente cargada en la base de conocimientos."
+            # 无可用来源，可能系统尚未加载相关信息
+            enhanced_answer = f"🤖 **回答:**\n\n❌ **未找到与问题相关的信息，无法回答。**\n\n"
+            enhanced_answer += "💡 **建议:**\n"
+            enhanced_answer += "• 确保已加载与问题相关的文档\n"
+            enhanced_answer += "• 尝试使用更具体的关键词重新提问\n"
+            enhanced_answer += "• 使用 `get_knowledge_base_stats()` 检查知识库状态\n"
+            enhanced_answer += "• 考虑加载更多相关文档\n\n"
+            enhanced_answer += "⚠️ **提示:** 系统仅基于已加载信息进行回答。"
             
-            log(f"MCP Server: No se encontraron fuentes relevantes para la pregunta")
+            log(f"MCP服务器: 未找到相关信息来源")
             return enhanced_answer
         
-        # Verificar si la respuesta parece ser una alucinación
-        # Si no hay fuentes pero hay respuesta, es probable una alucinación
+        # 检查回答是否可能是幻觉
+        # 如果没有来源但有回答，可能是幻觉结果
         if len(source_documents) == 0 and answer.strip():
-            enhanced_answer = f"🤖 **Respuesta:**\n\n❌ **No se encontró información específica en la base de conocimientos para responder tu pregunta.**\n\n"
-            enhanced_answer += "💡 **Sugerencias:**\n"
-            enhanced_answer += "• Verifica que hayas cargado documentos relacionados con tu pregunta\n"
-            enhanced_answer += "• Intenta reformular tu pregunta con términos más específicos\n"
-            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué información está disponible\n\n"
-            enhanced_answer += "⚠️ **Nota:** El sistema solo puede responder basándose en la información que ha sido previamente cargada en la base de conocimientos."
+            # 有回答但无来源，可能为幻觉结果
+            enhanced_answer = f"🤖 **回答:**\n\n❌ **未找到特定信息，无法准确回答。**\n\n"
+            enhanced_answer += "💡 **建议:**\n"
+            enhanced_answer += "• 确保已加载与问题相关的文档\n"
+            enhanced_answer += "• 尝试使用更具体的关键词重新提问\n"
+            enhanced_answer += "• 使用 `get_knowledge_base_stats()` 检查知识库状态\n\n"
+            enhanced_answer += "⚠️ **提示:** 系统仅基于已加载信息进行回答。"
             
-            log(f"MCP Server: Respuesta detectada como posible alucinación (sin fuentes)")
+            log(f"MCP服务器: 检测到可能的幻觉回答（无来源）")
             return enhanced_answer
         
-        # Si tenemos fuentes, construir respuesta normal
-        enhanced_answer = f"🤖 **Respuesta:**\n\n{answer}\n"
+        # 如果有可用来源，构建正常回答
+        enhanced_answer = f"🤖 **回答:**\n\n{answer}\n"
         
-        # Añadir información de fuentes con más detalles
+        # 添加来源信息及更多详情
         if source_documents:
-            enhanced_answer += "📚 **Fuentes de información utilizadas:**\n\n"
+            enhanced_answer += "📚 **使用的信息来源:**\n\n"
             for i, doc in enumerate(source_documents, 1):
                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
-                source_name = metadata.get("source", "Fuente desconocida")
+                source_name = metadata.get("source", "未知来源")
                 
-                # --- Mejoramos la información de la fuente ---
+                # --- 改进来源信息 ---
                 source_info = f"   {i}. **{source_name}**"
                 
-                # Añadir ruta completa si es un documento
+                # 如果是文档则添加完整路径
                 file_path = metadata.get("file_path")
                 if file_path:
-                    source_info += f"\n      - **Ruta:** `{file_path}`"
+                    source_info += f"\n      - **路径:** `{file_path}`"
                 
-                # Añadir tipo de archivo si está disponible
+                # 如果有文件类型则添加
                 file_type = metadata.get("file_type")
                 if file_type:
-                    source_info += f"\n      - **Tipo:** {file_type.upper()}"
+                    source_info += f"\n      - **类型:** {file_type.upper()}"
                 
-                # Añadir método de procesamiento si está disponible
+                # 如果有处理方法则添加
                 processing_method = metadata.get("processing_method")
                 if processing_method:
                     method_display = processing_method.replace('_', ' ').title()
-                    source_info += f"\n      - **Procesamiento:** {method_display}"
+                    source_info += f"\n      - **处理方法:** {method_display}"
                 
-                # Añadir información estructural si está disponible
+                # 如果有结构信息则添加
                 structural_info = metadata.get("structural_info")
                 if structural_info:
-                    source_info += f"\n      - **Estructura:** {structural_info.get('total_elements', 'N/A')} elementos"
+                    source_info += f"\n      - **结构:** {structural_info.get('total_elements', 'N/A')} 个元素"
                     titles_count = structural_info.get('titles_count', 0)
                     tables_count = structural_info.get('tables_count', 0)
                     lists_count = structural_info.get('lists_count', 0)
                     if titles_count > 0 or tables_count > 0 or lists_count > 0:
                         structure_details = []
                         if titles_count > 0:
-                            structure_details.append(f"{titles_count} títulos")
+                            structure_details.append(f"{titles_count} 个标题")
                         if tables_count > 0:
-                            structure_details.append(f"{tables_count} tablas")
+                            structure_details.append(f"{tables_count} 个表格")
                         if lists_count > 0:
-                            structure_details.append(f"{lists_count} listas")
+                            structure_details.append(f"{lists_count} 个列表")
                         source_info += f" ({', '.join(structure_details)})"
                 
-                # Reconstruir información estructural desde metadatos planos
+                # 从扁平元数据重构结构信息
                 structural_elements = []
                 titles_count = metadata.get("structural_titles_count", 0)
                 tables_count = metadata.get("structural_tables_count", 0)
@@ -772,65 +755,65 @@ def ask_rag(query: str) -> str:
                 if total_elements > 0:
                     structural_details = []
                     if titles_count > 0:
-                        structural_details.append(f"{titles_count} títulos")
+                        structural_details.append(f"{titles_count} 个标题")
                     if tables_count > 0:
-                        structural_details.append(f"{tables_count} tablas")
+                        structural_details.append(f"{tables_count} 个表格")
                     if lists_count > 0:
-                        structural_details.append(f"{lists_count} listas")
+                        structural_details.append(f"{lists_count} 个列表")
                     
                     if structural_details:
-                        source_info += f"\n      - **Estructura:** {', '.join(structural_details)}"
+                        source_info += f"\n      - **结构:** {', '.join(structural_details)}"
                 
                 enhanced_answer += source_info + "\n\n"
         
-        # Añadir información sobre la calidad de la respuesta
+        # 添加回答质量信息
         num_sources = len(source_documents)
         if num_sources >= 3:
-            enhanced_answer += "\n✅ **Alta confianza:** Respuesta basada en múltiples fuentes"
+            enhanced_answer += "\n✅ **高可信度:** 回答基于多个来源"
         elif num_sources == 2:
-            enhanced_answer += "\n⚠️ **Confianza media:** Respuesta basada en 2 fuentes"
+            enhanced_answer += "\n⚠️ **中等可信度:** 回答基于2个来源"
         else:
-            enhanced_answer += "\n⚠️ **Confianza limitada:** Respuesta basada en 1 fuente"
+            enhanced_answer += "\n⚠️ **有限可信度:** 回答基于1个来源"
         
-        # Añadir información sobre el procesamiento si hay documentos con metadatos estructurales
+        # 如果有文档使用了结构化元数据处理则添加信息
         enhanced_docs = [doc for doc in source_documents if hasattr(doc, 'metadata') and doc.metadata.get("processing_method") == "unstructured_enhanced"]
         if enhanced_docs:
-            enhanced_answer += f"\n🧠 **Procesamiento inteligente:** {len(enhanced_docs)} fuentes procesadas con Unstructured (preservación de estructura)"
+            enhanced_answer += f"\n🧠 **智能处理:** {len(enhanced_docs)} 个来源使用了Unstructured处理（保留结构）"
         
-        log(f"MCP Server: Respuesta generada exitosamente con {len(source_documents)} fuentes")
+        log(f"MCP服务器: 成功生成回答，共{len(source_documents)}个来源")
         return enhanced_answer
         
     except Exception as e:
-        log(f"MCP Server: Error procesando pregunta: {e}")
-        return f"❌ **Error al procesar la pregunta:** {e}\n\n💡 **Sugerencias:**\n- Verifica que el sistema RAG esté correctamente inicializado\n- Intenta reformular tu pregunta\n- Si el problema persiste, reinicia el servidor"
+        log(f"MCP服务器: 处理问题时出错: {e}")
+        return f"❌ **处理问题时出错:** {e}\n\n💡 **建议:**\n- 检查RAG系统是否正确初始化\n- 尝试重新表述您的问题\n- 如果问题持续，请重启服务器"
 
 @mcp.tool()
 def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, min_titles: int = None, processing_method: str = None) -> str:
     """
-    Asks a question to the RAG knowledge base with specific filters to focus the search.
-    Use this when you want to get information from specific types of documents or documents with certain characteristics.
+    向 RAG 知识库提出问题，使用特定过滤器聚焦搜索范围。
+    适用于从特定类型的文档或具有特定特征的文档中获取信息。
     
-    Examples of when to use:
-    - Searching only in PDF documents: file_type=".pdf"
-    - Looking for documents with tables: min_tables=1
-    - Finding well-structured documents: min_titles=5
-    - Searching in enhanced processed documents: processing_method="unstructured_enhanced"
+    使用示例：
+    - 仅在PDF文档中搜索: file_type=".pdf"
+    - 查找包含表格的文档: min_tables=1
+    - 查找结构良好的文档: min_titles=5
+    - 在增强处理的文档中搜索: processing_method="unstructured_enhanced"
     
-    This provides more targeted and relevant results by filtering the search scope.
+    通过过滤搜索范围提供更精准和相关的结果。
 
-    Args:
-        query: The question or query to ask the knowledge base.
-        file_type: Filter by file type (e.g., ".pdf", ".docx", ".txt")
-        min_tables: Minimum number of tables the document must have
-        min_titles: Minimum number of titles the document must have
-        processing_method: Filter by processing method (e.g., "unstructured_enhanced", "markitdown")
+    参数：
+        query: 向知识库提出的问题或查询。
+        file_type: 按文件类型过滤（例如 ".pdf", ".docx", ".txt"）
+        min_tables: 文档必须包含的最少表格数量
+        min_titles: 文档必须包含的最少标题数量
+        processing_method: 按处理方法过滤（例如 "unstructured_enhanced", "markitdown"）
     """
-    log(f"MCP Server: Procesando pregunta con filtros: {query}")
-    log(f"MCP Server: Filtros aplicados - Tipo: {file_type}, Tablas: {min_tables}, Títulos: {min_titles}, Método: {processing_method}")
+    log(f"MCP服务器: 正在处理带过滤器的问题: {query}")
+    log(f"MCP服务器: 应用的过滤器 - 类型: {file_type}, 表格: {min_tables}, 标题: {min_titles}, 方法: {processing_method}")
     initialize_rag()
     
     try:
-        # Crear filtros de metadatos
+        # 创建元数据过滤器
         metadata_filter = create_metadata_filter(
             file_type=file_type,
             processing_method=processing_method,
@@ -838,88 +821,86 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
             min_titles=min_titles
         )
         
-        # Usar la cadena QA con filtros
+        # 使用带过滤器的QA链
         qa_chain = get_qa_chain(rag_state["vector_store"], metadata_filter)
         response = qa_chain.invoke({"query": query})
         
         answer = response.get("result", "")
         source_documents = response.get("source_documents", [])
         
-        # Verificar si realmente tenemos información relevante con los filtros
+        # 检查是否有符合过滤器的相关信息
         if not source_documents:
-            # No hay fuentes que cumplan con los filtros
-            enhanced_answer = f"🔍 **Respuesta (con filtros aplicados):**\n\n❌ **No se encontró información relevante en la base de conocimientos que cumpla con los filtros especificados.**\n\n"
+            # 没有符合过滤器的来源
+            enhanced_answer = f"🔍 **回答（已应用过滤器）:**\n\n❌ **在知识库中未找到符合指定过滤器的相关信息。**\n\n"
             
-            # Mostrar filtros aplicados
+            # 显示应用的过滤器
             if metadata_filter:
-                enhanced_answer += "📋 **Filtros aplicados:**\n"
+                enhanced_answer += "📋 **应用的过滤器:**\n"
                 for key, value in metadata_filter.items():
                     if key == "file_type":
-                        enhanced_answer += f"   • Tipo de archivo: {value}\n"
+                        enhanced_answer += f"   • 文件类型: {value}\n"
                     elif key == "processing_method":
-                        enhanced_answer += f"   • Método de procesamiento: {value.replace('_', ' ').title()}\n"
+                        enhanced_answer += f"   • 处理方法: {value.replace('_', ' ').title()}\n"
                     elif key == "structural_tables_count":
-                        enhanced_answer += f"   • Mínimo de tablas: {value['$gte']}\n"
+                        enhanced_answer += f"   • 最少表格数: {value['$gte']}\n"
                     elif key == "structural_titles_count":
-                        enhanced_answer += f"   • Mínimo de títulos: {value['$gte']}\n"
+                        enhanced_answer += f"   • 最少标题数: {value['$gte']}\n"
                 enhanced_answer += "\n"
             
-            enhanced_answer += "💡 **Sugerencias:**\n"
-            enhanced_answer += "• Intenta relajar los filtros para obtener más resultados\n"
-            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué tipos de documentos están disponibles\n"
-            enhanced_answer += "• Considera usar `ask_rag()` sin filtros para buscar en toda la base de conocimientos\n"
-            enhanced_answer += "• Verifica que hayas cargado documentos que cumplan con los criterios especificados\n\n"
-            enhanced_answer += "⚠️ **Nota:** Los filtros pueden ser muy restrictivos. Intenta con filtros más amplios."
+            enhanced_answer += "💡 **建议:**\n"
+            enhanced_answer += "• 尝试放宽过滤器以获得更多结果\n"
+            enhanced_answer += "• 使用 `get_knowledge_base_stats()` 查看可用的文档类型\n"
+            enhanced_answer += "• 考虑使用 `ask_rag()` 不带过滤器搜索整个知识库\n"
+            enhanced_answer += "• 确认已加载符合指定条件的文档\n\n"
+            enhanced_answer += "⚠️ **注意:** 过滤器可能过于严格。尝试使用更宽松的过滤器。"
             
-            log(f"MCP Server: No se encontraron fuentes que cumplan con los filtros especificados")
+            log(f"MCP服务器: 未找到符合指定过滤器的来源")
             return enhanced_answer
         
-        # Verificar si la respuesta parece ser una alucinación
+        # 验证响应是否可能是幻觉
         if len(source_documents) == 0 and answer.strip():
-            enhanced_answer = f"🔍 **Respuesta (con filtros aplicados):**\n\n❌ **No se encontró información específica que cumpla con los filtros especificados.**\n\n"
+            enhanced_answer = f"🔍 **响应（已应用过滤器）:**\n\n❌ **未找到符合指定过滤器的特定信息。**\n\n"
             
-            # Mostrar filtros aplicados
+            # 显示应用的过滤器
             if metadata_filter:
-                enhanced_answer += "📋 **Filtros aplicados:**\n"
+                enhanced_answer += "📋 **应用的过滤器:**\n"
                 for key, value in metadata_filter.items():
                     if key == "file_type":
-                        enhanced_answer += f"   • Tipo de archivo: {value}\n"
+                        enhanced_answer += f"   • 文件类型: {value}\n"
                     elif key == "processing_method":
-                        enhanced_answer += f"   • Método de procesamiento: {value.replace('_', ' ').title()}\n"
+                        enhanced_answer += f"   • 处理方法: {value.replace('_', ' ').title()}\n"
                     elif key == "structural_tables_count":
                         enhanced_answer += f"   • Mínimo de tablas: {value['$gte']}\n"
                     elif key == "structural_titles_count":
                         enhanced_answer += f"   • Mínimo de títulos: {value['$gte']}\n"
-                enhanced_answer += "\n"
+                enhanced_answer += "\n💡 **建议:**\n"
+            enhanced_answer += "• 尝试放宽过滤器以获得更多结果\n"
+            enhanced_answer += "• 使用 `get_knowledge_base_stats()` 查看可用的文档类型\n"
+            enhanced_answer += "• 考虑使用不带过滤器的 `ask_rag()` 搜索整个知识库\n\n"
+            enhanced_answer += "⚠️ **注意:** 过滤器可能过于严格，请尝试使用更宽泛的过滤器。"
             
-            enhanced_answer += "💡 **Sugerencias:**\n"
-            enhanced_answer += "• Intenta relajar los filtros para obtener más resultados\n"
-            enhanced_answer += "• Usa `get_knowledge_base_stats()` para ver qué tipos de documentos están disponibles\n"
-            enhanced_answer += "• Considera usar `ask_rag()` sin filtros para buscar en toda la base de conocimientos\n\n"
-            enhanced_answer += "⚠️ **Nota:** Los filtros pueden ser muy restrictivos. Intenta con filtros más amplios."
-            
-            log(f"MCP Server: Respuesta filtrada detectada como posible alucinación (sin fuentes)")
+            log(f"MCP服务器: 过滤响应检测到可能的幻觉（无来源）")
             return enhanced_answer
         
-        # Si tenemos fuentes, construir respuesta normal
-        enhanced_answer = f"🔍 **Respuesta (con filtros aplicados):**\n\n{answer}\n"
+        # 如果有来源，构建正常回答
+        enhanced_answer = f"🔍 **回答（已应用过滤器）:**\n\n{answer}\n"
         
-        # Mostrar filtros aplicados
+        # 显示应用的过滤器
         if metadata_filter:
-            enhanced_answer += "\n📋 **Filtros aplicados:**\n"
+            enhanced_answer += "\n📋 **应用的过滤器:**\n"
             for key, value in metadata_filter.items():
                 if key == "file_type":
-                    enhanced_answer += f"   • Tipo de archivo: {value}\n"
+                    enhanced_answer += f"   • 文件类型: {value}\n"
                 elif key == "processing_method":
-                    enhanced_answer += f"   • Método de procesamiento: {value.replace('_', ' ').title()}\n"
+                    enhanced_answer += f"   • 处理方法: {value.replace('_', ' ').title()}\n"
                 elif key == "structural_tables_count":
                     enhanced_answer += f"   • Mínimo de tablas: {value['$gte']}\n"
                 elif key == "structural_titles_count":
                     enhanced_answer += f"   • Mínimo de títulos: {value['$gte']}\n"
         
-        # Añadir información de fuentes
+        # 添加来源信息
         if source_documents:
-            enhanced_answer += f"\n📚 **Fuentes encontradas ({len(source_documents)}):**\n\n"
+            enhanced_answer += f"\n📚 **找到的来源 ({len(source_documents)}):**\n\n"
             for i, doc in enumerate(source_documents, 1):
                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
                 source_name = metadata.get("source", "Fuente desconocida")
@@ -945,366 +926,366 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
                 
                 enhanced_answer += source_info + "\n"
         
-        # Información sobre la búsqueda filtrada
-        enhanced_answer += f"\n🎯 **Búsqueda filtrada:** Los resultados se limitaron a documentos que cumplen con los criterios especificados."
+        # 过滤搜索信息
+        enhanced_answer += f"\n🎯 **过滤搜索:** 结果仅限于符合指定条件的文档。"
         
-        log(f"MCP Server: Respuesta filtrada generada exitosamente con {len(source_documents)} fuentes")
+        log(f"MCP服务器: 成功生成过滤回答，共{len(source_documents)}个来源")
         return enhanced_answer
         
     except Exception as e:
-        log(f"MCP Server: Error procesando pregunta filtrada: {e}")
-        return f"❌ **Error al procesar la pregunta filtrada:** {e}"
+        log(f"MCP服务器: 处理过滤问题时出错: {e}")
+        return f"❌ **处理过滤问题时出错:** {e}"
 
 @mcp.tool()
 def get_knowledge_base_stats() -> str:
     """
-    Gets comprehensive statistics about the knowledge base, including document types, processing methods, and structural information.
-    Use this to understand what information is available in your knowledge base and how it was processed.
+    获取知识库的综合统计信息，包括文档类型、处理方法和结构信息。
+    用于了解知识库中有哪些信息以及如何处理的。
     
-    Examples of when to use:
-    - Checking how many documents are in the knowledge base
-    - Understanding the distribution of file types
-    - Seeing which processing methods were used
-    - Analyzing the structural complexity of stored documents
+    使用示例：
+    - 检查知识库中有多少文档
+    - 了解文件类型的分布
+    - 查看使用了哪些处理方法
+    - 分析存储文档的结构复杂性
     
-    This helps you make informed decisions about what to search for and how to filter your queries.
+    这有助于您就搜索内容和如何过滤查询做出明智的决定。
 
-    Returns:
-        Detailed statistics about the knowledge base contents.
+    返回：
+        关于知识库内容的详细统计信息。
     """
-    log(f"MCP Server: Obteniendo estadísticas de la base de conocimientos...")
+    log(f"MCP服务器: 正在获取知识库统计信息...")
     initialize_rag()
     
     try:
         stats = get_document_statistics(rag_state["vector_store"])
         
         if "error" in stats:
-            return f"❌ **Error obteniendo estadísticas:** {stats['error']}"
+            return f"❌ **获取统计信息时出错:** {stats['error']}"
         
         if stats.get("total_documents", 0) == 0:
-            return "📊 **Base de conocimientos vacía**\n\nNo hay documentos almacenados en la base de conocimientos."
+            return "📊 **知识库为空**\n\n知识库中没有存储的文档。"
         
-        # Construir respuesta detallada
-        response = f"📊 **Estadísticas de la Base de Conocimientos**\n\n"
-        response += f"📚 **Total de documentos:** {stats['total_documents']}\n\n"
+        # 构建详细回答
+        response = f"📊 **知识库统计信息**\n\n"
+        response += f"📚 **文档总数:** {stats['total_documents']}\n\n"
         
-        # Tipos de archivo
+        # 文件类型
         if stats["file_types"]:
-            response += "📄 **Tipos de archivo:**\n"
+            response += "📄 **文件类型:**\n"
             for file_type, count in sorted(stats["file_types"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / stats["total_documents"]) * 100
                 response += f"   • {file_type.upper()}: {count} ({percentage:.1f}%)\n"
             response += "\n"
         
-        # Métodos de procesamiento
+        # 处理方法
         if stats["processing_methods"]:
-            response += "🔧 **Métodos de procesamiento:**\n"
+            response += "🔧 **处理方法:**\n"
             for method, count in sorted(stats["processing_methods"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / stats["total_documents"]) * 100
                 method_display = method.replace('_', ' ').title()
                 response += f"   • {method_display}: {count} ({percentage:.1f}%)\n"
             response += "\n"
         
-        # Estadísticas estructurales
+        # 结构统计
         structural = stats["structural_stats"]
-        response += "🏗️ **Información estructural:**\n"
-        response += f"   • Documentos con tablas: {structural['documents_with_tables']}\n"
-        response += f"   • Documentos con títulos: {structural['documents_with_titles']}\n"
-        response += f"   • Documentos con listas: {structural['documents_with_lists']}\n"
-        response += f"   • Promedio de tablas por documento: {structural['avg_tables_per_doc']:.1f}\n"
-        response += f"   • Promedio de títulos por documento: {structural['avg_titles_per_doc']:.1f}\n"
-        response += f"   • Promedio de listas por documento: {structural['avg_lists_per_doc']:.1f}\n\n"
+        response += "🏗️ **结构信息:**\n"
+        response += f"   • 包含表格的文档: {structural['documents_with_tables']}\n"
+        response += f"   • 包含标题的文档: {structural['documents_with_titles']}\n"
+        response += f"   • 包含列表的文档: {structural['documents_with_lists']}\n"
+        response += f"   • 每文档平均表格数: {structural['avg_tables_per_doc']:.1f}\n"
+        response += f"   • 每文档平均标题数: {structural['avg_titles_per_doc']:.1f}\n"
+        response += f"   • 每文档平均列表数: {structural['avg_lists_per_doc']:.1f}\n\n"
         
-        # Sugerencias de búsqueda
-        response += "💡 **Sugerencias de búsqueda:**\n"
+        # 搜索建议
+        response += "💡 **搜索建议:**\n"
         if structural['documents_with_tables'] > 0:
-            response += f"   • Usa `ask_rag_filtered` con `min_tables=1` para buscar información en documentos con tablas\n"
+            response += f"   • 使用 `ask_rag_filtered` 带 `min_tables=1` 搜索包含表格的文档信息\n"
         if structural['documents_with_titles'] > 5:
-            response += f"   • Usa `ask_rag_filtered` con `min_titles=5` para buscar en documentos bien estructurados\n"
+            response += f"   • 使用 `ask_rag_filtered` 带 `min_titles=5` 搜索结构良好的文档\n"
         if ".pdf" in stats["file_types"]:
-            response += f"   • Usa `ask_rag_filtered` con `file_type=\".pdf\"` para buscar solo en documentos PDF\n"
+            response += f"   • 使用 `ask_rag_filtered` 带 `file_type=\".pdf\"` 仅搜索PDF文档\n"
         
-        log(f"MCP Server: Estadísticas obtenidas exitosamente")
+        log(f"MCP服务器: 成功获取统计信息")
         return response
         
     except Exception as e:
-        log(f"MCP Server: Error obteniendo estadísticas: {e}")
-        return f"❌ **Error obteniendo estadísticas:** {e}"
+        log(f"MCP服务器: 获取统计信息时出错: {e}")
+        return f"❌ **获取统计信息时出错:** {e}"
 
 @mcp.tool()
 def get_embedding_cache_stats() -> str:
     """
-    Gets detailed statistics about the embedding cache performance.
-    Use this to monitor cache efficiency and understand how the system is performing.
+    获取嵌入缓存性能的详细统计信息。
+    用于监控缓存效率并了解系统性能。
     
-    Examples of when to use:
-    - Checking cache hit rates to see if the system is working efficiently
-    - Monitoring memory usage of the cache
-    - Understanding how often embeddings are being reused
-    - Debugging performance issues
+    使用示例：
+    - 检查缓存命中率以查看系统是否高效运行
+    - 监控缓存的内存使用情况
+    - 了解嵌入重复使用的频率
+    - 调试性能问题
     
-    This helps you optimize the system and understand its behavior.
+    这有助于您优化系统并了解其行为。
 
-    Returns:
-        Detailed statistics about the embedding cache performance.
+    返回：
+        关于嵌入缓存性能的详细统计信息。
     """
-    log(f"MCP Server: Obteniendo estadísticas del cache de embeddings...")
+    log(f"MCP服务器: 正在获取嵌入缓存统计信息...")
     
     try:
         stats = get_cache_stats()
         
         if not stats:
-            return "📊 **Cache de embeddings no disponible**\n\nEl cache de embeddings no está inicializado."
+            return "📊 **嵌入缓存不可用**\n\n嵌入缓存未初始化。"
         
-        # Construir respuesta detallada
-        response = f"📊 **Estadísticas del Cache de Embeddings**\n\n"
+        # 构建详细回答
+        response = f"📊 **嵌入缓存统计信息**\n\n"
         
-        # Métricas principales
-        response += f"🔄 **Actividad del cache:**\n"
-        response += f"   • Total de solicitudes: {stats['total_requests']}\n"
-        response += f"   • Hits en memoria: {stats['memory_hits']}\n"
-        response += f"   • Hits en disco: {stats['disk_hits']}\n"
-        response += f"   • Misses (no encontrados): {stats['misses']}\n\n"
+        # 主要指标
+        response += f"🔄 **缓存活动:**\n"
+        response += f"   • 总请求数: {stats['total_requests']}\n"
+        response += f"   • 内存命中次数: {stats['memory_hits']}\n"
+        response += f"   • 磁盘命中次数: {stats['disk_hits']}\n"
+        response += f"   • 未命中次数: {stats['misses']}\n\n"
         
-        # Tasas de éxito
-        response += f"📈 **Tasas de éxito:**\n"
-        response += f"   • Tasa de hits en memoria: {stats['memory_hit_rate']}\n"
-        response += f"   • Tasa de hits en disco: {stats['disk_hit_rate']}\n"
-        response += f"   • Tasa de hits total: {stats['overall_hit_rate']}\n\n"
+        # 成功率
+        response += f"📈 **成功率:**\n"
+        response += f"   • 内存命中率: {stats['memory_hit_rate']}\n"
+        response += f"   • 磁盘命中率: {stats['disk_hit_rate']}\n"
+        response += f"   • 总命中率: {stats['overall_hit_rate']}\n\n"
         
-        # Uso de memoria
-        response += f"💾 **Uso de memoria:**\n"
-        response += f"   • Embeddings en memoria: {stats['memory_cache_size']}\n"
-        response += f"   • Tamaño máximo: {stats['max_memory_size']}\n"
-        response += f"   • Directorio de cache: {stats['cache_directory']}\n\n"
+        # 内存使用
+        response += f"💾 **内存使用:**\n"
+        response += f"   • 内存中的嵌入: {stats['memory_cache_size']}\n"
+        response += f"   • 最大内存大小: {stats['max_memory_size']}\n"
+        response += f"   • 缓存目录: {stats['cache_directory']}\n\n"
         
-        # Análisis de rendimiento
+        # 性能分析
         total_requests = stats['total_requests']
         if total_requests > 0:
             memory_hit_rate = float(stats['memory_hit_rate'].rstrip('%'))
             overall_hit_rate = float(stats['overall_hit_rate'].rstrip('%'))
             
-            response += f"🎯 **Análisis de rendimiento:**\n"
+            response += f"🎯 **性能分析:**\n"
             
             if overall_hit_rate > 70:
-                response += f"   • ✅ Excelente rendimiento: {overall_hit_rate:.1f}% de hits\n"
+                response += f"   • ✅ 性能卓越: {overall_hit_rate:.1f}% 命中率\n"
             elif overall_hit_rate > 50:
-                response += f"   • ⚠️ Rendimiento moderado: {overall_hit_rate:.1f}% de hits\n"
+                response += f"   • ⚠️ 性能中等: {overall_hit_rate:.1f}% 命中率\n"
             else:
-                response += f"   • ❌ Rendimiento bajo: {overall_hit_rate:.1f}% de hits\n"
+                response += f"   • ❌ 性能较低: {overall_hit_rate:.1f}% 命中率\n"
             
             if memory_hit_rate > 50:
-                response += f"   • 🚀 Cache en memoria efectivo: {memory_hit_rate:.1f}% de hits en memoria\n"
+                response += f"   • 🚀 内存缓存高效: {memory_hit_rate:.1f}% 内存命中率\n"
             else:
-                response += f"   • 💾 Dependencia del disco: {memory_hit_rate:.1f}% de hits en memoria\n"
+                response += f"   • 💾 依赖磁盘存储: {memory_hit_rate:.1f}% 内存命中率\n"
             
-            # Sugerencias de optimización
-            response += f"\n💡 **Sugerencias de optimización:**\n"
+            # 优化建议
+            response += f"\n💡 **优化建议:**\n"
             if overall_hit_rate < 30:
-                response += f"   • Considera procesar documentos similares juntos\n"
-                response += f"   • Revisa si hay muchos textos únicos que no se repiten\n"
+                response += f"   • 考虑同时处理相似的文档\n"
+                response += f"   • 检查是否有很多不重复的独特文本\n"
             
             if memory_hit_rate < 30 and total_requests > 100:
-                response += f"   • Considera aumentar el tamaño del cache en memoria\n"
-                response += f"   • Los hits en disco son más lentos que en memoria\n"
+                response += f"   • 考虑增加内存缓存大小\n"
+                response += f"   • 磁盘命中比内存命中速度慢\n"
             
             if stats['memory_cache_size'] >= stats['max_memory_size'] * 0.9:
-                response += f"   • El cache en memoria está casi lleno\n"
-                response += f"   • Considera aumentar max_memory_size si tienes RAM disponible\n"
+                response += f"   • 内存缓存接近满载\n"
+                response += f"   • 如有可用RAM，考虑增加max_memory_size\n"
         
-        log(f"MCP Server: Estadísticas del cache obtenidas exitosamente")
+        log(f"MCP服务器: 成功获取缓存统计信息")
         return response
         
     except Exception as e:
-        log(f"MCP Server: Error obteniendo estadísticas del cache: {e}")
-        return f"❌ **Error obteniendo estadísticas del cache:** {e}"
+        log(f"MCP服务器: 获取缓存统计信息时出错: {e}")
+        return f"❌ **获取缓存统计信息时出错:** {e}"
 
 @mcp.tool()
 def clear_embedding_cache_tool() -> str:
     """
-    Clears the embedding cache to free up memory and disk space.
-    Use this when you want to reset the cache or free up resources.
+    清除嵌入缓存以释放内存和磁盘空间。
+    当您想重置缓存或释放资源时使用此功能。
     
-    Examples of when to use:
-    - Freeing up memory when the system is running low on RAM
-    - Resetting the cache after making changes to the embedding model
-    - Clearing old cached embeddings that are no longer needed
-    - Troubleshooting cache-related issues
+    使用示例：
+    - 系统内存不足时释放内存
+    - 更改嵌入模型后重置缓存
+    - 清除不再需要的旧缓存嵌入
+    - 故障排除缓存相关问题
     
-    Warning: This will remove all cached embeddings and they will need to be recalculated.
+    警告: 这将删除所有缓存的嵌入，需要重新计算。
 
-    Returns:
-        Confirmation message about the cache clearing operation.
+    返回：
+        关于缓存清除操作的确认消息。
     """
-    log(f"MCP Server: Limpiando cache de embeddings...")
+    log(f"MCP服务器: 正在清除嵌入缓存...")
     
     try:
         clear_embedding_cache()
         
-        response = "🧹 **Cache de embeddings limpiado exitosamente**\n\n"
-        response += "✅ Se han eliminado todos los embeddings almacenados en cache.\n"
-        response += "📝 Los próximos embeddings se calcularán desde cero.\n"
-        response += "💾 Se ha liberado memoria y espacio en disco.\n\n"
-        response += "⚠️ **Nota:** Los embeddings se recalcularán automáticamente cuando sea necesario."
+        response = "🧹 **嵌入缓存清除成功**\n\n"
+        response += "✅ 已删除所有缓存中存储的嵌入。\n"
+        response += "📝 下次需要时将从头计算嵌入。\n"
+        response += "💾 已释放内存和磁盘空间。\n\n"
+        response += "⚠️ **注意:** 需要时嵌入将自动重新计算。"
         
-        log(f"MCP Server: Cache de embeddings limpiado exitosamente")
+        log(f"MCP服务器: 嵌入缓存清除成功")
         return response
         
     except Exception as e:
-        log(f"MCP Server: Error limpiando cache: {e}")
-        return f"❌ **Error limpiando cache:** {e}"
+        log(f"MCP服务器: 清除缓存时出错: {e}")
+        return f"❌ **清除缓存时出错:** {e}"
 
 @mcp.tool()
 def optimize_vector_database() -> str:
     """
-    Optimiza la base de datos vectorial para mejorar el rendimiento de búsquedas.
-    Esta herramienta reorganiza los índices internos para búsquedas más rápidas.
+    优化向量数据库以提高搜索性能。
+    此工具重新组织内部索引以实现更快的搜索。
     
-    Use esta herramienta cuando:
-    - Las búsquedas son lentas
-    - Se han añadido muchos documentos nuevos
-    - Quieres mejorar el rendimiento general del sistema
+    使用此工具当：
+    - 搜索速度缓慢
+    - 添加了许多新文档
+    - 想要提高系统整体性能
     
-    Returns:
-        Información sobre el proceso de optimización
+    返回：
+        关于优化过程的信息
     """
-    log("MCP Server: Optimizando base de datos vectorial...")
+    log("MCP服务器: 正在优化向量数据库...")
     
     try:
         result = optimize_vector_store()
         
         if result["status"] == "success":
-            response = f"✅ **Base de datos vectorial optimizada exitosamente**\n\n"
-            response += f"📊 **Estadísticas antes de la optimización:**\n"
+            response = f"✅ **向量数据库优化成功**\n\n"
+            response += f"📊 **优化前统计:**\n"
             stats_before = result.get("stats_before", {})
-            response += f"   • Documentos totales: {stats_before.get('total_documents', 'N/A')}\n"
+            response += f"   • 文档总数: {stats_before.get('total_documents', 'N/A')}\n"
             
-            response += f"\n📊 **Estadísticas después de la optimización:**\n"
+            response += f"\n📊 **优化后统计:**\n"
             stats_after = result.get("stats_after", {})
-            response += f"   • Documentos totales: {stats_after.get('total_documents', 'N/A')}\n"
+            response += f"   • 文档总数: {stats_after.get('total_documents', 'N/A')}\n"
             
-            response += f"\n🚀 **Beneficios:**\n"
-            response += f"   • Búsquedas más rápidas\n"
-            response += f"   • Mejor precisión en resultados\n"
-            response += f"   • Índices optimizados\n"
+            response += f"\n🚀 **优势:**\n"
+            response += f"   • 搜索速度更快\n"
+            response += f"   • 结果精度更高\n"
+            response += f"   • 索引已优化\n"
             
         else:
-            response = f"❌ **Error optimizando base de datos:** {result.get('message', 'Error desconocido')}"
+            response = f"❌ **优化数据库时出错:** {result.get('message', '未知错误')}"
             
         return response
         
     except Exception as e:
-        log(f"MCP Server Error: Error en optimización: {e}")
-        return f"❌ **Error optimizando base de datos vectorial:** {str(e)}"
+        log(f"MCP服务器错误: 优化出错: {e}")
+        return f"❌ **优化向量数据库时出错:** {str(e)}"
 
 @mcp.tool()
 def get_vector_database_stats() -> str:
     """
-    Obtiene estadísticas detalladas de la base de datos vectorial.
-    Incluye información sobre documentos, tipos de archivo y configuración.
+    获取向量数据库的详细统计信息。
+    包括文档、文件类型和配置信息。
     
-    Use esta herramienta para:
-    - Verificar el estado de la base de datos
-    - Analizar la distribución de documentos
-    - Diagnosticar problemas de rendimiento
-    - Planificar optimizaciones
+    使用此工具来：
+    - 检查数据库状态
+    - 分析文档分布
+    - 诊断性能问题
+    - 规划优化
     
-    Returns:
-        Estadísticas detalladas de la base de datos vectorial
+    返回：
+        向量数据库的详细统计信息
     """
-    log("MCP Server: Obteniendo estadísticas de base de datos vectorial...")
+    log("MCP服务器: 正在获取向量数据库统计信息...")
     
     try:
         stats = get_vector_store_stats()
         
         if "error" in stats:
-            return f"❌ **Error obteniendo estadísticas:** {stats['error']}"
+            return f"❌ **获取统计信息时出错:** {stats['error']}"
         
-        response = f"📊 **Estadísticas de la Base de Datos Vectorial**\n\n"
+        response = f"📊 **向量数据库统计信息**\n\n"
         
-        response += f"📚 **Información General:**\n"
-        response += f"   • Total de documentos: {stats.get('total_documents', 0)}\n"
-        response += f"   • Nombre de colección: {stats.get('collection_name', 'N/A')}\n"
-        response += f"   • Dimensión de embeddings: {stats.get('embedding_dimension', 'N/A')}\n"
+        response += f"📚 **基本信息:**\n"
+        response += f"   • 文档总数: {stats.get('total_documents', 0)}\n"
+        response += f"   • 集合名称: {stats.get('collection_name', 'N/A')}\n"
+        response += f"   • 嵌入维度: {stats.get('embedding_dimension', 'N/A')}\n"
         
-        # Tipos de archivo
+        # 文件类型
         file_types = stats.get('file_types', {})
         if file_types:
-            response += f"\n📄 **Distribución por tipo de archivo:**\n"
+            response += f"\n📄 **按文件类型分布:**\n"
             for file_type, count in file_types.items():
-                response += f"   • {file_type}: {count} documentos\n"
+                response += f"   • {file_type}: {count} 个文档\n"
         
-        # Métodos de procesamiento
+        # 处理方法
         processing_methods = stats.get('processing_methods', {})
         if processing_methods:
-            response += f"\n🔧 **Métodos de procesamiento:**\n"
+            response += f"\n🔧 **处理方法:**\n"
             for method, count in processing_methods.items():
-                response += f"   • {method}: {count} documentos\n"
+                response += f"   • {method}: {count} 个文档\n"
         
-        # Perfil recomendado
+        # 推荐配置文件
         try:
             recommended_profile = get_optimal_vector_store_profile()
-            response += f"\n🎯 **Perfil recomendado:** {recommended_profile}\n"
+            response += f"\n🎯 **推荐配置:** {recommended_profile}\n"
         except:
             pass
         
         return response
         
     except Exception as e:
-        log(f"MCP Server Error: Error obteniendo estadísticas: {e}")
-        return f"❌ **Error obteniendo estadísticas de base de datos:** {str(e)}"
+        log(f"MCP服务器错误: 获取统计信息出错: {e}")
+        return f"❌ **获取数据库统计信息时出错:** {str(e)}"
 
 @mcp.tool()
 def reindex_vector_database(profile: str = 'auto') -> str:
     """
-    Reindexa la base de datos vectorial con una configuración optimizada.
-    Esta herramienta recrea los índices con parámetros optimizados para el tamaño actual.
+    使用优化配置重新索引向量数据库。
+    此工具用当前大小的优化参数重新创建索引。
     
-    Args:
-        profile: Perfil de configuración ('small', 'medium', 'large', 'auto')
-                 'auto' detecta automáticamente el perfil óptimo
+    参数:
+        profile: 配置文件 ('small', 'medium', 'large', 'auto')
+                 'auto' 自动检测最佳配置
     
-    Use esta herramienta cuando:
-    - Cambias el perfil de configuración
-    - Las búsquedas son muy lentas
-    - Quieres optimizar para un tamaño específico de base de datos
-    - Hay problemas de rendimiento persistentes
+    使用此工具当：
+    - 更改配置文件
+    - 搜索非常缓慢
+    - 想要为特定数据库大小优化
+    - 存在持续的性能问题
     
-    ⚠️ **Nota:** Este proceso puede tomar tiempo dependiendo del tamaño de la base de datos.
+    ⚠️ **注意:** 此过程可能需要时间，取决于数据库大小。
     
-    Returns:
-        Información sobre el proceso de reindexado
+    返回：
+        关于重新索引过程的信息
     """
-    log(f"MCP Server: Reindexando base de datos vectorial con perfil '{profile}'...")
+    log(f"MCP服务器: 正在使用配置'{profile}'重新索引向量数据库...")
     
     try:
         result = reindex_vector_store(profile=profile)
         
         if result["status"] == "success":
-            response = f"✅ **Base de datos vectorial reindexada exitosamente**\n\n"
-            response += f"📊 **Información del proceso:**\n"
-            response += f"   • Perfil aplicado: {profile}\n"
-            response += f"   • Documentos procesados: {result.get('documents_processed', 0)}\n"
+            response = f"✅ **向量数据库重新索引成功**\n\n"
+            response += f"📊 **处理信息:**\n"
+            response += f"   • 应用的配置: {profile}\n"
+            response += f"   • 处理的文档: {result.get('documents_processed', 0)}\n"
             
-            response += f"\n🚀 **Beneficios del reindexado:**\n"
-            response += f"   • Índices optimizados para el tamaño actual\n"
-            response += f"   • Búsquedas más rápidas y precisas\n"
-            response += f"   • Mejor uso de memoria\n"
+            response += f"\n🚀 **重新索引的好处:**\n"
+            response += f"   • 针对当前大小优化的索引\n"
+            response += f"   • 更快更精确的搜索\n"
+            response += f"   • 更好的内存使用\n"
             
         elif result["status"] == "warning":
-            response = f"⚠️ **Advertencia:** {result.get('message', 'No hay documentos para reindexar')}"
+            response = f"⚠️ **警告:** {result.get('message', '没有文档需要重新索引')}"
             
         else:
-            response = f"❌ **Error reindexando base de datos:** {result.get('message', 'Error desconocido')}"
+            response = f"❌ **重新索引数据库时出错:** {result.get('message', '未知错误')}"
             
         return response
         
     except Exception as e:
-        log(f"MCP Server Error: Error en reindexado: {e}")
-        return f"❌ **Error reindexando base de datos vectorial:** {str(e)}"
+        log(f"MCP服务器错误: 重新索引出错: {e}")
+        return f"❌ **重新索引向量数据库时出错:** {str(e)}"
 
-# --- Punto de Entrada para Correr el Servidor ---
+# --- 运行服务器的入口点 ---
 if __name__ == "__main__":
-    log("Iniciando servidor MCP RAG...")
-    warm_up_rag_system()  # Calentamos el sistema al arrancar
+    log("正在启动MCP RAG服务器...")
+    warm_up_rag_system()  # 启动时预热系统
     mcp.run(transport='stdio') 

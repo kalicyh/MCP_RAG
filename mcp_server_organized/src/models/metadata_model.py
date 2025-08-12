@@ -1,9 +1,8 @@
 """
-Metadata Model para el Servidor MCP
-==================================
+MCP 服务器元数据模型
+===================
 
-Este módulo define las estructuras de datos para metadatos
-en el sistema RAG.
+此模块定义了 RAG 系统中元数据的数据结构。
 """
 
 from datetime import datetime
@@ -13,21 +12,21 @@ from dataclasses import dataclass, field
 @dataclass
 class MetadataModel:
     """
-    Modelo de datos para representar metadatos de documentos.
+    用于表示文档元数据的数据模型。
     """
     
-    # Información básica
+    # 基本信息
     source: str
     input_type: str
     processed_date: datetime = field(default_factory=datetime.now)
     
-    # Información del archivo
+    # 文件信息
     file_path: Optional[str] = None
     file_type: Optional[str] = None
     file_size: Optional[int] = None
     
-    # Información de procesamiento
-    processing_method: str = "unknown"
+    # 处理信息
+    processing_method: str = "未知"
     processing_duration: Optional[float] = None
     
     # Información estructural
