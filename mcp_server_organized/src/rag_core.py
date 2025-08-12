@@ -52,7 +52,7 @@ try:
     from langchain_community.embeddings import HuggingFaceEmbeddings
     from langchain_community.vectorstores import Chroma
     from langchain.chains import RetrievalQA
-    from langchain.llms import HuggingFacePipeline
+    from langchain_community.llms import HuggingFacePipeline
     from langchain.schema import Document
     from langchain.retrievers import ContextualCompressionRetriever
     from langchain.retrievers.document_compressors import LLMChainExtractor
@@ -96,6 +96,10 @@ DEFAULT_CONFIG = {
     'max_partition': 2000,
     'new_after_n_chars': 1500
 }
+
+# 定义 COLLECTION_NAME 和 PERSIST_DIRECTORY
+COLLECTION_NAME = "default_collection"
+PERSIST_DIRECTORY = "./data/vector_store"
 
 # --- Sistema de Cache de Embeddings ---
 class EmbeddingCache:
@@ -2016,7 +2020,7 @@ def get_vector_store_stats_advanced(vector_store: Chroma = None) -> dict:
             "memory_threshold": LARGE_DB_CONFIG['memory_threshold'],
             "incremental_batch_size": LARGE_DB_CONFIG['incremental_batch_size'],
             "checkpoint_interval": LARGE_DB_CONFIG['checkpoint_interval']
-        }
+        };
         
         return advanced_stats
         
@@ -2393,38 +2397,3 @@ def create_advanced_semantic_chunks(elements: List[Any], max_chunk_size: int = 1
     
     log(f"Core: Chunking semántico avanzado completado: {len(chunks)} chunks creados")
     return chunks
-
-# =============================================================================
-# CONFIGURACIÓN Y GESTIÓN DEL VECTOR STORE
-# =============================================================================
-
-# Configuración del proyecto
-load_dotenv()
-
-# Obtener la ruta absoluta del directorio del proyecto
-_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Usar la configuración centralizada para la base de datos
-PERSIST_DIRECTORY = os.path.join(_project_root, Config.VECTOR_STORE_DIR.replace("./", ""))
-COLLECTION_NAME = "mcp_rag_collection"
-
-# Perfiles de configuración para diferentes tamaños de base de datos
-VECTOR_STORE_PROFILES = {
-    'small': {
-        'description': 'Base de datos pequeña (< 1000 documentos)',
-        'recommended_for': 'Desarrollo y pruebas',
-        'chunk_size': 1000,
-        'chunk_overlap': 200
-    },
-    'medium': {
-        'description': 'Base de datos mediana (1000-10000 documentos)',
-        'recommended_for': 'Uso general',
-        'chunk_size': 1000,
-        'chunk_overlap': 200
-    },
-    'large': {
-        'description': 'Base de datos grande (> 10000 documentos)',
-        'recommended_for': 'Producción y grandes volúmenes',
-        'chunk_size': 800,
-        'chunk_overlap': 150
-    }
-}
