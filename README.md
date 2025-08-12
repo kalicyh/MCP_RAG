@@ -431,9 +431,30 @@ python bulk_ingest.py --directory "C:\\Path\\To\\Docs"
 {
     "mcpServers": {
         "rag": {
-            "command": "D:\\your\\absolute\\path\\MCP_RAG\\mcp_server_organized\\run_server_organized.bat",
-            "args": [],
-            "workingDirectory": "D:\\your\\absolute\\path\\MCP_RAG"
+            "command": "uv",
+            "args": [
+                "run",
+                "--directory",
+                "C:\\Users\\NAME\\path\\to\\MCP_RAG",
+                "mcp_server_organized\\server.py"
+            ],
+            "env": {
+                "PYTHONUNBUFFERED": "1",
+                "MODEL_TYPE": "OPENAI",
+
+                "OLLAMA_MODEL": "phi3",
+                "OLLAMA_TEMPERATURE": "0",
+
+                "OPENAI_API_KEY": "key",
+                "OPENAI_API_BASE": "https://api.openai.com/v1",
+                "OPENAI_MODEL": "gpt-4o-mini",
+                "OPENAI_TEMPERATURE": "0",
+
+                "EMBEDDING_PROVIDER": "OPENAI",
+                "OPENAI_EMBEDDING_MODEL": "text-embedding-3-large",
+
+                "COLLECTION_NAME": "default_collection"
+            }
         }
     }
 }
