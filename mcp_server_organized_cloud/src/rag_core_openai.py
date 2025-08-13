@@ -25,16 +25,35 @@ from services.cloud_openai import (
     ensure_client,
     embed_query,
 )
+try:
+    from services.chroma_store import ChromaVectorStore  # optional
+except Exception:
+    ChromaVectorStore = None  # type: ignore
 
 
-_VECTOR_STORE: Optional[OpenAIVectorStore] = None
+_VECTOR_STORE: Optional[Any] = None
+_STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "vector_store", "cloud_store.json")
 
 
-def get_vector_store(profile: str = 'auto') -> OpenAIVectorStore:
+def get_vector_store(profile: str = 'auto') -> Any:
     global _VECTOR_STORE
     if _VECTOR_STORE is None:
-        _VECTOR_STORE = OpenAIVectorStore()
-        log("核心: 已初始化 OpenAI 内存向量库 (cloud-only)")
+        backend = (os.environ.get("RAG_BACKEND", "JSON") or "JSON").upper()
+        if backend == "CHROMA" and ChromaVectorStore is not None:
+            persist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "vector_store"))
+            _VECTOR_STORE = ChromaVectorStore(persist_directory=persist_dir, collection_name="cloud_collection")
+            log("核心: 已初始化 Chroma 向量库 (cloud)")
+        else:
+            _VECTOR_STORE = OpenAIVectorStore()
+            # 尝试加载持久化(JSON)
+            try:
+                loaded = _VECTOR_STORE.load_from_file(os.path.abspath(_STORE_PATH))
+                if loaded > 0:
+                    log(f"核心: 已初始化 OpenAI 内存向量库并加载 {loaded} 条记录 (cloud-only)")
+                else:
+                    log("核心: 已初始化 OpenAI 内存向量库 (cloud-only)")
+            except Exception:
+                log("核心: 已初始化 OpenAI 内存向量库 (cloud-only)")
     return _VECTOR_STORE
 
 
@@ -57,18 +76,24 @@ def flatten_metadata(metadata: Dict[str, Any], prefix: str = "") -> Dict[str, An
     flat: Dict[str, Any] = {}
     for k, v in (metadata or {}).items():
         key = f"{prefix}{k}" if prefix else k
+        # 跳过 None，Chroma 不接受 None 元数据
+        if v is None:
+            continue
         if isinstance(v, dict):
             flat.update(flatten_metadata(v, f"{key}_"))
         elif isinstance(v, (list, tuple)):
             flat[key] = str(v)
-        else:
+        elif isinstance(v, (str, int, float, bool)):
             flat[key] = v
+        else:
+            # 其他类型统一转字符串，确保类型受支持
+            flat[key] = str(v)
     return flat
 
 
 def add_text_to_knowledge_base_enhanced(
     text: str,
-    vector_store: OpenAIVectorStore,
+    vector_store: Any,
     source_metadata: Optional[dict] = None,
     use_semantic_chunking: bool = False,
     structural_elements: Optional[List[Any]] = None,
@@ -89,9 +114,18 @@ def add_text_to_knowledge_base_enhanced(
             metadatas.append(m)
     vector_store.add_texts(texts, metadatas=metadatas)
     log(f"核心: 已写入 {len(texts)} 个片段到内存向量库")
+    # 写入后持久化
+    # JSON 后端支持文件持久化；Chroma 后端保持内部 persist
+    try:
+        if hasattr(vector_store, "save_to_file"):
+            vector_store.save_to_file(os.path.abspath(_STORE_PATH))
+        elif hasattr(vector_store, "persist"):
+            vector_store.persist()
+    except Exception:
+        pass
 
 
-def add_text_to_knowledge_base(text: str, vector_store: OpenAIVectorStore, source_metadata: dict | None = None) -> None:
+def add_text_to_knowledge_base(text: str, vector_store: Any, source_metadata: dict | None = None) -> None:
     add_text_to_knowledge_base_enhanced(text, vector_store, source_metadata, use_semantic_chunking=False)
 
 
@@ -148,18 +182,22 @@ class QAChain:
         return {"result": answer, "source_documents": sources}
 
 
-def get_qa_chain(vector_store: OpenAIVectorStore, metadata_filter: dict | None = None) -> QAChain:
+def get_qa_chain(vector_store: Any, metadata_filter: dict | None = None) -> QAChain:
     return QAChain(vector_store, metadata_filter)
 
 
-def search_with_metadata_filters(vector_store: OpenAIVectorStore, query: str, metadata_filter: dict | None = None, k: int = 5) -> List[SimpleDocument]:
+def search_with_metadata_filters(vector_store: Any, query: str, metadata_filter: dict | None = None, k: int = 5) -> List[SimpleDocument]:
     results = vector_store.search(query, k=k, filter=metadata_filter)
     return [SimpleDocument(page_content=r["text"], metadata=r["metadata"]) for r in results]
 
 
-def get_document_statistics(vector_store: OpenAIVectorStore | None = None) -> dict:
+def get_document_statistics(vector_store: Any | None = None) -> dict:
     vs = vector_store or get_vector_store()
-    total = len(vs._metas)
+    # 统一通过 get() 获取全部数据，兼容 JSON/Chroma
+    data = vs.get() if hasattr(vs, "get") else {"documents": [], "metadatas": []}
+    docs = data.get("documents", []) or []
+    metas = data.get("metadatas", []) or []
+    total = len(metas) if metas else len(docs)
     file_types: Dict[str, int] = {}
     methods: Dict[str, int] = {}
     structural = {
@@ -171,7 +209,7 @@ def get_document_statistics(vector_store: OpenAIVectorStore | None = None) -> di
         "avg_lists_per_doc": 0,
     }
     sum_tables = sum_titles = sum_lists = 0
-    for m in vs._metas:
+    for m in metas:
         ft = m.get("file_type") or "unknown"
         file_types[ft] = file_types.get(ft, 0) + 1
         pm = m.get("processing_method") or "unknown"
@@ -200,26 +238,28 @@ def get_document_statistics(vector_store: OpenAIVectorStore | None = None) -> di
     }
 
 
-def get_vector_store_stats(vector_store: OpenAIVectorStore | None = None) -> dict:
+def get_vector_store_stats(vector_store: Any | None = None) -> dict:
     vs = vector_store or get_vector_store()
     try:
         dim = len(embed_query("__probe__"))
     except Exception:
         dim = "unknown"
+    data = vs.get() if hasattr(vs, "get") else {"documents": [], "metadatas": []}
+    metas = data.get("metadatas", []) or []
     return {
-        "total_documents": len(vs._metas),
+        "total_documents": len(metas),
         "file_types": {},
         "processing_methods": {},
-        "collection_name": "openai_in_memory",
+        "collection_name": "chroma_collection" if hasattr(vs, "persist") and not hasattr(vs, "save_to_file") else "openai_in_memory",
         "embedding_dimension": str(dim),
     }
 
 
-def optimize_vector_store(vector_store: OpenAIVectorStore | None = None) -> dict:
+def optimize_vector_store(vector_store: Any | None = None) -> dict:
     return {"status": "success", "message": "no-op for in-memory store"}
 
 
-def reindex_vector_store(vector_store: OpenAIVectorStore | None = None, profile: str = 'auto') -> dict:
+def reindex_vector_store(vector_store: Any | None = None, profile: str = 'auto') -> dict:
     return {"status": "success", "message": "no-op for in-memory store", "profile": profile}
 
 

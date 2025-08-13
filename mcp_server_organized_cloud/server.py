@@ -151,6 +151,8 @@ def initialize_rag():
 
 # --- 初始化自动化 RAG 系统 ---
 log_mcp_server("自动初始化 RAG 系统...")
+backend = (os.environ.get("RAG_BACKEND", "JSON") or "JSON").upper()
+log_mcp_server(f"RAG 后端: {backend} (JSON=内存+文件, CHROMA=向量库)")
 initialize_rag()
 warm_up_rag_system()
 log_mcp_server("RAG 系统已初始化并准备就绪。")

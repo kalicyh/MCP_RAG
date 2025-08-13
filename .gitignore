@@ -86,6 +86,7 @@ venv.bak/
 
 # OS specific
 .DS_Store
-Thumbs.db 
-bulk_ingest_GUI/data/vector_store/*
-data/vector_store/*
+Thumbs.db
+bulk_ingest_GUI/data/*
+data/*
+mcp_server_organized_cloud/data/*

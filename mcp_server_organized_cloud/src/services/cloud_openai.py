@@ -22,6 +22,9 @@ from __future__ import annotations
 
 import os
 from typing import Any, Dict, List, Optional
+import json
+from pathlib import Path
+import locale
 
 try:
     from openai import OpenAI
@@ -118,6 +121,50 @@ class OpenAIVectorStore:
             "documents": list(self._texts),
             "metadatas": list(self._metas),
         }
+
+    # --- Persistence helpers ---
+    def save_to_file(self, file_path: str) -> None:
+        try:
+            p = Path(file_path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                "texts": self._texts,
+                "metas": self._metas,
+                "embs": self._embs,
+            }
+            # 始终使用 UTF-8 写入，避免平台默认编码不一致导致后续读取失败
+            p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as e:
+            # persistence should be best-effort; avoid crashing
+            try:
+                from utils.logger import log
+                log(f"持久化保存失败: {e}")
+            except Exception:
+                pass
+
+    def load_from_file(self, file_path: str) -> int:
+        try:
+            p = Path(file_path)
+            if not p.exists():
+                return 0
+            # 优先按 UTF-8 读取；如失败则回退到系统首选编码以兼容历史文件
+            try:
+                raw = p.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                enc = locale.getpreferredencoding(False) or "utf-8"
+                raw = p.read_text(encoding=enc, errors="replace")
+            data = json.loads(raw)
+            self._texts = list(data.get("texts", []))
+            self._metas = list(data.get("metas", []))
+            self._embs = list(data.get("embs", []))
+            return len(self._texts)
+        except Exception as e:
+            try:
+                from utils.logger import log
+                log(f"持久化加载失败: {e}")
+            except Exception:
+                pass
+            return 0
 
 
 def _meta_match(meta: Dict[str, Any], flt: Dict[str, Any]) -> bool:
