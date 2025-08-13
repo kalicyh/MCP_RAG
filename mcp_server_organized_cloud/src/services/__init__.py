@@ -1,15 +1,20 @@
-# MCP Services Module
+# MCP Services Module (cloud-only)
 """
-Módulo de servicios del servidor MCP.
-Contiene la lógica de negocio y servicios principales.
+Servicios del servidor MCP (modo cloud-only).
+
+Este paquete expone únicamente el adaptador de OpenAI en la nube.
 """
 
-from .document_service import DocumentService
-from .vector_service import VectorService
-from .rag_service import RAGService
+from .cloud_openai import (
+    OpenAIVectorStore,
+    ensure_client,
+    embed_texts,
+    embed_query,
+)
 
 __all__ = [
-    'DocumentService',
-    'VectorService', 
-    'RAGService'
+    'OpenAIVectorStore',
+    'ensure_client',
+    'embed_texts',
+    'embed_query',
 ] 
