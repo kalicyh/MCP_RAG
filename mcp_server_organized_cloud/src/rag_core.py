@@ -45,17 +45,17 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# LangChain 和 ChromaDB 导入
+# LangChain 导入（保留以兼容传统实现；云端推荐使用 rag_core_openai）
 try:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain_huggingface import HuggingFaceEmbeddings
-    from langchain_chroma import Chroma
+    # from langchain_chroma import Chroma  # 已不在云端使用
     from langchain.chains import RetrievalQA
     from langchain_community.llms import HuggingFacePipeline
     from langchain.schema import Document
     from langchain.retrievers import ContextualCompressionRetriever
     from langchain.retrievers.document_compressors import LLMChainExtractor
-    from chromadb.config import Settings
+    # from chromadb.config import Settings  # 已不在云端使用
     from langchain_ollama import ChatOllama
 except ImportError as e:
     print(f"导入 LangChain 时出错: {e}", file=sys.stderr)

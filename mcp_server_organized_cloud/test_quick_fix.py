@@ -10,12 +10,15 @@ try:
     print("🔍 测试导入...")
     
     # 测试配置的导入
-    from utils.config import Config
+    config_mod = __import__('utils.config', fromlist=['Config'])
+    Config = getattr(config_mod, 'Config')
     print("✅ Config 导入成功")
     
-    # 测试 rag_core 的导入
-    from rag_core import get_vector_store, get_qa_chain
-    print("✅ rag_core 导入成功")
+    # 测试 rag_core_openai 的导入
+    core = __import__('rag_core_openai')
+    get_vector_store = getattr(core, 'get_vector_store')
+    get_qa_chain = getattr(core, 'get_qa_chain')
+    print("✅ rag_core_openai 导入成功")
     
     # 测试 get_vector_store 是否正常工作
     print("🔧 测试 get_vector_store...")

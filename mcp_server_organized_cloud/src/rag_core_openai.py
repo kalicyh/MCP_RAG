@@ -25,10 +25,6 @@ from services.cloud_openai import (
     ensure_client,
     embed_query,
 )
-try:
-    from services.chroma_store import ChromaVectorStore  # optional
-except Exception:
-    ChromaVectorStore = None  # type: ignore
 
 
 _VECTOR_STORE: Optional[Any] = None
@@ -38,22 +34,16 @@ _STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "vector_stor
 def get_vector_store(profile: str = 'auto') -> Any:
     global _VECTOR_STORE
     if _VECTOR_STORE is None:
-        backend = (os.environ.get("RAG_BACKEND", "JSON") or "JSON").upper()
-        if backend == "CHROMA" and ChromaVectorStore is not None:
-            persist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "vector_store"))
-            _VECTOR_STORE = ChromaVectorStore(persist_directory=persist_dir, collection_name="cloud_collection")
-            log("核心: 已初始化 Chroma 向量库 (cloud)")
-        else:
-            _VECTOR_STORE = OpenAIVectorStore()
-            # 尝试加载持久化(JSON)
-            try:
-                loaded = _VECTOR_STORE.load_from_file(os.path.abspath(_STORE_PATH))
-                if loaded > 0:
-                    log(f"核心: 已初始化 OpenAI 内存向量库并加载 {loaded} 条记录 (cloud-only)")
-                else:
-                    log("核心: 已初始化 OpenAI 内存向量库 (cloud-only)")
-            except Exception:
+        _VECTOR_STORE = OpenAIVectorStore()
+        # 尝试加载持久化(JSON)
+        try:
+            loaded = _VECTOR_STORE.load_from_file(os.path.abspath(_STORE_PATH))
+            if loaded > 0:
+                log(f"核心: 已初始化 OpenAI 内存向量库并加载 {loaded} 条记录 (cloud-only)")
+            else:
                 log("核心: 已初始化 OpenAI 内存向量库 (cloud-only)")
+        except Exception:
+            log("核心: 已初始化 OpenAI 内存向量库 (cloud-only)")
     return _VECTOR_STORE
 
 
@@ -76,7 +66,7 @@ def flatten_metadata(metadata: Dict[str, Any], prefix: str = "") -> Dict[str, An
     flat: Dict[str, Any] = {}
     for k, v in (metadata or {}).items():
         key = f"{prefix}{k}" if prefix else k
-        # 跳过 None，Chroma 不接受 None 元数据
+    # 跳过 None
         if v is None:
             continue
         if isinstance(v, dict):
@@ -115,12 +105,10 @@ def add_text_to_knowledge_base_enhanced(
     vector_store.add_texts(texts, metadatas=metadatas)
     log(f"核心: 已写入 {len(texts)} 个片段到内存向量库")
     # 写入后持久化
-    # JSON 后端支持文件持久化；Chroma 后端保持内部 persist
+    # JSON 后端支持文件持久化
     try:
         if hasattr(vector_store, "save_to_file"):
             vector_store.save_to_file(os.path.abspath(_STORE_PATH))
-        elif hasattr(vector_store, "persist"):
-            vector_store.persist()
     except Exception:
         pass
 
@@ -193,7 +181,7 @@ def search_with_metadata_filters(vector_store: Any, query: str, metadata_filter:
 
 def get_document_statistics(vector_store: Any | None = None) -> dict:
     vs = vector_store or get_vector_store()
-    # 统一通过 get() 获取全部数据，兼容 JSON/Chroma
+    # 统一通过 get() 获取全部数据（JSON 内存）
     data = vs.get() if hasattr(vs, "get") else {"documents": [], "metadatas": []}
     docs = data.get("documents", []) or []
     metas = data.get("metadatas", []) or []
@@ -250,7 +238,7 @@ def get_vector_store_stats(vector_store: Any | None = None) -> dict:
         "total_documents": len(metas),
         "file_types": {},
         "processing_methods": {},
-        "collection_name": "chroma_collection" if hasattr(vs, "persist") and not hasattr(vs, "save_to_file") else "openai_in_memory",
+        "collection_name": "openai_in_memory",
         "embedding_dimension": str(dim),
     }
 
