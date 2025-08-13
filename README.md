@@ -435,8 +435,8 @@ python bulk_ingest.py --directory "C:\\Path\\To\\Docs"
             "args": [
                 "run",
                 "--directory",
-                "C:\\Users\\NAME\\path\\to\\MCP_RAG",
-                "mcp_server_organized\\server.py"
+                "C:\\Users\\NAME\\path\\to\\MCP_RAG\\mcp_server_organized_cloud",
+                "server.py"
             ],
             "env": {
                 "PYTHONUNBUFFERED": "1",
