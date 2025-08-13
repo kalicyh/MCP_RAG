@@ -244,7 +244,7 @@ def learn_document(file_path: str) -> str:
         
         return f"""✅ **文档处理成功**
 📄 **文件:** {document_model.file_name}
-📋 **类型:** {document_model.file_type.upper()}
+📋 **类型:** {(document_model.file_type or 'unknown').upper()}
 🔧 **方法:** {document_model.processing_method}
 {chunking_info}
 📊 **处理字符数:** {len(processed_content):,}
@@ -380,7 +380,7 @@ def learn_from_url(url: str) -> str:
                 return f"""✅ **URL 处理成功**
 🌐 **URL:** {url}
 📄 **文件:** {file_name}
-📋 **类型:** {file_type.upper()}
+📋 **类型:** {(file_type or 'unknown').upper()}
 🔧 **方法:** {processing_method}
 📊 **处理字符数:** {len(processed_content):,}
 💾 **保存的副本:** {processed_filepath if processed_filepath else "不可用"}"""

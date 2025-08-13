@@ -169,7 +169,7 @@ def ask_rag(query: str) -> str:
                 
                 # 如果可用，添加文件类型
                 if doc_info['file_type']:
-                    source_info += f"\n      - **类型：** {doc_info['file_type'].upper()}"
+                    source_info += f"\n      - **类型：** {(doc_info.get('file_type') or 'unknown').upper()}"
                 
                 # 如果可用，添加处理方法
                 if doc_info['processing_method']:
@@ -340,7 +340,7 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
                 
                 file_type = metadata.get("file_type")
                 if file_type:
-                    source_info += f"\n      - **类型：** {file_type.upper()}"
+                    source_info += f"\n      - **类型：** {(file_type or 'unknown').upper()}"
                 
                 processing_method = metadata.get("processing_method")
                 if processing_method:

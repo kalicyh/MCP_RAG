@@ -226,7 +226,8 @@ def get_knowledge_base_stats() -> str:
             response += "📄 **文件类型:**\n"
             for file_type, count in sorted(basic_stats["file_types"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / basic_stats["total_documents"]) * 100
-                response += f"   • {file_type.upper()}: {count} ({percentage:.1f}%)\n"
+                display_ft = (file_type.upper() if isinstance(file_type, str) else "UNKNOWN")
+                response += f"   • {display_ft}: {count} ({percentage:.1f}%)\n"
             response += "\n"
         
         # 处理方法

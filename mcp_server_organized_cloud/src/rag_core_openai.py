@@ -172,9 +172,9 @@ def get_document_statistics(vector_store: OpenAIVectorStore | None = None) -> di
     }
     sum_tables = sum_titles = sum_lists = 0
     for m in vs._metas:
-        ft = m.get("file_type", "unknown")
+        ft = m.get("file_type") or "unknown"
         file_types[ft] = file_types.get(ft, 0) + 1
-        pm = m.get("processing_method", "unknown")
+        pm = m.get("processing_method") or "unknown"
         methods[pm] = methods.get(pm, 0) + 1
         t = int(m.get("structural_info_tables_count", 0) or 0)
         ti = int(m.get("structural_info_titles_count", 0) or 0)
