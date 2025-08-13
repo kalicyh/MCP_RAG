@@ -8,7 +8,7 @@ MCP 实用工具
 注意：这些函数被设计为在主服务器中使用 @mcp.tool() 装饰器。
 """
 
-from rag_core import (
+from rag_core_openai import (
     get_document_statistics,
     get_cache_stats,
     clear_embedding_cache,

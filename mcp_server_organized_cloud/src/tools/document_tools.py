@@ -13,7 +13,7 @@ import tempfile
 import requests
 from datetime import datetime
 from urllib.parse import urlparse
-from rag_core import (
+from rag_core_openai import (
     add_text_to_knowledge_base,
     add_text_to_knowledge_base_enhanced,
     load_document_with_elements
@@ -317,50 +317,8 @@ def learn_from_url(url: str) -> str:
                 log(f"MCP Server: 开始 Unstructured 处理（大型 PDF 可能需要几分钟）...")
                 
                 # 对于 PDF，使用更快的配置避免挂起
-                if file_extension == '.pdf':
-                    log(f"MCP Server: 检测到 PDF，使用优化配置避免超时...")
-                    
-                    # 选项1：直接尝试 PyPDF2（对 Cursor 更快）
-                    log(f"MCP Server: 尝试使用 PyPDF2 直接处理以提高速度...")
-                    try:
-                        import PyPDF2
-                        with open(temp_file_path, 'rb') as file:
-                            pdf_reader = PyPDF2.PdfReader(file)
-                            processed_content = ""
-                            for page_num, page in enumerate(pdf_reader.pages):
-                                page_text = page.extract_text()
-                                if page_text:
-                                    processed_content += f"\n--- 第 {page_num + 1} 页 ---\n{page_text}\n"
-                            
-                            if processed_content.strip():
-                                log(f"MCP Server: PyPDF2 直接处理成功，提取了 {len(processed_content)} 个字符")
-                                metadata = {
-                                    "source": os.path.basename(temp_file_path),
-                                    "file_path": temp_file_path,
-                                    "file_type": ".pdf",
-                                    "processed_date": datetime.now().isoformat(),
-                                    "processing_method": "pypdf2_direct",
-                                    "structural_info": {
-                                        "total_elements": len(pdf_reader.pages),
-                                        "titles_count": 0,
-                                        "tables_count": 0,
-                                        "lists_count": 0,
-                                        "narrative_blocks": len(pdf_reader.pages),
-                                        "other_elements": 0,
-                                        "total_text_length": len(processed_content),
-                                        "avg_element_length": len(processed_content) / len(pdf_reader.pages) if pdf_reader.pages else 0
-                                    }
-                                }
-                                log(f"MCP Server: PyPDF2 直接处理完成")
-                            else:
-                                raise Exception("无法使用 PyPDF2 提取内容")
-                    except Exception as e:
-                        log(f"MCP Server: PyPDF2 失败，使用 Unstructured: {e}")
-                        # 继续使用 Unstructured
-                        processed_content, metadata, structural_elements = load_document_with_elements(temp_file_path)
-                else:
-                    # 对于其他文件类型，直接使用 Unstructured
-                    processed_content, metadata, structural_elements = load_document_with_elements(temp_file_path)
+                # 统一使用云端核心的加载函数（最小实现）
+                processed_content, metadata, structural_elements = load_document_with_elements(temp_file_path)
                 
                 log(f"MCP Server: 下载的文件处理成功 ({len(processed_content)} 个字符)")
                 

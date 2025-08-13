@@ -8,7 +8,7 @@ MCP 搜索工具
 注意：这些函数被设计为在主服务器中使用 @mcp.tool() 装饰器。
 """
 
-from rag_core import (
+from rag_core_openai import (
     get_qa_chain,
     create_metadata_filter
 )

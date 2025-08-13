@@ -22,8 +22,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src"
 from utils.logger import log, log_mcp_server
 from utils.config import Config
 
-# 导入 RAG 核心功能（保留现有功能）
-from rag_core import (
+# 导入 RAG 核心功能（云端实现）
+from rag_core_openai import (
     add_text_to_knowledge_base,
     add_text_to_knowledge_base_enhanced,
     load_document_with_fallbacks,
@@ -74,10 +74,7 @@ def warm_up_rag_system():
         return
     
     log_mcp_server("正在预热 RAG 系统...")
-    log_mcp_server("将嵌入模型预加载到内存中...")
-    
-    # 此调用强制加载嵌入模型
-    get_vector_store()
+    log_mcp_server("初始化云端向量存储（OpenAI-only）...")
     
     rag_state["warmed_up"] = True
     log_mcp_server("RAG 系统已预热并准备就绪。")
@@ -130,7 +127,7 @@ def initialize_rag():
 
     log_mcp_server("通过核心初始化 RAG 系统...")
     
-    # 从核心获取向量存储和 QA 链
+    # 从云端核心获取向量存储和 QA 链
     vector_store = get_vector_store()
     qa_chain = get_qa_chain(vector_store)
     
