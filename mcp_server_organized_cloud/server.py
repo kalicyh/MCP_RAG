@@ -12,7 +12,6 @@ import sys
 from datetime import datetime
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
-from markitdown import MarkItDown
 from urllib.parse import urlparse
 
 # 添加 src 目录到路径以支持导入
@@ -63,8 +62,14 @@ rag_state = {
     "metadata_cache": {}    # 每个文档的 MetadataModel 缓存
 }
 
-# 初始化 MarkItDown 转换器（用于 URL）
-md_converter = MarkItDown()
+# 初始化 MarkItDown 转换器（用于 URL），在云端可选
+try:
+    from markitdown import MarkItDown  # 可选依赖：若不可用则使用回退方案
+    md_converter = MarkItDown()
+    log_mcp_server("✅ MarkItDown 可用，将用于网页转换")
+except Exception as e:
+    md_converter = None
+    log_mcp_server(f"ℹ️ MarkItDown 不可用（{e}），将使用内置网页提取回退方案")
 
 def warm_up_rag_system():
     """
