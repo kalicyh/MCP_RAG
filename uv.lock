@@ -256,7 +256,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mcp-server-organized"
+name = "mcp-rag"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
