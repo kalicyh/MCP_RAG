@@ -50,7 +50,6 @@ consented_tools = {}
 TOOL_CHINESE = {
     'learn_text': '添加文本到知识库（手动输入）',
     'learn_document': '处理并添加本地文档到知识库（文件路径）',
-    'learn_from_url': '抓取网页 / URL 内容并添加到知识库',
     'ask_rag': '基于知识库回答问题（返回简洁回答）',
     'ask_rag_filtered': '带过滤器的知识库查询（按元数据筛选）',
     'get_knowledge_base_stats': '显示知识库文档和处理方法的统计信息',

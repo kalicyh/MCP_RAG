@@ -213,35 +213,6 @@ def learn_document(file_path: str) -> str:
     return learn_document_logic(file_path)
 
 @mcp.tool()
-def learn_from_url(url: str) -> str:
-    """
-    处理 URL 内容（网页或 YouTube 视频），并添加知识库。
-    当您想通过网页内容训练 AI 而无需下载文件时，请使用此选项。
-
-    支持的 URL 类型：
-    - 网页（HTML 内容）
-    - YouTube 视频（文字记录）
-    - MarkItDown 可以处理的任何 URL
-    - 直接下载文件（PDF、DOCX 等）- 将使用增强的非结构化处理
-
-    使用示例：
-    - 从新闻文章或博客文章添加内容
-    - 处理 YouTube 视频文字记录
-    - 从网页导入信息
-    - 将网页内容转换为可搜索的知识
-    - 直接从 URL 处理文档
-
-    内容将被智能处理并与增强的元数据一起存储。
-
-    处理后的内容副本将保存以供验证。
-
-    参数：
-    url：要处理的网页或视频的 URL。
-    """
-    from tools.document_tools import learn_from_url as learn_from_url_logic
-    return learn_from_url_logic(url)
-
-@mcp.tool()
 def ask_rag(query: str) -> str:
     """
     向 RAG 知识库提问，并根据存储的信息返回答案。
@@ -379,7 +350,6 @@ def reindex_vector_database(profile: str = 'auto') -> str:
 # --- 将所有工具函数暴露为 mcp 的方法，方便直接调用（全局作用域，所有函数定义之后） ---
 mcp.learn_text = learn_text
 mcp.learn_document = learn_document
-mcp.learn_from_url = learn_from_url
 mcp.ask_rag = ask_rag
 mcp.ask_rag_filtered = ask_rag_filtered
 mcp.get_knowledge_base_stats = get_knowledge_base_stats
@@ -397,7 +367,6 @@ if __name__ == "__main__":
     # 将所有工具函数暴露为 mcp 的方法，方便直接调用
     mcp.learn_text = learn_text
     mcp.learn_document = learn_document
-    mcp.learn_from_url = learn_from_url
     mcp.ask_rag = ask_rag
     mcp.ask_rag_filtered = ask_rag_filtered
     mcp.get_knowledge_base_stats = get_knowledge_base_stats

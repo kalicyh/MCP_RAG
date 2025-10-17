@@ -15,7 +15,6 @@ MCP工具模块
 from .document_tools import (
     learn_text,
     learn_document,
-    learn_from_url,
     set_rag_state as set_doc_rag_state,
     set_initialize_rag_func as set_doc_initialize_rag_func,
     set_save_processed_copy_func
@@ -67,7 +66,6 @@ ALL_TOOLS = [
     # 文档工具
     learn_text,
     learn_document,
-    learn_from_url,
     
     # 搜索工具
     ask_rag,
@@ -86,7 +84,6 @@ ALL_TOOLS = [
 TOOLS_BY_NAME = {
     "learn_text": learn_text,
     "learn_document": learn_document,
-    "learn_from_url": learn_from_url,
     "ask_rag": ask_rag,
     "ask_rag_filtered": ask_rag_filtered,
     "get_knowledge_base_stats": get_knowledge_base_stats,
@@ -101,7 +98,6 @@ __all__ = [
     # 文档工具
     "learn_text",
     "learn_document", 
-    "learn_from_url",
     
     # 搜索工具
     "ask_rag",
