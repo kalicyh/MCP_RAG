@@ -17,7 +17,6 @@ from .document_tools import (
     learn_document,
     learn_from_url,
     set_rag_state as set_doc_rag_state,
-    set_md_converter,
     set_initialize_rag_func as set_doc_initialize_rag_func,
     set_save_processed_copy_func
 )
@@ -41,13 +40,12 @@ from .utility_tools import (
 )
 
 # 配置所有工具模块中RAG状态的函数
-def configure_rag_state(rag_state, md_converter=None, initialize_rag_func=None, save_processed_copy_func=None):
+def configure_rag_state(rag_state, initialize_rag_func=None, save_processed_copy_func=None):
     """
     在所有工具模块中配置RAG状态。
     
     Args:
         rag_state: 全局RAG状态
-        md_converter: MarkItDown转换器（可选）
         initialize_rag_func: RAG初始化函数（可选）
         save_processed_copy_func: 保存处理副本函数（可选）
     """
@@ -55,8 +53,6 @@ def configure_rag_state(rag_state, md_converter=None, initialize_rag_func=None, 
     set_search_rag_state(rag_state)
     set_utility_rag_state(rag_state)
     
-    if md_converter:
-        set_md_converter(md_converter)
     
     if initialize_rag_func:
         set_doc_initialize_rag_func(initialize_rag_func)
@@ -106,7 +102,6 @@ __all__ = [
     "learn_text",
     "learn_document", 
     "learn_from_url",
-    "set_md_converter",
     
     # 搜索工具
     "ask_rag",

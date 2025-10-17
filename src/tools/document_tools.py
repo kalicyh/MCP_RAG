@@ -23,24 +23,25 @@ from models import DocumentModel, MetadataModel
 
 # 必须在服务器中可用的全局变量
 rag_state = {}
-md_converter = None
 initialize_rag_func = None
 save_processed_copy_func = None
+md_converter = None  # deprecated placeholder, MarkItDown support removed
 
 def set_rag_state(state):
     """设置全局 RAG 状态。"""
     global rag_state
     rag_state = state
 
-def set_md_converter(converter):
-    """设置全局 MarkItDown 转换器。"""
-    global md_converter
-    md_converter = converter
-
 def set_initialize_rag_func(func):
     """设置 RAG 初始化函数。"""
     global initialize_rag_func
     initialize_rag_func = func
+
+def set_md_converter(converter):
+    """Deprecated: previously used to set a MarkItDown converter. This is now a no-op kept for API compatibility."""
+    global md_converter
+    md_converter = converter
+    log("警告: set_md_converter 已弃用 — MarkItDown 支持已移除，传入的转换器将被忽略。")
 
 def set_save_processed_copy_func(func):
     """设置保存处理副本的函数。"""
@@ -393,60 +394,39 @@ def learn_from_url(url: str) -> str:
                     pass
                 raise e
         else:
-            # 使用 MarkItDown 或回退方案处理网页
             method_used = None
-            processed_content = None
-            if md_converter is not None:
-                log(f"MCP Server: 使用 MarkItDown 处理为网页...")
-                try:
-                    # MarkItDown.convert 返回对象，取 text_content
-                    result = md_converter.convert(url)
-                    processed_content = getattr(result, "text_content", None) or str(result)
-                    
-                    if not processed_content or processed_content.isspace():
-                        log(f"MCP Server: 警告: URL 已处理但无法提取内容: {url}")
-                        return f"警告: URL '{url}' 已处理，但无法提取文本内容。"
-                    
-                    log(f"MCP Server: URL 处理成功 ({len(processed_content)} 个字符)")
-                    method_used = "markitdown"
-                except Exception as e:
-                    log(f"MCP Server: MarkItDown 处理失败，切换到回退方案: {e}")
-                    processed_content = None
-
-            if processed_content is None:
-                # 轻量回退：下载 HTML 并清洗为纯文本（去脚本/样式，保留链接文本）
-                log("MCP Server: 使用轻量回退（requests + 简单清洗）处理网页...")
-                try:
-                    resp = requests.get(url, timeout=20)
-                    resp.raise_for_status()
-                    html = resp.text
-                    # 基础清洗：移除 script/style，去标签，压缩空白
-                    import re
-                    # 去掉 script/style 内容
-                    html = re.sub(r"<script[\s\S]*?</script>", " ", html, flags=re.IGNORECASE)
-                    html = re.sub(r"<style[\s\S]*?</style>", " ", html, flags=re.IGNORECASE)
-                    # 替换常见块标签为换行
-                    html = re.sub(r"</?(p|div|br|li|ul|ol|tr|td|th|h[1-6])[^>]*>", "\n", html, flags=re.IGNORECASE)
-                    # 去所有其余标签
-                    text = re.sub(r"<[^>]+>", " ", html)
-                    # HTML 实体最简替换
-                    text = (text
-                            .replace("&nbsp;", " ")
-                            .replace("&amp;", "&")
-                            .replace("&lt;", "<")
-                            .replace("&gt;", ">")
-                            )
-                    # 压缩空白并截断尾部空行
-                    text = re.sub(r"\s+", " ", text).strip()
-                    processed_content = text
-                    if not processed_content:
-                        return f"警告: URL '{url}' 已获取，但内容为空。"
-                    log(f"MCP Server: 回退网页提取成功 ({len(processed_content)} 个字符)")
-                    method_used = "html_fallback"
-                except Exception as e:
-                    log(f"MCP Server: 回退网页提取失败: {e}")
-                    return f"处理 URL 时出错: {e}"
-                
+            log("MCP Server: 使用轻量回退（requests + 简单清洗）处理网页...")
+            try:
+                resp = requests.get(url, timeout=20)
+                resp.raise_for_status()
+                html = resp.text
+                # 基础清洗：移除 script/style，去标签，压缩空白
+                import re
+                # 去掉 script/style 内容
+                html = re.sub(r"<script[\s\S]*?</script>", " ", html, flags=re.IGNORECASE)
+                html = re.sub(r"<style[\s\S]*?</style>", " ", html, flags=re.IGNORECASE)
+                # 替换常见块标签为换行
+                html = re.sub(r"</?(p|div|br|li|ul|ol|tr|td|th|h[1-6])[^>]*>", "\n", html, flags=re.IGNORECASE)
+                # 去所有其余标签
+                text = re.sub(r"<[^>]+>", " ", html)
+                # HTML 实体最简替换
+                text = (text
+                        .replace("&nbsp;", " ")
+                        .replace("&amp;", "&")
+                        .replace("&lt;", "<")
+                        .replace("&gt;", ">")
+                        )
+                # 压缩空白并截断尾部空行
+                text = re.sub(r"\s+", " ", text).strip()
+                processed_content = text
+                if not processed_content:
+                    return f"警告: URL '{url}' 已获取，但内容为空。"
+                log(f"MCP Server: 回退网页提取成功 ({len(processed_content)} 个字符)")
+                method_used = "html_fallback"
+            except Exception as e:
+                log(f"MCP Server: 回退网页提取失败: {e}")
+                return f"处理 URL 时出错: {e}"
+            
             # 保存处理后的副本
             log(f"MCP Server: 保存处理后的副本...")
             domain = parsed_url.netloc.replace('.', '_')
@@ -455,7 +435,7 @@ def learn_from_url(url: str) -> str:
                 path = 'homepage'
             
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{domain}_{path}_{timestamp}_markitdown.md"
+            filename = f"{domain}_{path}_{timestamp}_web.md"
             processed_filepath = os.path.join("./data/documents", filename)
             
             try:
@@ -473,7 +453,7 @@ def learn_from_url(url: str) -> str:
                 "domain": parsed_url.netloc,
                 "input_type": "url_web",
                 "processed_date": datetime.now().isoformat(),
-                "processing_method": method_used or ("markitdown" if md_converter is not None else "html_fallback"),
+                "processing_method": method_used or "html_fallback",
                 "converted_to_md": processed_filepath if processed_filepath else "No",
                 "server_processed_date": datetime.now().isoformat()
             }
@@ -488,7 +468,7 @@ def learn_from_url(url: str) -> str:
             return f"""✅ URL 处理成功
 🌐 URL: {url}
 📋 类型: 网页
-🔧 方法: {('MarkItDown' if method_used == 'markitdown' else 'HTML 回退')}
+🔧 方法: {('HTML 回退')}
 📊 处理字符数: {len(processed_content):,}
 💾 保存的副本: {processed_filepath if processed_filepath else "不可用"}"""
                 

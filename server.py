@@ -62,14 +62,7 @@ rag_state = {
     "metadata_cache": {}    # 每个文档的 MetadataModel 缓存
 }
 
-# 初始化 MarkItDown 转换器（用于 URL），在云端可选
-try:
-    from markitdown import MarkItDown  # 可选依赖：若不可用则使用回退方案
-    md_converter = MarkItDown()
-    log_mcp_server("✅ MarkItDown 可用，将用于网页转换")
-except Exception as e:
-    md_converter = None
-    log_mcp_server(f"ℹ️ MarkItDown 不可用（{e}），将使用内置网页提取回退方案")
+md_converter = None
 
 def warm_up_rag_system():
     """
@@ -162,8 +155,7 @@ from tools import configure_rag_state, ALL_TOOLS
 
 # 配置工具模块中的 RAG 状态
 configure_rag_state(
-    rag_state=rag_state, 
-    md_converter=md_converter,
+    rag_state=rag_state,
     initialize_rag_func=initialize_rag,
     save_processed_copy_func=save_processed_copy
 )

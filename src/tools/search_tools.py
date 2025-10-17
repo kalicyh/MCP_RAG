@@ -94,6 +94,33 @@ def process_document_metadata(metadata: dict) -> dict:
         "avg_chunk_size": metadata.get("avg_chunk_size", 0)
     }
 
+
+def extract_brief_answer(full_text: str) -> str:
+    """
+    从增强回答文本中提取简洁回答（去掉前缀、来源和建议部分）。
+    返回去掉杂项后的纯文本（如果无法提取则返回原文的简短形式或空字符串）。
+    """
+    if not full_text:
+        return ""
+
+    text = full_text.strip()
+
+    # 常见前缀
+    prefixes = ["🤖 回答：", "🔍 回答（已应用过滤器）：", "🔍 回答：", "回答："]
+    for p in prefixes:
+        if text.startswith(p):
+            text = text[len(p):].lstrip('\n ').lstrip()
+            break
+
+    # 截断到第一个来源或建议标记
+    for marker in ["📚 使用的信息来源：", "📋 应用的过滤器：", "💡 建议：", "⚠️ 注意："]:
+        idx = text.find(marker)
+        if idx != -1:
+            text = text[:idx].rstrip()
+            break
+
+    return text.strip()
+
 def ask_rag(query: str) -> str:
     """
     向 RAG 知识库提问并基于存储的信息返回答案。
@@ -120,6 +147,12 @@ def ask_rag(query: str) -> str:
         
         answer = response.get("result", "")
         source_documents = response.get("source_documents", [])
+
+        # 优先返回简洁的回答文本（去掉来源与建议）
+        concise = extract_brief_answer(response.get("result", ""))
+        if concise:
+            log(f"MCP服务器：成功生成简洁回答，使用了 {len(source_documents)} 个来源")
+            return concise
         
         # 验证是否真的有相关信息
         if not source_documents:
@@ -275,6 +308,12 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
         
         answer = response.get("result", "")
         source_documents = response.get("source_documents", [])
+
+        # 优先返回简洁的回答文本（去掉来源与建议）
+        concise = extract_brief_answer(response.get("result", ""))
+        if concise:
+            log(f"MCP服务器：成功生成简洁过滤回答，使用了 {len(source_documents)} 个来源")
+            return concise
         
         # 验证是否真的有符合过滤器的相关信息
         if not source_documents:
