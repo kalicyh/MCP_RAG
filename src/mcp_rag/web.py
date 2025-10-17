@@ -20,11 +20,12 @@ except Exception as e:
 
 # 导入工具列表
 try:
-    import mcp_rag.tools as tools_module
-    ALL_TOOLS = tools_module.ALL_TOOLS
+    from tools import ALL_TOOLS, TOOLS_BY_NAME
+    print(f"Loaded {len(ALL_TOOLS)} tools from tools module")
 except Exception as e:
     print(f"Error importing ALL_TOOLS from tools: {e}")
     ALL_TOOLS = []
+    TOOLS_BY_NAME = {}
 
 # 构建要测试的工具名列表
 tool_names = [fn.__name__ for fn in ALL_TOOLS]
@@ -790,24 +791,25 @@ def index():
 
 @app.route('/run_tool', methods=['POST'])
 def run_tool():
-    data = request.get_json()
-    tool_name = data.get('tool_name')
-    args_dict = data.get('args', {})
-    
-    # 处理文件上传
-    if tool_name == 'learn_document' and 'file' in request.files:
-        file = request.files['file']
-        if file.filename != '':
-            # 保存上传的文件
-            filename = file.filename
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            args_dict['file_path'] = file_path
+    # 检查是否是文件上传请求（FormData）
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        tool_name = request.form.get('tool_name')
+        args_dict = {}
+        
+        # 处理文件上传
+        if tool_name == 'learn_document' and 'file' in request.files:
+            file = request.files['file']
+            if file.filename != '':
+                # 保存上传的文件
+                filename = file.filename
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                args_dict['file_path'] = file_path
     else:
-        # 处理普通参数
-        for key, value in request.form.items():
-            if key != 'tool_name' and value.strip():
-                args_dict[key] = value.strip()
+        # 处理JSON请求
+        data = request.get_json()
+        tool_name = data.get('tool_name')
+        args_dict = data.get('args', {})
 
     allowed_tools = set(TOOL_CHINESE.keys())
     if not tool_name or tool_name not in allowed_tools:
@@ -815,17 +817,20 @@ def run_tool():
 
     # 从工具模块中找到对应的函数
     func = None
-    if ALL_TOOLS:
+    if TOOLS_BY_NAME and tool_name in TOOLS_BY_NAME:
+        func = TOOLS_BY_NAME[tool_name]
+    elif ALL_TOOLS:
         for f in ALL_TOOLS:
             if f.__name__ == tool_name:
                 func = f
                 break
     else:
         # 尝试从 mcp 对象获取
-        try:
-            func = getattr(mcp, tool_name, None)
-        except:
-            pass
+        if mcp:
+            try:
+                func = getattr(mcp, tool_name, None)
+            except:
+                pass
 
     if not func or not callable(func):
         return jsonify({'success': False, 'error': '工具不可调用'})
