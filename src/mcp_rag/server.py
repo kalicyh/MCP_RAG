@@ -15,7 +15,7 @@ from mcp.server.fastmcp import FastMCP
 from urllib.parse import urlparse
 
 # 添加 src 目录到路径以支持导入
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
 
 # 导入工具
 from utils.logger import log, log_mcp_server

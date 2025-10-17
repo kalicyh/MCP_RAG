@@ -16,7 +16,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.cmd == "serve":
         try:
-            import server
+            from mcp_rag import server
         except Exception as e:
             # 尝试把当前工作目录加入 sys.path（方便在仓库根直接运行）
             import os, traceback
@@ -24,7 +24,7 @@ def main(argv=None):
             if cwd not in sys.path:
                 sys.path.insert(0, cwd)
             try:
-                import server
+                from mcp_rag import server
             except Exception as e2:
                 print("无法导入 server 模块，尝试将当前工作目录加入 sys.path 后仍失败。")
                 print("原始错误:", e)
