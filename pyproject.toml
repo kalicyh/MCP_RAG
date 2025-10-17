@@ -13,3 +13,11 @@ dependencies = [
     "tqdm>=4.67.1",
 ]
 
+[project.scripts]
+# CLI entrypoint: `mcp-rag` will invoke mcp_rag.cli:main
+mcp-rag = "mcp_rag.cli:main"
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
