@@ -133,7 +133,7 @@ def run_tool(name, ask_for_args: bool = False):
     if is_mutating:
         # 如果此前用户已同意该工具，则不再提示
         if not consented_tools.get(name, False):
-            if not prompt_yes(f"工具 '{name}' 可能会产生副作用，要运行吗？"):
+            if not prompt_yes(f"工具 '{name}' 可能会修改数据库，要运行吗？"):
                 print(f"SKIP (user): {name}")
                 return ('skipped', 'user')
             consented_tools[name] = True

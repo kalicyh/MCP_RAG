@@ -82,3 +82,4 @@ venv.bak/
 .DS_Store
 data/*
 mcp_server_organized_cloud/data/*
+uploads/
