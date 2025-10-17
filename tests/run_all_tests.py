@@ -282,7 +282,7 @@ def save_test_report(test_results, execution_results):
 
 def main():
     """Función principal."""
-    console.print("🧪 **PRUEBAS UNITARIAS DEL SERVIDOR MCP ORGANIZADO**")
+    console.print("🧪 PRUEBAS UNITARIAS DEL SERVIDOR MCP ORGANIZADO")
     console.print("=" * 70)
     console.print(f"📅 Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     console.print("=" * 70)
@@ -296,7 +296,7 @@ def main():
     # Guardar reporte
     save_test_report(test_results, execution_results)
     
-    console.print(f"\n💡 **PRÓXIMOS PASOS:**")
+    console.print(f"\n💡 PRÓXIMOS PASOS:")
     console.print("   • Revisar pruebas fallidas para correcciones")
     console.print("   • Ejecutar pruebas de integración")
     console.print("   • 验证系统完整功能")

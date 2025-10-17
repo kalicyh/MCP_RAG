@@ -200,30 +200,30 @@ def get_knowledge_base_stats() -> str:
         basic_stats = get_document_statistics(rag_state["vector_store"])
         
         if "error" in basic_stats:
-            return f"❌ **获取统计信息时出错：** {basic_stats['error']}"
+            return f"❌ 获取统计信息时出错： {basic_stats['error']}"
         
         if basic_stats.get("total_documents", 0) == 0:
-            return "📊 **知识库为空**\n\n知识库中没有存储任何文档。"
+            return "📊 知识库为空\n\n知识库中没有存储任何文档。"
         
         # 获取结构化模型分析
         model_analysis = analyze_documents_with_models(rag_state["vector_store"])
         
         # 构建详细响应
-        response = f"📊 **知识库统计信息**\n\n"
-        response += f"📚 **文档总数:** {basic_stats['total_documents']}\n"
+        response = f"📊 知识库统计信息\n\n"
+        response += f"📚 文档总数: {basic_stats['total_documents']}\n"
         
         # 关于结构化模型的信息（如果可用）
         if "error" not in model_analysis and model_analysis.get("structured_models", 0) > 0:
-            response += f"🧠 **结构化模型文档:** {model_analysis['structured_models']}\n"
-            response += f"📈 **高级分析可用:** ✅\n"
+            response += f"🧠 结构化模型文档: {model_analysis['structured_models']}\n"
+            response += f"📈 高级分析可用: ✅\n"
         else:
-            response += f"📈 **高级分析可用:** ❌ (使用基础分析)\n"
+            response += f"📈 高级分析可用: ❌ (使用基础分析)\n"
         
         response += "\n"
         
         # 文件类型
         if basic_stats["file_types"]:
-            response += "📄 **文件类型:**\n"
+            response += "📄 文件类型:\n"
             for file_type, count in sorted(basic_stats["file_types"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / basic_stats["total_documents"]) * 100
                 display_ft = (file_type.upper() if isinstance(file_type, str) else "UNKNOWN")
@@ -232,7 +232,7 @@ def get_knowledge_base_stats() -> str:
         
         # 处理方法
         if basic_stats["processing_methods"]:
-            response += "🔧 **处理方法:**\n"
+            response += "🔧 处理方法:\n"
             for method, count in sorted(basic_stats["processing_methods"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / basic_stats["total_documents"]) * 100
                 method_display = method.replace('_', ' ').title()
@@ -241,7 +241,7 @@ def get_knowledge_base_stats() -> str:
         
         # 分块方法（仅当有模型分析时）
         if "error" not in model_analysis and model_analysis.get("chunking_methods"):
-            response += "🧩 **分块方法:**\n"
+            response += "🧩 分块方法:\n"
             for method, count in sorted(model_analysis["chunking_methods"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / model_analysis["structured_models"]) * 100
                 method_display = method.replace('_', ' ').title()
@@ -250,7 +250,7 @@ def get_knowledge_base_stats() -> str:
         
         # 内容质量（仅当有模型分析时）
         if "error" not in model_analysis and model_analysis.get("content_quality"):
-            response += "📊 **内容质量:**\n"
+            response += "📊 内容质量:\n"
             quality = model_analysis["content_quality"]
             total_analyzed = quality["rich_content"] + quality["standard_content"] + quality["poor_content"]
             
@@ -266,7 +266,7 @@ def get_knowledge_base_stats() -> str:
         
         # 结构统计信息
         structural = basic_stats["structural_stats"]
-        response += "🏗️ **结构信息:**\n"
+        response += "🏗️ 结构信息:\n"
         response += f"   • 包含表格的文档: {structural['documents_with_tables']}\n"
         response += f"   • 包含标题的文档: {structural['documents_with_titles']}\n"
         response += f"   • 包含列表的文档: {structural['documents_with_lists']}\n"
@@ -282,7 +282,7 @@ def get_knowledge_base_stats() -> str:
         response += "\n"
         
         # 增强的搜索建议
-        response += "💡 **搜索建议:**\n"
+        response += "💡 搜索建议:\n"
         if structural['documents_with_tables'] > 0:
             response += f"   • 使用 `ask_rag_filtered` 加上 `min_tables=1` 在包含表格的文档中搜索信息\n"
         if structural['documents_with_titles'] > 5:
@@ -302,7 +302,7 @@ def get_knowledge_base_stats() -> str:
         
     except Exception as e:
         log(f"MCP 服务器: 获取统计信息时出错: {e}")
-        return f"❌ **获取统计信息时出错:** {e}"
+        return f"❌ 获取统计信息时出错: {e}"
 
 def get_embedding_cache_stats() -> str:
     """
@@ -326,26 +326,26 @@ def get_embedding_cache_stats() -> str:
         stats = get_cache_stats()
         
         if not stats:
-            return "📊 **嵌入缓存不可用**\n\n嵌入缓存未初始化。"
+            return "📊 嵌入缓存不可用\n\n嵌入缓存未初始化。"
         
         # 构建详细响应
-        response = f"📊 **嵌入缓存统计信息**\n\n"
+        response = f"📊 嵌入缓存统计信息\n\n"
         
         # 主要指标
-        response += f"🔄 **缓存活动:**\n"
+        response += f"🔄 缓存活动:\n"
         response += f"   • 总请求数: {stats['total_requests']}\n"
         response += f"   • 内存命中数: {stats['memory_hits']}\n"
         response += f"   • 磁盘命中数: {stats['disk_hits']}\n"
         response += f"   • 未命中数（未找到）: {stats['misses']}\n\n"
         
         # 成功率
-        response += f"📈 **成功率:**\n"
+        response += f"📈 成功率:\n"
         response += f"   • 内存命中率: {stats['memory_hit_rate']}\n"
         response += f"   • 磁盘命中率: {stats['disk_hit_rate']}\n"
         response += f"   • 总命中率: {stats['overall_hit_rate']}\n\n"
         
         # 内存使用
-        response += f"💾 **内存使用:**\n"
+        response += f"💾 内存使用:\n"
         response += f"   • 内存中的嵌入: {stats['memory_cache_size']}\n"
         response += f"   • 最大大小: {stats['max_memory_size']}\n"
         response += f"   • 缓存目录: {stats['cache_directory']}\n\n"
@@ -356,7 +356,7 @@ def get_embedding_cache_stats() -> str:
             memory_hit_rate = float(stats['memory_hit_rate'].rstrip('%'))
             overall_hit_rate = float(stats['overall_hit_rate'].rstrip('%'))
             
-            response += f"🎯 **性能分析:**\n"
+            response += f"🎯 性能分析:\n"
             
             if overall_hit_rate > 70:
                 response += f"   • ✅ 性能优秀: {overall_hit_rate:.1f}% 命中率\n"
@@ -371,7 +371,7 @@ def get_embedding_cache_stats() -> str:
                 response += f"   • 💾 依赖磁盘访问: {memory_hit_rate:.1f}% 内存命中率\n"
             
             # 优化建议
-            response += f"\n💡 **优化建议:**\n"
+            response += f"\n💡 优化建议:\n"
             if overall_hit_rate < 30:
                 response += f"   • 考虑将类似文档一起处理\n"
                 response += f"   • 检查是否有太多不重复的唯一文本\n"
@@ -389,7 +389,7 @@ def get_embedding_cache_stats() -> str:
         
     except Exception as e:
         log(f"MCP Server: 获取缓存统计信息时出错: {e}")
-        return f"❌ **获取缓存统计信息时出错:** {e}"
+        return f"❌ 获取缓存统计信息时出错: {e}"
 
 def clear_embedding_cache_tool() -> str:
     """
@@ -412,18 +412,18 @@ def clear_embedding_cache_tool() -> str:
     try:
         clear_embedding_cache()
         
-        response = "🧹 **嵌入缓存清理成功**\n\n"
+        response = "🧹 嵌入缓存清理成功\n\n"
         response += "✅ 已删除所有存储在缓存中的嵌入。\n"
         response += "📝 下一次嵌入将从头开始计算。\n"
         response += "💾 已释放内存和磁盘空间。\n\n"
-        response += "⚠️ **注意:** 嵌入将在需要时自动重新计算。"
+        response += "⚠️ 注意: 嵌入将在需要时自动重新计算。"
         
         log(f"MCP Server: 嵌入缓存清理成功")
         return response
         
     except Exception as e:
         log(f"MCP Server: 清理缓存时出错: {e}")
-        return f"❌ **清理缓存时出错:** {e}"
+        return f"❌ 清理缓存时出错: {e}"
 
 def optimize_vector_database() -> str:
     """
@@ -444,28 +444,28 @@ def optimize_vector_database() -> str:
         result = optimize_vector_store()
         
         if result["status"] == "success":
-            response = f"✅ **向量数据库优化成功**\n\n"
-            response += f"📊 **优化前统计信息:**\n"
+            response = f"✅ 向量数据库优化成功\n\n"
+            response += f"📊 优化前统计信息:\n"
             stats_before = result.get("stats_before", {})
             response += f"   • 总文档数: {stats_before.get('total_documents', 'N/A')}\n"
             
-            response += f"\n📊 **优化后统计信息:**\n"
+            response += f"\n📊 优化后统计信息:\n"
             stats_after = result.get("stats_after", {})
             response += f"   • 总文档数: {stats_after.get('total_documents', 'N/A')}\n"
             
-            response += f"\n🚀 **优化效果:**\n"
+            response += f"\n🚀 优化效果:\n"
             response += f"   • 搜索速度更快\n"
             response += f"   • 结果精度更高\n"
             response += f"   • 索引已优化\n"
             
         else:
-            response = f"❌ **优化数据库时出错:** {result.get('message', '未知错误')}"
+            response = f"❌ 优化数据库时出错: {result.get('message', '未知错误')}"
             
         return response
         
     except Exception as e:
         log(f"MCP Server Error: 优化时出错: {e}")
-        return f"❌ **优化向量数据库时出错:** {str(e)}"
+        return f"❌ 优化向量数据库时出错: {str(e)}"
 
 def get_vector_database_stats() -> str:
     """
@@ -487,11 +487,11 @@ def get_vector_database_stats() -> str:
         stats = get_vector_store_stats()
         
         if "error" in stats:
-            return f"❌ **获取统计信息时出错:** {stats['error']}"
+            return f"❌ 获取统计信息时出错: {stats['error']}"
         
-        response = f"📊 **向量数据库统计信息**\n\n"
+        response = f"📊 向量数据库统计信息\n\n"
         
-        response += f"📚 **基本信息:**\n"
+        response += f"📚 基本信息:\n"
         response += f"   • 文档总数: {stats.get('total_documents', 0)}\n"
         response += f"   • 集合名称: {stats.get('collection_name', 'N/A')}\n"
         response += f"   • 嵌入维度: {stats.get('embedding_dimension', 'N/A')}\n"
@@ -499,21 +499,21 @@ def get_vector_database_stats() -> str:
         # Tipos de archivo
         file_types = stats.get('file_types', {})
         if file_types:
-            response += f"\n📄 **按文件类型分布:**\n"
+            response += f"\n📄 按文件类型分布:\n"
             for file_type, count in file_types.items():
                 response += f"   • {file_type}: {count} 个文档\n"
         
         # 处理方法
         processing_methods = stats.get('processing_methods', {})
         if processing_methods:
-            response += f"\n🔧 **处理方法:**\n"
+            response += f"\n🔧 处理方法:\n"
             for method, count in processing_methods.items():
                 response += f"   • {method}: {count} 个文档\n"
         
         # 性能信息
         performance = stats.get('performance', {})
         if performance:
-            response += f"\n⚡ **性能信息:**\n"
+            response += f"\n⚡ 性能信息:\n"
             response += f"   • 索引时间: {performance.get('indexing_time', 'N/A')}\n"
             response += f"   • 索引大小: {performance.get('index_size', 'N/A')}\n"
         
@@ -522,7 +522,7 @@ def get_vector_database_stats() -> str:
         
     except Exception as e:
         log(f"MCP Server: 获取向量数据库统计信息时出错: {e}")
-        return f"❌ **获取向量数据库统计信息时出错:** {str(e)}"
+        return f"❌ 获取向量数据库统计信息时出错: {str(e)}"
 
 def reindex_vector_database(profile: str = 'auto') -> str:
     """
@@ -539,7 +539,7 @@ def reindex_vector_database(profile: str = 'auto') -> str:
     - 希望针对特定数据库大小进行优化时
     - 存在持续性能问题时
     
-    ⚠️ **注意:** 此过程可能需要一些时间，具体取决于数据库大小。
+    ⚠️ 注意: 此过程可能需要一些时间，具体取决于数据库大小。
     
     Returns:
         重新索引过程的信息
@@ -550,21 +550,21 @@ def reindex_vector_database(profile: str = 'auto') -> str:
         result = reindex_vector_store(profile=profile)
         
         if result["status"] == "success":
-            response = f"✅ **向量数据库重新索引成功**\n\n"
-            response += f"📊 **应用的配置档案:** {result.get('profile', 'N/A')}\n"
-            response += f"📊 **处理的文档数:** {result.get('documents_processed', 'N/A')}\n"
-            response += f"⏱️ **重新索引时间:** {result.get('reindexing_time', 'N/A')}\n"
+            response = f"✅ 向量数据库重新索引成功\n\n"
+            response += f"📊 应用的配置档案: {result.get('profile', 'N/A')}\n"
+            response += f"📊 处理的文档数: {result.get('documents_processed', 'N/A')}\n"
+            response += f"⏱️ 重新索引时间: {result.get('reindexing_time', 'N/A')}\n"
             
-            response += f"\n🚀 **重新索引的优势:**\n"
+            response += f"\n🚀 重新索引的优势:\n"
             response += f"   • 针对当前大小优化的索引\n"
             response += f"   • 更快更精确的搜索\n"
             response += f"   • 更好的数据分布\n"
             
         else:
-            response = f"❌ **重新索引数据库时出错:** {result.get('message', '未知错误')}"
+            response = f"❌ 重新索引数据库时出错: {result.get('message', '未知错误')}"
             
         return response
         
     except Exception as e:
         log(f"MCP Server: 重新索引向量数据库时出错: {e}")
-        return f"❌ **重新索引向量数据库时出错:** {str(e)}" 
+        return f"❌ 重新索引向量数据库时出错: {str(e)}" 

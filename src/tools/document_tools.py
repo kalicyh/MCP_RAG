@@ -236,21 +236,21 @@ def learn_document(file_path: str) -> str:
         # 使用的分块信息
         chunking_info = ""
         if structural_elements and len(structural_elements) > 1:
-            chunking_info = f"🧠 **高级语义分块** 包含 {len(structural_elements)} 个结构元素"
+            chunking_info = f"🧠 高级语义分块 包含 {len(structural_elements)} 个结构元素"
         elif metadata_model.is_rich_content():
-            chunking_info = f"📊 **增强语义分块** 基于结构元数据"
+            chunking_info = f"📊 增强语义分块 基于结构元数据"
         else:
-            chunking_info = f"📝 **优化传统分块**"
+            chunking_info = f"📝 优化传统分块"
         
-        return f"""✅ **文档处理成功**
-📄 **文件:** {document_model.file_name}
-📋 **类型:** {(document_model.file_type or 'unknown').upper()}
-🔧 **方法:** {document_model.processing_method}
+        return f"""✅ 文档处理成功
+📄 文件: {document_model.file_name}
+📋 类型: {(document_model.file_type or 'unknown').upper()}
+🔧 方法: {document_model.processing_method}
 {chunking_info}
-📊 **处理字符数:** {len(processed_content):,}
-📈 **结构:** {titles_count} 个标题, {tables_count} 个表格, {lists_count} 个列表
-💾 **保存的副本:** {saved_copy_path if saved_copy_path else "不可用"}
-✅ **验证:** 使用结构化模型处理的文档"""
+📊 处理字符数: {len(processed_content):,}
+📈 结构: {titles_count} 个标题, {tables_count} 个表格, {lists_count} 个列表
+💾 保存的副本: {saved_copy_path if saved_copy_path else "不可用"}
+✅ 验证: 使用结构化模型处理的文档"""
 
     except Exception as e:
         log(f"MCP Server: 处理文档 '{file_path}' 时出错: {e}")
@@ -377,13 +377,13 @@ def learn_from_url(url: str) -> str:
                 file_type = metadata.get("file_type", file_extension)
                 processing_method = metadata.get("processing_method", "unstructured_enhanced")
                 
-                return f"""✅ **URL 处理成功**
-🌐 **URL:** {url}
-📄 **文件:** {file_name}
-📋 **类型:** {(file_type or 'unknown').upper()}
-🔧 **方法:** {processing_method}
-📊 **处理字符数:** {len(processed_content):,}
-💾 **保存的副本:** {processed_filepath if processed_filepath else "不可用"}"""
+                return f"""✅ URL 处理成功
+🌐 URL: {url}
+📄 文件: {file_name}
+📋 类型: {(file_type or 'unknown').upper()}
+🔧 方法: {processing_method}
+📊 处理字符数: {len(processed_content):,}
+💾 保存的副本: {processed_filepath if processed_filepath else "不可用"}"""
                 
             except Exception as e:
                 # 出错时清理临时文件
@@ -485,12 +485,12 @@ def learn_from_url(url: str) -> str:
             log(f"MCP Server: 处理完成 - URL 处理成功")
             
             # 准备信息响应
-            return f"""✅ **URL 处理成功**
-🌐 **URL:** {url}
-📋 **类型:** 网页
-🔧 **方法:** {('MarkItDown' if method_used == 'markitdown' else 'HTML 回退')}
-📊 **处理字符数:** {len(processed_content):,}
-💾 **保存的副本:** {processed_filepath if processed_filepath else "不可用"}"""
+            return f"""✅ URL 处理成功
+🌐 URL: {url}
+📋 类型: 网页
+🔧 方法: {('MarkItDown' if method_used == 'markitdown' else 'HTML 回退')}
+📊 处理字符数: {len(processed_content):,}
+💾 保存的副本: {processed_filepath if processed_filepath else "不可用"}"""
                 
     except Exception as e:
         log(f"MCP Server: 处理 URL '{url}' 时出错: {e}")

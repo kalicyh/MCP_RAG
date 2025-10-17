@@ -15,7 +15,7 @@ sys.path.insert(0, 'src')
 def interactive_test():
     """MCP 服务器的交互式测试。"""
     
-    print("🚀 **MCP 服务器交互式测试**")
+    print("🚀 MCP 服务器交互式测试")
     print("=" * 50)
     
     try:

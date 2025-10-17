@@ -124,13 +124,13 @@ def ask_rag(query: str) -> str:
         # 验证是否真的有相关信息
         if not source_documents:
             # 没有来源 - LLM 可能在产生幻觉
-            enhanced_answer = f"🤖 **回答：**\n\n❌ **在知识库中未找到相关信息来回答您的问题。**\n\n"
-            enhanced_answer += "💡 **建议：**\n"
+            enhanced_answer = f"🤖 回答：\n\n❌ 在知识库中未找到相关信息来回答您的问题。\n\n"
+            enhanced_answer += "💡 建议：\n"
             enhanced_answer += "• 验证您是否已加载与问题相关的文档\n"
             enhanced_answer += "• 尝试用更具体的术语重新表述您的问题\n"
             enhanced_answer += "• 使用 `get_knowledge_base_stats()` 查看可用信息\n"
             enhanced_answer += "• 考虑加载更多关于您感兴趣主题的文档\n\n"
-            enhanced_answer += "⚠️ **注意：** 系统只能基于之前加载到知识库中的信息进行回答。"
+            enhanced_answer += "⚠️ 注意： 系统只能基于之前加载到知识库中的信息进行回答。"
             
             log(f"MCP服务器：未找到相关来源回答问题")
             return enhanced_answer
@@ -138,22 +138,22 @@ def ask_rag(query: str) -> str:
         # 验证回答是否可能是幻觉
         # 如果没有来源但有回答，可能是幻觉
         if len(source_documents) == 0 and answer.strip():
-            enhanced_answer = f"🤖 **回答：**\n\n❌ **在知识库中未找到特定信息来回答您的问题。**\n\n"
-            enhanced_answer += "💡 **建议：**\n"
+            enhanced_answer = f"🤖 回答：\n\n❌ 在知识库中未找到特定信息来回答您的问题。\n\n"
+            enhanced_answer += "💡 建议：\n"
             enhanced_answer += "• 验证您是否已加载与问题相关的文档\n"
             enhanced_answer += "• 尝试用更具体的术语重新表述您的问题\n"
             enhanced_answer += "• 使用 `get_knowledge_base_stats()` 查看可用信息\n\n"
-            enhanced_answer += "⚠️ **注意：** 系统只能基于之前加载到知识库中的信息进行回答。"
+            enhanced_answer += "⚠️ 注意： 系统只能基于之前加载到知识库中的信息进行回答。"
             
             log(f"MCP服务器：检测到可能的幻觉回答（无来源）")
             return enhanced_answer
         
         # 如果有来源，构建正常回答
-        enhanced_answer = f"🤖 **回答：**\n\n{answer}\n"
+        enhanced_answer = f"🤖 回答：\n\n{answer}\n"
         
         # 使用结构化模型添加更详细的来源信息
         if source_documents:
-            enhanced_answer += "📚 **使用的信息来源：**\n\n"
+            enhanced_answer += "📚 使用的信息来源：\n\n"
             for i, doc in enumerate(source_documents, 1):
                 raw_metadata = doc.metadata if hasattr(doc, 'metadata') else {}
                 
@@ -161,24 +161,24 @@ def ask_rag(query: str) -> str:
                 doc_info = process_document_metadata(raw_metadata)
                 
                 # --- 改进来源信息 ---
-                source_info = f"   {i}. **{doc_info['source']}**"
+                source_info = f"   {i}. {doc_info['source']}"
                 
                 # 如果是文档，添加完整路径
                 if doc_info['file_path']:
-                    source_info += f"\n      - **路径：** `{doc_info['file_path']}`"
+                    source_info += f"\n      - 路径： `{doc_info['file_path']}`"
                 
                 # 如果可用，添加文件类型
                 if doc_info['file_type']:
-                    source_info += f"\n      - **类型：** {(doc_info.get('file_type') or 'unknown').upper()}"
+                    source_info += f"\n      - 类型： {(doc_info.get('file_type') or 'unknown').upper()}"
                 
                 # 如果可用，添加处理方法
                 if doc_info['processing_method']:
                     method_display = doc_info['processing_method'].replace('_', ' ').title()
-                    source_info += f"\n      - **处理：** {method_display}"
+                    source_info += f"\n      - 处理： {method_display}"
                 
                 # 使用模型数据添加结构信息
                 if doc_info['total_elements'] > 0:
-                    source_info += f"\n      - **结构：** {doc_info['total_elements']} 个元素"
+                    source_info += f"\n      - 结构： {doc_info['total_elements']} 个元素"
                     
                     structural_details = []
                     if doc_info['titles_count'] > 0:
@@ -194,22 +194,22 @@ def ask_rag(query: str) -> str:
                 # 如果可用，添加分块信息
                 if doc_info['chunking_method'] and doc_info['chunking_method'] != "未知":
                     chunking_display = doc_info['chunking_method'].replace('_', ' ').title()
-                    source_info += f"\n      - **分块：** {chunking_display}"
+                    source_info += f"\n      - 分块： {chunking_display}"
                 
                 # 如果可用，添加丰富内容指示器
                 if doc_info.get('is_rich_content', False):
-                    source_info += f"\n      - **质量：** 结构丰富的内容"
+                    source_info += f"\n      - 质量： 结构丰富的内容"
                 
                 enhanced_answer += source_info + "\n\n"
         
         # 添加回答质量信息
         num_sources = len(source_documents)
         if num_sources >= 3:
-            enhanced_answer += "\n✅ **高可信度：** 基于多个来源的回答"
+            enhanced_answer += "\n✅ 高可信度： 基于多个来源的回答"
         elif num_sources == 2:
-            enhanced_answer += "\n⚠️ **中等可信度：** 基于 2 个来源的回答"
+            enhanced_answer += "\n⚠️ 中等可信度： 基于 2 个来源的回答"
         else:
-            enhanced_answer += "\n⚠️ **有限可信度：** 基于 1 个来源的回答"
+            enhanced_answer += "\n⚠️ 有限可信度： 基于 1 个来源的回答"
         
         # 使用结构化模型添加处理信息
         enhanced_docs = []
@@ -224,17 +224,17 @@ def ask_rag(query: str) -> str:
                     rich_content_docs.append(doc)
         
         if enhanced_docs:
-            enhanced_answer += f"\n🧠 **智能处理：** {len(enhanced_docs)} 个来源使用 Unstructured 处理（保留结构）"
+            enhanced_answer += f"\n🧠 智能处理： {len(enhanced_docs)} 个来源使用 Unstructured 处理（保留结构）"
         
         if rich_content_docs:
-            enhanced_answer += f"\n📊 **结构化内容：** {len(rich_content_docs)} 个来源具有丰富结构（标题、表格、列表）"
+            enhanced_answer += f"\n📊 结构化内容： {len(rich_content_docs)} 个来源具有丰富结构（标题、表格、列表）"
         
         log(f"MCP服务器：成功生成回答，使用了 {len(source_documents)} 个来源")
         return enhanced_answer
         
     except Exception as e:
         log(f"MCP服务器：处理问题时出错：{e}")
-        return f"❌ **处理问题时出错：** {e}\n\n💡 **建议：**\n- 验证 RAG 系统是否正确初始化\n- 尝试重新表述您的问题\n- 如果问题持续存在，请重启服务器"
+        return f"❌ 处理问题时出错： {e}\n\n💡 建议：\n- 验证 RAG 系统是否正确初始化\n- 尝试重新表述您的问题\n- 如果问题持续存在，请重启服务器"
 
 def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, min_titles: int = None, processing_method: str = None) -> str:
     """
@@ -279,11 +279,11 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
         # 验证是否真的有符合过滤器的相关信息
         if not source_documents:
             # 没有符合过滤器的来源
-            enhanced_answer = f"🔍 **回答（已应用过滤器）：**\n\n❌ **在知识库中未找到符合指定过滤器的相关信息。**\n\n"
+            enhanced_answer = f"🔍 回答（已应用过滤器）：\n\n❌ 在知识库中未找到符合指定过滤器的相关信息。\n\n"
             
             # 显示应用的过滤器
             if metadata_filter:
-                enhanced_answer += "📋 **应用的过滤器：**\n"
+                enhanced_answer += "📋 应用的过滤器：\n"
                 for key, value in metadata_filter.items():
                     if key == "file_type":
                         enhanced_answer += f"   • 文件类型：{value}\n"
@@ -296,22 +296,22 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
                     else:
                         enhanced_answer += f"   • {key}：{value}\n"
             
-            enhanced_answer += "\n💡 **建议：**\n"
+            enhanced_answer += "\n💡 建议：\n"
             enhanced_answer += "• 尝试放宽过滤器以获得更多结果\n"
             enhanced_answer += "• 验证您有符合指定条件的文档\n"
             enhanced_answer += "• 使用 `get_knowledge_base_stats()` 查看可用的文档类型\n"
             enhanced_answer += "• 考虑加载更多符合过滤器的文档\n\n"
-            enhanced_answer += "⚠️ **注意：** 过滤器可能过于严格，如果没有获得结果，请尝试使用更宽松的过滤器。"
+            enhanced_answer += "⚠️ 注意： 过滤器可能过于严格，如果没有获得结果，请尝试使用更宽松的过滤器。"
             
             log(f"MCP服务器：未找到符合指定过滤器的来源")
             return enhanced_answer
         
         # 如果有来源，构建正常回答
-        enhanced_answer = f"🔍 **回答（已应用过滤器）：**\n\n{answer}\n"
+        enhanced_answer = f"🔍 回答（已应用过滤器）：\n{answer}\n"
         
         # 显示应用的过滤器
         if metadata_filter:
-            enhanced_answer += "\n📋 **应用的过滤器：**\n"
+            enhanced_answer += "\n📋 应用的过滤器：\n"
             for key, value in metadata_filter.items():
                 if key == "file_type":
                     enhanced_answer += f"   • 文件类型：{value}\n"
@@ -326,31 +326,31 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
         
         # 添加来源信息
         if source_documents:
-            enhanced_answer += "\n📚 **使用的信息来源：**\n\n"
+            enhanced_answer += "\n📚 使用的信息来源：\n\n"
             for i, doc in enumerate(source_documents, 1):
                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
                 source_name = metadata.get("source", "未知来源")
                 
-                source_info = f"   {i}. **{source_name}**"
+                source_info = f"   {i}. {source_name}"
                 
                 # 添加来源的附加信息
                 file_path = metadata.get("file_path")
                 if file_path:
-                    source_info += f"\n      - **路径：** `{file_path}`"
+                    source_info += f"\n      - 路径： `{file_path}`"
                 
                 file_type = metadata.get("file_type")
                 if file_type:
-                    source_info += f"\n      - **类型：** {(file_type or 'unknown').upper()}"
+                    source_info += f"\n      - 类型： {(file_type or 'unknown').upper()}"
                 
                 processing_method = metadata.get("processing_method")
                 if processing_method:
                     method_display = processing_method.replace('_', ' ').title()
-                    source_info += f"\n      - **处理：** {method_display}"
+                    source_info += f"\n      - 处理： {method_display}"
                 
                 # 添加结构信息
                 structural_info = metadata.get("structural_info")
                 if structural_info:
-                    source_info += f"\n      - **结构：** {structural_info.get('total_elements', 'N/A')} 个元素"
+                    source_info += f"\n      - 结构： {structural_info.get('total_elements', 'N/A')} 个元素"
                     titles_count = structural_info.get('titles_count', 0)
                     tables_count = structural_info.get('tables_count', 0)
                     lists_count = structural_info.get('lists_count', 0)
@@ -369,15 +369,15 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
         # 添加回答质量信息
         num_sources = len(source_documents)
         if num_sources >= 3:
-            enhanced_answer += "\n✅ **高可信度：** 基于多个过滤来源的回答"
+            enhanced_answer += "\n✅ 高可信度： 基于多个过滤来源的回答"
         elif num_sources == 2:
-            enhanced_answer += "\n⚠️ **中等可信度：** 基于 2 个过滤来源的回答"
+            enhanced_answer += "\n⚠️ 中等可信度： 基于 2 个过滤来源的回答"
         else:
-            enhanced_answer += "\n⚠️ **有限可信度：** 基于 1 个过滤来源的回答"
+            enhanced_answer += "\n⚠️ 有限可信度： 基于 1 个过滤来源的回答"
         
         log(f"MCP服务器：成功生成过滤回答，使用了 {len(source_documents)} 个来源")
         return enhanced_answer
         
     except Exception as e:
         log(f"MCP服务器：处理过滤问题时出错：{e}")
-        return f"❌ **处理过滤问题时出错：** {e}\n\n💡 **建议：**\n- 验证 RAG 系统是否正确初始化\n- 尝试使用限制较少的过滤器\n- 如果问题持续存在，请重启服务器" 
+        return f"❌ 处理过滤问题时出错： {e}\n\n💡 建议：\n- 验证 RAG 系统是否正确初始化\n- 尝试使用限制较少的过滤器\n- 如果问题持续存在，请重启服务器" 

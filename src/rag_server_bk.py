@@ -219,19 +219,19 @@ def learn_document(file_path: str) -> str:
         # 分块信息
         chunking_info = ""
         if structural_elements and len(structural_elements) > 1:
-            chunking_info = f"🧠 **高级语义分块**，共 {len(structural_elements)} 个结构化元素"
+            chunking_info = f"🧠 高级语义分块，共 {len(structural_elements)} 个结构化元素"
         elif metadata.get("structural_info", {}).get("total_elements", 0) > 1:
-            chunking_info = f"📊 **增强语义分块**，基于结构化元数据"
+            chunking_info = f"📊 增强语义分块，基于结构化元数据"
         else:
-            chunking_info = f"📝 **传统分块** 优化"
+            chunking_info = f"📝 传统分块 优化"
 
-        return f"""✅ **文档处理成功**
-📄 **文件:** {file_name}
-📋 **类型:** {file_type.upper()}
-🔧 **处理方法:** {processing_method}
+        return f"""✅ 文档处理成功
+📄 文件: {file_name}
+📋 类型: {file_type.upper()}
+🔧 处理方法: {processing_method}
 {chunking_info}
-📊 **处理字符数:** {len(processed_content):,}
-💾 **副本保存路径:** {saved_copy_path if saved_copy_path else "无"}"""
+📊 处理字符数: {len(processed_content):,}
+💾 副本保存路径: {saved_copy_path if saved_copy_path else "无"}"""
 
     except Exception as e:
         log(f"MCP服务器: 处理文档 '{file_path}' 时出错: {e}")
@@ -399,11 +399,11 @@ def learn_from_url(url: str) -> str:
                                 log(f"MCP服务器: 最小分区完成，提取了{len(elements)}个元素")
                             except Exception as e:
                                 log(f"MCP服务器: 最小分区出错: {e}")
-                                return f"❌ **超时错误:** PDF处理时间过长。\n\n💡 **建议：**\n- PDF可能过大或复杂\n- 尝试较小的PDF\n- 检查文件是否损坏"
+                                return f"❌ 超时错误: PDF处理时间过长。\n\n💡 建议：\n- PDF可能过大或复杂\n- 尝试较小的PDF\n- 检查文件是否损坏"
                         
                         if processing_error:
                             log(f"MCP服务器: 处理出错: {processing_error}")
-                            return f"❌ **PDF处理错误:** {processing_error}\n\n💡 **建议：**\n- 文件可能损坏\n- 尝试其他PDF\n- 确保文件可访问"
+                            return f"❌ PDF处理错误: {processing_error}\n\n💡 建议：\n- 文件可能损坏\n- 尝试其他PDF\n- 确保文件可访问"
                         
                         if not elements:
                             log(f"MCP服务器: 无法从PDF中提取元素")
@@ -439,13 +439,13 @@ def learn_from_url(url: str) -> str:
                                             }
                                         }
                                     else:
-                                        return f"❌ **错误:** 无法用任何方法从PDF中提取文本。\n\n💡 **建议:**\n- PDF可能为扫描版（仅图像）\n- 文件可能损坏\n- 尝试其他PDF"
+                                        return f"❌ 错误: 无法用任何方法从PDF中提取文本。\n\n💡 建议:\n- PDF可能为扫描版（仅图像）\n- 文件可能损坏\n- 尝试其他PDF"
                             except ImportError:
                                 log(f"MCP服务器: PyPDF2 不可用")
-                                return f"❌ **错误:** 无法从PDF中提取元素。\n\n💡 **建议:**\n- 文件可能为空或损坏\n- 尝试其他PDF"
+                                return f"❌ 错误: 无法从PDF中提取元素。\n\n💡 建议:\n- 文件可能为空或损坏\n- 尝试其他PDF"
                             except Exception as e:
                                 log(f"MCP服务器: PyPDF2回退失败: {e}")
-                                return f"❌ **错误:** 无法从PDF中提取任何文本。\n\n💡 **建议:**\n- PDF可能为扫描版（仅图像）\n- 文件可能损坏\n- 尝试其他PDF"
+                                return f"❌ 错误:法从PDF中提取任何文本。\n\n💡 建议:\n- PDF可能为扫描版（仅图像）\n- 文件可能损坏\n- 尝试其他PDF"
                         else:
                             log(f"MCP服务器: 正在处理提取的元素...")
                             from rag_core import process_unstructured_elements, extract_structural_metadata
@@ -509,17 +509,17 @@ def learn_from_url(url: str) -> str:
                 structural_info = enhanced_metadata.get("structural_info", {})
                 
                 response_parts = [
-                    f"✅ **文件下载并处理成功**",
-                    f"🌐 **URL:** {url}",
-                    f"📄 **文件:** {os.path.basename(parsed_url.path)}",
-                    f"📋 **类型:** {file_extension.upper()}",
-                    f"🔧 **方法:** {processing_method.replace('_', ' ').title()}"
+                    f"✅ 文件下载并处理成功",
+                    f"🌐 URL: {url}",
+                    f"📄 文件: {os.path.basename(parsed_url.path)}",
+                    f"📋 类型: {file_extension.upper()}",
+                    f"🔧 方法: {processing_method.replace('_', ' ').title()}"
                 ]
                 
                 # 如果有结构信息则添加
                 if structural_info:
                     response_parts.extend([
-                        f"📊 **文档结构:**",
+                        f"📊 文档结构:",
                         f"   • 总元素: {structural_info.get('total_elements', 'N/A')}",
                         f"   • 标题: {structural_info.get('titles_count', 'N/A')}",
                         f"   • 表格: {structural_info.get('tables_count', 'N/A')}",
@@ -528,9 +528,9 @@ def learn_from_url(url: str) -> str:
                     ])
                 
                 if processed_filepath:
-                    response_parts.append(f"💾 **副本已保存:** {processed_filepath}")
+                    response_parts.append(f"💾 副本已保存: {processed_filepath}")
                 
-                response_parts.append(f"📚 **状态:** 已通过语义分块添加到知识库")
+                response_parts.append(f"📚 状态: 已通过语义分块添加到知识库")
                 
                 log(f"MCP服务器: URL处理完成")
                 return "\n".join(response_parts)
@@ -605,44 +605,44 @@ def learn_from_url(url: str) -> str:
             
             # 完成过程的信息
             response_parts = [
-                f"✅ **网页内容处理成功**",
-                f"🌐 **URL:** {url}",
-                f"🌍 **域名:** {parsed_url.netloc}",
-                f"🔧 **方法:** MarkItDown"
+                f"✅ 网页内容处理成功",
+                f"🌐 URL: {url}",
+                f"🌍 域名: {parsed_url.netloc}",
+                f"🔧 方法: MarkItDown"
             ]
             
             if md_filepath:
-                response_parts.append(f"💾 **副本已保存:** {md_filepath}")
+                response_parts.append(f"💾 副本已保存: {md_filepath}")
             
-            response_parts.append(f"📚 **状态:** 已添加到知识库")
+            response_parts.append(f"📚 状态: 已添加到知识库")
             
             log(f"MCP服务器: URL处理完成")
             return "\n".join(response_parts)
 
     except requests.exceptions.Timeout:
         log(f"MCP服务器: 处理URL超时: {url}")
-        return f"❌ **超时错误:** URL '{url}' 响应过慢。\n\n💡 **建议：**\n- 检查网络连接\n- 稍后重试\n- 目标网站可能临时缓慢"
+        return f"❌ 超时错误: URL '{url}' 响应过慢。\n\n💡 建议：\n- 检查网络连接\n- 稍后重试\n- 目标网站可能临时缓慢"
     except requests.exceptions.ConnectionError:
         log(f"MCP服务器: 处理URL时连接错误: {url}")
-        return f"❌ **连接错误:** 无法连接到 URL '{url}'。\n\n💡 **建议：**\n- 检查网络连接\n- 目标网站可能不可用\n- 稍后重试"
+        return f"❌ 连接错误: 无法连接到 URL '{url}'。\n\n💡 建议：\n- 检查网络连接\n- 目标网站可能不可用\n- 稍后重试"
     except Exception as e:
         log(f"MCP服务器: 处理URL '{url}' 时出错: {e}")
-        error_msg = f"❌ **处理 URL '{url}' 时出错:** {e}"
+        error_msg = f"❌ 处理 URL '{url}' 时出错: {e}"
         # 提供更有用的建议
         if "404" in str(e) or "Not Found" in str(e):
-            error_msg += "\n\n💡 **建议：** URL 不存在或无法访问，请检查链接是否正确。"
+            error_msg += "\n\n💡 建议： URL 不存在或无法访问，请检查链接是否正确。"
         elif "timeout" in str(e).lower():
-            error_msg += "\n\n💡 **建议：** 页面加载过慢，请稍后重试或检查网络。"
+            error_msg += "\n\n💡 建议： 页面加载过慢，请稍后重试或检查网络。"
         elif "permission" in str(e).lower() or "403" in str(e):
-            error_msg += "\n\n💡 **建议：** 没有访问权限，部分网站禁止自动访问。"
+            error_msg += "\n\n💡 建议：有访问权限，部分网站禁止自动访问。"
         elif "youtube" in url.lower() and "transcript" in str(e).lower():
-            error_msg += "\n\n💡 **建议：** 此 YouTube 视频无可用字幕或已禁用。"
+            error_msg += "\n\n💡 建议： 此 YouTube 视频无可用字幕或已禁用。"
         elif "ssl" in str(e).lower() or "certificate" in str(e).lower():
-            error_msg += "\n\n💡 **建议：** SSL 证书问题，请尝试其他链接。"
+            error_msg += "\n\n💡 建议： SSL 证书问题，请尝试其他链接。"
         elif "download" in str(e).lower() or "connection" in str(e).lower():
-            error_msg += "\n\n💡 **建议：** 下载文件出错，请确认链接可访问且文件存在。"
+            error_msg += "\n\n💡 建议： 下载文件出错，请确认链接可访问且文件存在。"
         elif "unstructured" in str(e).lower():
-            error_msg += "\n\n💡 **建议：** 文档处理出错，文件可能损坏或过大。"
+            error_msg += "\n\n💡 建议： 文档处理出错，文件可能损坏或过大。"
         return error_msg
 
 @mcp.tool()
@@ -674,13 +674,13 @@ def ask_rag(query: str) -> str:
         # 检查是否真的有相关信息
         if not source_documents:
             # 无可用来源，可能系统尚未加载相关信息
-            enhanced_answer = f"🤖 **回答:**\n\n❌ **未找到与问题相关的信息，无法回答。**\n\n"
-            enhanced_answer += "💡 **建议:**\n"
+            enhanced_answer = f"🤖 回答:\n\n❌ 未找到与问题相关的信息，无法回答。\n\n"
+            enhanced_answer += "💡 建议:\n"
             enhanced_answer += "• 确保已加载与问题相关的文档\n"
             enhanced_answer += "• 尝试使用更具体的关键词重新提问\n"
             enhanced_answer += "• 使用 `get_knowledge_base_stats()` 检查知识库状态\n"
             enhanced_answer += "• 考虑加载更多相关文档\n\n"
-            enhanced_answer += "⚠️ **提示:** 系统仅基于已加载信息进行回答。"
+            enhanced_answer += "⚠️ 提示: 系统仅基于已加载信息进行回答。"
             
             log(f"MCP服务器: 未找到相关信息来源")
             return enhanced_answer
@@ -689,49 +689,49 @@ def ask_rag(query: str) -> str:
         # 如果没有来源但有回答，可能是幻觉结果
         if len(source_documents) == 0 and answer.strip():
             # 有回答但无来源，可能为幻觉结果
-            enhanced_answer = f"🤖 **回答:**\n\n❌ **未找到特定信息，无法准确回答。**\n\n"
-            enhanced_answer += "💡 **建议:**\n"
+            enhanced_answer = f"🤖 回答:\n\n❌ 未找到特定信息，无法准确回答。\n\n"
+            enhanced_answer += "💡 建议:\n"
             enhanced_answer += "• 确保已加载与问题相关的文档\n"
             enhanced_answer += "• 尝试使用更具体的关键词重新提问\n"
             enhanced_answer += "• 使用 `get_knowledge_base_stats()` 检查知识库状态\n\n"
-            enhanced_answer += "⚠️ **提示:** 系统仅基于已加载信息进行回答。"
+            enhanced_answer += "⚠️ 提示: 系统仅基于已加载信息进行回答。"
             
             log(f"MCP服务器: 检测到可能的幻觉回答（无来源）")
             return enhanced_answer
         
         # 如果有可用来源，构建正常回答
-        enhanced_answer = f"🤖 **回答:**\n\n{answer}\n"
+        enhanced_answer = f"🤖 回答:\n\n{answer}\n"
         
         # 添加来源信息及更多详情
         if source_documents:
-            enhanced_answer += "📚 **使用的信息来源:**\n\n"
+            enhanced_answer += "📚 使用的信息来源:\n\n"
             for i, doc in enumerate(source_documents, 1):
                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
                 source_name = metadata.get("source", "未知来源")
                 
                 # --- 改进来源信息 ---
-                source_info = f"   {i}. **{source_name}**"
+                source_info = f"   {i}. {source_name}"
                 
                 # 如果是文档则添加完整路径
                 file_path = metadata.get("file_path")
                 if file_path:
-                    source_info += f"\n      - **路径:** `{file_path}`"
+                    source_info += f"\n      - 路径: `{file_path}`"
                 
                 # 如果有文件类型则添加
                 file_type = metadata.get("file_type")
                 if file_type:
-                    source_info += f"\n      - **类型:** {file_type.upper()}"
+                    source_info += f"\n      - 类型: {file_type.upper()}"
                 
                 # 如果有处理方法则添加
                 processing_method = metadata.get("processing_method")
                 if processing_method:
                     method_display = processing_method.replace('_', ' ').title()
-                    source_info += f"\n      - **处理方法:** {method_display}"
+                    source_info += f"\n      - 处理方法: {method_display}"
                 
                 # 如果有结构信息则添加
                 structural_info = metadata.get("structural_info")
                 if structural_info:
-                    source_info += f"\n      - **结构:** {structural_info.get('total_elements', 'N/A')} 个元素"
+                    source_info += f"\n      - 结构: {structural_info.get('total_elements', 'N/A')} 个元素"
                     titles_count = structural_info.get('titles_count', 0)
                     tables_count = structural_info.get('tables_count', 0)
                     lists_count = structural_info.get('lists_count', 0)
@@ -762,30 +762,30 @@ def ask_rag(query: str) -> str:
                         structural_details.append(f"{lists_count} 个列表")
                     
                     if structural_details:
-                        source_info += f"\n      - **结构:** {', '.join(structural_details)}"
+                        source_info += f"\n      - 结构: {', '.join(structural_details)}"
                 
                 enhanced_answer += source_info + "\n\n"
         
         # 添加回答质量信息
         num_sources = len(source_documents)
         if num_sources >= 3:
-            enhanced_answer += "\n✅ **高可信度:** 回答基于多个来源"
+            enhanced_answer += "\n✅ 高可信度: 回答基于多个来源"
         elif num_sources == 2:
-            enhanced_answer += "\n⚠️ **中等可信度:** 回答基于2个来源"
+            enhanced_answer += "\n⚠️ 中等可信度: 回答基于2个来源"
         else:
-            enhanced_answer += "\n⚠️ **有限可信度:** 回答基于1个来源"
+            enhanced_answer += "\n⚠️ 有限可信度: 回答基于1个来源"
         
         # 如果有文档使用了结构化元数据处理则添加信息
         enhanced_docs = [doc for doc in source_documents if hasattr(doc, 'metadata') and doc.metadata.get("processing_method") == "unstructured_enhanced"]
         if enhanced_docs:
-            enhanced_answer += f"\n🧠 **智能处理:** {len(enhanced_docs)} 个来源使用了Unstructured处理（保留结构）"
+            enhanced_answer += f"\n🧠 智能处理: {len(enhanced_docs)} 个来源使用了Unstructured处理（保留结构）"
         
         log(f"MCP服务器: 成功生成回答，共{len(source_documents)}个来源")
         return enhanced_answer
         
     except Exception as e:
         log(f"MCP服务器: 处理问题时出错: {e}")
-        return f"❌ **处理问题时出错:** {e}\n\n💡 **建议:**\n- 检查RAG系统是否正确初始化\n- 尝试重新表述您的问题\n- 如果问题持续，请重启服务器"
+        return f"❌ 处理问题时出错: {e}\n\n💡 建议:\n- 检查RAG系统是否正确初始化\n- 尝试重新表述您的问题\n- 如果问题持续，请重启服务器"
 
 @mcp.tool()
 def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, min_titles: int = None, processing_method: str = None) -> str:
@@ -831,11 +831,11 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
         # 检查是否有符合过滤器的相关信息
         if not source_documents:
             # 没有符合过滤器的来源
-            enhanced_answer = f"🔍 **回答（已应用过滤器）:**\n\n❌ **在知识库中未找到符合指定过滤器的相关信息。**\n\n"
+            enhanced_answer = f"🔍 回答（已应用过滤器）:\n\n❌ 在知识库中未找到符合指定过滤器的相关信息。\n\n"
             
             # 显示应用的过滤器
             if metadata_filter:
-                enhanced_answer += "📋 **应用的过滤器:**\n"
+                enhanced_answer += "📋 应用的过滤器:\n"
                 for key, value in metadata_filter.items():
                     if key == "file_type":
                         enhanced_answer += f"   • 文件类型: {value}\n"
@@ -847,23 +847,23 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
                         enhanced_answer += f"   • 最少标题数: {value['$gte']}\n"
                 enhanced_answer += "\n"
             
-            enhanced_answer += "💡 **建议:**\n"
+            enhanced_answer += "💡 建议:\n"
             enhanced_answer += "• 尝试放宽过滤器以获得更多结果\n"
             enhanced_answer += "• 使用 `get_knowledge_base_stats()` 查看可用的文档类型\n"
             enhanced_answer += "• 考虑使用 `ask_rag()` 不带过滤器搜索整个知识库\n"
             enhanced_answer += "• 确认已加载符合指定条件的文档\n\n"
-            enhanced_answer += "⚠️ **注意:** 过滤器可能过于严格。尝试使用更宽松的过滤器。"
+            enhanced_answer += "⚠️ 注意: 过滤器可能过于严格。尝试使用更宽松的过滤器。"
             
             log(f"MCP服务器: 未找到符合指定过滤器的来源")
             return enhanced_answer
         
         # 验证响应是否可能是幻觉
         if len(source_documents) == 0 and answer.strip():
-            enhanced_answer = f"🔍 **响应（已应用过滤器）:**\n\n❌ **未找到符合指定过滤器的特定信息。**\n\n"
+            enhanced_answer = f"🔍 响应（已应用过滤器）:\n\n❌ 未找到符合指定过滤器的特定信息。\n\n"
             
             # 显示应用的过滤器
             if metadata_filter:
-                enhanced_answer += "📋 **应用的过滤器:**\n"
+                enhanced_answer += "📋 应用的过滤器:\n"
                 for key, value in metadata_filter.items():
                     if key == "file_type":
                         enhanced_answer += f"   • 文件类型: {value}\n"
@@ -873,21 +873,21 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
                         enhanced_answer += f"   • Mínimo de tablas: {value['$gte']}\n"
                     elif key == "structural_titles_count":
                         enhanced_answer += f"   • Mínimo de títulos: {value['$gte']}\n"
-                enhanced_answer += "\n💡 **建议:**\n"
+                enhanced_answer += "\n💡 建议:\n"
             enhanced_answer += "• 尝试放宽过滤器以获得更多结果\n"
             enhanced_answer += "• 使用 `get_knowledge_base_stats()` 查看可用的文档类型\n"
             enhanced_answer += "• 考虑使用不带过滤器的 `ask_rag()` 搜索整个知识库\n\n"
-            enhanced_answer += "⚠️ **注意:** 过滤器可能过于严格，请尝试使用更宽泛的过滤器。"
+            enhanced_answer += "⚠️ 注意: 过滤器可能过于严格，请尝试使用更宽泛的过滤器。"
             
             log(f"MCP服务器: 过滤响应检测到可能的幻觉（无来源）")
             return enhanced_answer
         
         # 如果有来源，构建正常回答
-        enhanced_answer = f"🔍 **回答（已应用过滤器）:**\n\n{answer}\n"
+        enhanced_answer = f"🔍 回答（已应用过滤器）:\n\n{answer}\n"
         
         # 显示应用的过滤器
         if metadata_filter:
-            enhanced_answer += "\n📋 **应用的过滤器:**\n"
+            enhanced_answer += "\n📋 应用的过滤器:\n"
             for key, value in metadata_filter.items():
                 if key == "file_type":
                     enhanced_answer += f"   • 文件类型: {value}\n"
@@ -900,12 +900,12 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
         
         # 添加来源信息
         if source_documents:
-            enhanced_answer += f"\n📚 **找到的来源 ({len(source_documents)}):**\n\n"
+            enhanced_answer += f"\n📚 找到的来源 ({len(source_documents)}):\n\n"
             for i, doc in enumerate(source_documents, 1):
                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
                 source_name = metadata.get("source", "Fuente desconocida")
                 
-                source_info = f"   {i}. **{source_name}**"
+                source_info = f"   {i}. {source_name}"
                 
                 # Información estructural
                 tables_count = metadata.get("structural_tables_count", 0)
@@ -927,14 +927,14 @@ def ask_rag_filtered(query: str, file_type: str = None, min_tables: int = None, 
                 enhanced_answer += source_info + "\n"
         
         # 过滤搜索信息
-        enhanced_answer += f"\n🎯 **过滤搜索:** 结果仅限于符合指定条件的文档。"
+        enhanced_answer += f"\n🎯 过滤搜索: 结果仅限于符合指定条件的文档。"
         
         log(f"MCP服务器: 成功生成过滤回答，共{len(source_documents)}个来源")
         return enhanced_answer
         
     except Exception as e:
         log(f"MCP服务器: 处理过滤问题时出错: {e}")
-        return f"❌ **处理过滤问题时出错:** {e}"
+        return f"❌ 处理过滤问题时出错: {e}"
 
 @mcp.tool()
 def get_knowledge_base_stats() -> str:
@@ -960,18 +960,18 @@ def get_knowledge_base_stats() -> str:
         stats = get_document_statistics(rag_state["vector_store"])
         
         if "error" in stats:
-            return f"❌ **获取统计信息时出错:** {stats['error']}"
+            return f"❌ 获取统计信息时出错: {stats['error']}"
         
         if stats.get("total_documents", 0) == 0:
-            return "📊 **知识库为空**\n\n知识库中没有存储的文档。"
+            return "📊 知识库为空\n\n知识库中没有存储的文档。"
         
         # 构建详细回答
-        response = f"📊 **知识库统计信息**\n\n"
-        response += f"📚 **文档总数:** {stats['total_documents']}\n\n"
+        response = f"📊 知识库统计信息\n\n"
+        response += f"📚 文档总数: {stats['total_documents']}\n\n"
         
         # 文件类型
         if stats["file_types"]:
-            response += "📄 **文件类型:**\n"
+            response += "📄 文件类型:\n"
             for file_type, count in sorted(stats["file_types"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / stats["total_documents"]) * 100
                 response += f"   • {file_type.upper()}: {count} ({percentage:.1f}%)\n"
@@ -979,7 +979,7 @@ def get_knowledge_base_stats() -> str:
         
         # 处理方法
         if stats["processing_methods"]:
-            response += "🔧 **处理方法:**\n"
+            response += "🔧 处理方法:\n"
             for method, count in sorted(stats["processing_methods"].items(), key=lambda x: x[1], reverse=True):
                 percentage = (count / stats["total_documents"]) * 100
                 method_display = method.replace('_', ' ').title()
@@ -988,7 +988,7 @@ def get_knowledge_base_stats() -> str:
         
         # 结构统计
         structural = stats["structural_stats"]
-        response += "🏗️ **结构信息:**\n"
+        response += "🏗️ 结构信息:\n"
         response += f"   • 包含表格的文档: {structural['documents_with_tables']}\n"
         response += f"   • 包含标题的文档: {structural['documents_with_titles']}\n"
         response += f"   • 包含列表的文档: {structural['documents_with_lists']}\n"
@@ -997,7 +997,7 @@ def get_knowledge_base_stats() -> str:
         response += f"   • 每文档平均列表数: {structural['avg_lists_per_doc']:.1f}\n\n"
         
         # 搜索建议
-        response += "💡 **搜索建议:**\n"
+        response += "💡 搜索建议:\n"
         if structural['documents_with_tables'] > 0:
             response += f"   • 使用 `ask_rag_filtered` 带 `min_tables=1` 搜索包含表格的文档信息\n"
         if structural['documents_with_titles'] > 5:
@@ -1010,7 +1010,7 @@ def get_knowledge_base_stats() -> str:
         
     except Exception as e:
         log(f"MCP服务器: 获取统计信息时出错: {e}")
-        return f"❌ **获取统计信息时出错:** {e}"
+        return f"❌ 获取统计信息时出错: {e}"
 
 @mcp.tool()
 def get_embedding_cache_stats() -> str:
@@ -1035,26 +1035,26 @@ def get_embedding_cache_stats() -> str:
         stats = get_cache_stats()
         
         if not stats:
-            return "📊 **嵌入缓存不可用**\n\n嵌入缓存未初始化。"
+            return "📊 嵌入缓存不可用\n嵌入缓存未初始化。"
         
         # 构建详细回答
-        response = f"📊 **嵌入缓存统计信息**\n\n"
+        response = f"📊 嵌入缓存统计信息\n\n"
         
         # 主要指标
-        response += f"🔄 **缓存活动:**\n"
+        response += f"🔄 缓存活动:\n"
         response += f"   • 总请求数: {stats['total_requests']}\n"
         response += f"   • 内存命中次数: {stats['memory_hits']}\n"
         response += f"   • 磁盘命中次数: {stats['disk_hits']}\n"
         response += f"   • 未命中次数: {stats['misses']}\n\n"
         
         # 成功率
-        response += f"📈 **成功率:**\n"
+        response += f"📈 成功率:\n"
         response += f"   • 内存命中率: {stats['memory_hit_rate']}\n"
         response += f"   • 磁盘命中率: {stats['disk_hit_rate']}\n"
         response += f"   • 总命中率: {stats['overall_hit_rate']}\n\n"
         
         # 内存使用
-        response += f"💾 **内存使用:**\n"
+        response += f"💾 内存使用:\n"
         response += f"   • 内存中的嵌入: {stats['memory_cache_size']}\n"
         response += f"   • 最大内存大小: {stats['max_memory_size']}\n"
         response += f"   • 缓存目录: {stats['cache_directory']}\n\n"
@@ -1065,7 +1065,7 @@ def get_embedding_cache_stats() -> str:
             memory_hit_rate = float(stats['memory_hit_rate'].rstrip('%'))
             overall_hit_rate = float(stats['overall_hit_rate'].rstrip('%'))
             
-            response += f"🎯 **性能分析:**\n"
+            response += f"🎯 性能分析:\n"
             
             if overall_hit_rate > 70:
                 response += f"   • ✅ 性能卓越: {overall_hit_rate:.1f}% 命中率\n"
@@ -1080,7 +1080,7 @@ def get_embedding_cache_stats() -> str:
                 response += f"   • 💾 依赖磁盘存储: {memory_hit_rate:.1f}% 内存命中率\n"
             
             # 优化建议
-            response += f"\n💡 **优化建议:**\n"
+            response += f"\n💡 优化建议:\n"
             if overall_hit_rate < 30:
                 response += f"   • 考虑同时处理相似的文档\n"
                 response += f"   • 检查是否有很多不重复的独特文本\n"
@@ -1098,7 +1098,7 @@ def get_embedding_cache_stats() -> str:
         
     except Exception as e:
         log(f"MCP服务器: 获取缓存统计信息时出错: {e}")
-        return f"❌ **获取缓存统计信息时出错:** {e}"
+        return f"❌ 获取缓存统计信息时出错: {e}"
 
 @mcp.tool()
 def clear_embedding_cache_tool() -> str:
@@ -1122,18 +1122,18 @@ def clear_embedding_cache_tool() -> str:
     try:
         clear_embedding_cache()
         
-        response = "🧹 **嵌入缓存清除成功**\n\n"
+        response = "🧹 嵌入缓存清除成功\n\n"
         response += "✅ 已删除所有缓存中存储的嵌入。\n"
         response += "📝 下次需要时将从头计算嵌入。\n"
         response += "💾 已释放内存和磁盘空间。\n\n"
-        response += "⚠️ **注意:** 需要时嵌入将自动重新计算。"
+        response += "⚠️ 注意: 需要时嵌入将自动重新计算。"
         
         log(f"MCP服务器: 嵌入缓存清除成功")
         return response
         
     except Exception as e:
         log(f"MCP服务器: 清除缓存时出错: {e}")
-        return f"❌ **清除缓存时出错:** {e}"
+        return f"❌ 清除缓存时出错: {e}"
 
 @mcp.tool()
 def optimize_vector_database() -> str:
@@ -1155,28 +1155,28 @@ def optimize_vector_database() -> str:
         result = optimize_vector_store()
         
         if result["status"] == "success":
-            response = f"✅ **向量数据库优化成功**\n\n"
-            response += f"📊 **优化前统计:**\n"
+            response = f"✅ 向量数据库优化成功\n\n"
+            response += f"📊 优化前统计:\n"
             stats_before = result.get("stats_before", {})
             response += f"   • 文档总数: {stats_before.get('total_documents', 'N/A')}\n"
             
-            response += f"\n📊 **优化后统计:**\n"
+            response += f"\n📊 优化后统计:\n"
             stats_after = result.get("stats_after", {})
             response += f"   • 文档总数: {stats_after.get('total_documents', 'N/A')}\n"
             
-            response += f"\n🚀 **优势:**\n"
+            response += f"\n🚀 优势:\n"
             response += f"   • 搜索速度更快\n"
             response += f"   • 结果精度更高\n"
             response += f"   • 索引已优化\n"
             
         else:
-            response = f"❌ **优化数据库时出错:** {result.get('message', '未知错误')}"
+            response = f"❌ 优化数据库时出错:result.get('message', '未知错误')}"
             
         return response
         
     except Exception as e:
         log(f"MCP服务器错误: 优化出错: {e}")
-        return f"❌ **优化向量数据库时出错:** {str(e)}"
+        return f"❌ 优化向量数据库时出错: {str(e)}"
 
 @mcp.tool()
 def get_vector_database_stats() -> str:
@@ -1199,11 +1199,11 @@ def get_vector_database_stats() -> str:
         stats = get_vector_store_stats()
         
         if "error" in stats:
-            return f"❌ **获取统计信息时出错:** {stats['error']}"
+            return f"❌ 获取统计信息时出错: {stats['error']}"
         
-        response = f"📊 **向量数据库统计信息**\n\n"
+        response = f"📊 向量数据库统计信息\n\n"
         
-        response += f"📚 **基本信息:**\n"
+        response += f"📚 基本信息:\n"
         response += f"   • 文档总数: {stats.get('total_documents', 0)}\n"
         response += f"   • 集合名称: {stats.get('collection_name', 'N/A')}\n"
         response += f"   • 嵌入维度: {stats.get('embedding_dimension', 'N/A')}\n"
@@ -1211,21 +1211,21 @@ def get_vector_database_stats() -> str:
         # 文件类型
         file_types = stats.get('file_types', {})
         if file_types:
-            response += f"\n📄 **按文件类型分布:**\n"
+            response += f"\n📄 按文件类型分布:\n"
             for file_type, count in file_types.items():
                 response += f"   • {file_type}: {count} 个文档\n"
         
         # 处理方法
         processing_methods = stats.get('processing_methods', {})
         if processing_methods:
-            response += f"\n🔧 **处理方法:**\n"
+            response += f"\n🔧 处理方法:\n"
             for method, count in processing_methods.items():
                 response += f"   • {method}: {count} 个文档\n"
         
         # 推荐配置文件
         try:
             recommended_profile = get_optimal_vector_store_profile()
-            response += f"\n🎯 **推荐配置:** {recommended_profile}\n"
+            response += f"\n🎯 推荐配置: {recommended_profile}\n"
         except:
             pass
         
@@ -1233,7 +1233,7 @@ def get_vector_database_stats() -> str:
         
     except Exception as e:
         log(f"MCP服务器错误: 获取统计信息出错: {e}")
-        return f"❌ **获取数据库统计信息时出错:** {str(e)}"
+        return f"❌ 获取数据库统计信息时出错: {str(e)}"
 
 @mcp.tool()
 def reindex_vector_database(profile: str = 'auto') -> str:
@@ -1251,7 +1251,7 @@ def reindex_vector_database(profile: str = 'auto') -> str:
     - 想要为特定数据库大小优化
     - 存在持续的性能问题
     
-    ⚠️ **注意:** 此过程可能需要时间，取决于数据库大小。
+    ⚠️ 注意: 此过程可能需要时间，取决于数据库大小。
     
     返回：
         关于重新索引过程的信息
@@ -1262,27 +1262,27 @@ def reindex_vector_database(profile: str = 'auto') -> str:
         result = reindex_vector_store(profile=profile)
         
         if result["status"] == "success":
-            response = f"✅ **向量数据库重新索引成功**\n\n"
-            response += f"📊 **处理信息:**\n"
+            response = f"✅ 向量数据库重新索引成功\n\n"
+            response += f"📊 处理信息:\n"
             response += f"   • 应用的配置: {profile}\n"
             response += f"   • 处理的文档: {result.get('documents_processed', 0)}\n"
             
-            response += f"\n🚀 **重新索引的好处:**\n"
+            response += f"\n🚀 重新索引的好处:\n"
             response += f"   • 针对当前大小优化的索引\n"
             response += f"   • 更快更精确的搜索\n"
             response += f"   • 更好的内存使用\n"
             
         elif result["status"] == "warning":
-            response = f"⚠️ **警告:** {result.get('message', '没有文档需要重新索引')}"
+            response = f"⚠️ 警告: {result.get('message', '没有文档需要重新索引')}"
             
         else:
-            response = f"❌ **重新索引数据库时出错:** {result.get('message', '未知错误')}"
+            response = f"❌ 重新索引数据库时出错: {result.get('message', '未知错误')}"
             
         return response
         
     except Exception as e:
         log(f"MCP服务器错误: 重新索引出错: {e}")
-        return f"❌ **重新索引向量数据库时出错:** {str(e)}"
+        return f"❌ 重新索引向量数据库时出错: {str(e)}"
 
 # --- 运行服务器的入口点 ---
 if __name__ == "__main__":
