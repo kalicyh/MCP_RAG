@@ -45,11 +45,11 @@ TOOL_CHINESE = {
     'ask_rag_filtered': '带过滤器的知识库查询（按元数据筛选）',
     'get_knowledge_base_stats': '显示知识库文档和处理方法的统计信息',
     'get_embedding_cache_stats': '显示嵌入缓存命中/未命中统计',
+    'get_data_paths': '查看存储路径信息',
     'clear_embedding_cache_tool': '清理嵌入缓存（删除磁盘/内存缓存）',
     'optimize_vector_database': '优化向量数据库以提高搜索性能',
     'get_vector_database_stats': '显示向量数据库统计信息（集合、维度等）',
     'reindex_vector_database': '重新索引向量数据库（可能耗时）',
-    'get_data_paths': '显示当前数据存储路径信息',
 }
 
 app = Flask(__name__)
@@ -64,262 +64,540 @@ HTML_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP RAG 工具测试</title>
     <style>
+        :root {
+          --bg-color: #edf1f8;
+          --card-bg: rgba(255, 255, 255, 0.9);
+          --text-primary: #1a1a1a;
+          --text-secondary: #666;
+          --accent-blue: #007acc;
+          --accent-orange: #ff6b35;
+          --accent-purple: #8b5cf6;
+          --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          --border-radius: 20px;
+          --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+        }
+
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+          background: var(--bg-color);
+          font-family: var(--font-family);
+          color: var(--text-primary);
+          line-height: 1.6;
+          min-height: 100vh;
         }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+        main {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: clamp(1rem, 4vw, 2rem);
         }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
+
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(12, minmax(0, 1fr));
+          gap: clamp(1rem, 2vw, 1.5rem);
         }
-        .tool-section {
-            margin-bottom: 30px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
+
+        .card {
+          background: var(--card-bg);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: var(--border-radius);
+          box-shadow: var(--shadow);
+          padding: clamp(1.5rem, 3vw, 2rem);
+          transition: all 0.3s ease;
+          overflow: hidden;
         }
-        .tool-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
+
+        .card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
         }
-        .tool-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
+
+        .hero {
+          grid-column: span 12;
+          text-align: center;
+          background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+          color: white;
+          position: relative;
         }
+
+        .hero::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="60" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+          opacity: 0.1;
+        }
+
+        .hero-badge {
+          display: inline-block;
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 50px;
+          font-size: clamp(0.8rem, 2vw, 0.9rem);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 1rem;
+        }
+
+        .hero-title {
+          font-size: clamp(2rem, 5vw, 3rem);
+          font-weight: 700;
+          margin-bottom: 1rem;
+          line-height: 1.2;
+        }
+
+        .hero-subtitle {
+          font-size: clamp(1rem, 2.5vw, 1.2rem);
+          opacity: 0.9;
+          margin-bottom: 1.5rem;
+          max-width: 600px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .hero-meta {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+
+        .meta-pill {
+          background: rgba(255, 255, 255, 0.15);
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 50px;
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+
+        .section-title {
+          font-size: clamp(1.5rem, 3vw, 2rem);
+          font-weight: 600;
+          margin-bottom: 1rem;
+          color: var(--text-primary);
+        }
+
+        .section-desc {
+          color: var(--text-secondary);
+          margin-bottom: 1.5rem;
+          font-size: clamp(0.9rem, 2vw, 1rem);
+        }
+
+        .tool-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1rem;
+        }
+
+        .tool-card {
+          background: rgba(255, 255, 255, 0.8);
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          border-radius: 16px;
+          padding: 1.5rem;
+          transition: all 0.3s ease;
+          cursor: pointer;
+        }
+
+        .tool-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .tool-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          margin-bottom: 1rem;
+        }
+
+        .tool-badge {
+          display: inline-block;
+          background: var(--accent-blue);
+          color: white;
+          padding: 0.25rem 0.75rem;
+          border-radius: 50px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: lowercase;
+          margin-bottom: 0.5rem;
+        }
+
+        .tool-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          color: var(--text-primary);
+        }
+
         .tool-desc {
-            color: #666;
-            margin-bottom: 15px;
+          color: var(--text-secondary);
+          font-size: 0.9rem;
+          margin-bottom: 1rem;
         }
-        .param-inputs {
-            margin-bottom: 15px;
+
+        .tool-params {
+          margin-top: 1rem;
         }
-        .param-group {
-            margin-bottom: 10px;
-        }
-        .param-label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
+
         .param-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: monospace;
+          width: 100%;
+          padding: 0.5rem;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          font-family: inherit;
+          font-size: 0.9rem;
+          margin-bottom: 0.5rem;
         }
+
         .run-btn {
-            background: #007acc;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+          background: var(--accent-blue);
+          color: white;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          font-weight: 600;
+          width: 100%;
+          transition: background 0.3s ease;
         }
+
         .run-btn:hover {
-            background: #005aa3;
+          background: #005aa3;
         }
+
         .run-btn.mutating {
-            background: #ff6b6b;
+          background: var(--accent-orange);
         }
+
         .run-btn.mutating:hover {
-            background: #ff5252;
+          background: #e55a2b;
         }
-        .output-area {
-            margin-top: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            display: none;
+
+        .loading, .status, .output-area {
+          margin-top: 1rem;
+          display: none;
         }
-        .output-header {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        .output-content {
-            background: white;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            max-height: 300px;
-            overflow-y: auto;
-        }
+
         .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
+          text-align: center;
+          color: var(--text-secondary);
         }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #007acc;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 10px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+
         .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-            display: none;
+          padding: 0.75rem;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 500;
         }
+
         .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+          background: #d4edda;
+          color: #155724;
+          border: 1px solid #c3e6cb;
         }
+
         .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+          background: #f8d7da;
+          color: #721c24;
+          border: 1px solid #f5c6cb;
+        }
+
+        .output-area {
+          background: #f8f9fa;
+          border: 1px solid #dee2e6;
+          border-radius: 8px;
+          padding: 1rem;
+        }
+
+        .output-title {
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          color: var(--text-primary);
+        }
+
+        .output-content {
+          background: white;
+          padding: 0.75rem;
+          border-radius: 4px;
+          border: 1px solid #ddd;
+          font-family: 'Courier New', monospace;
+          font-size: 0.85rem;
+          white-space: pre-wrap;
+          max-height: 300px;
+          overflow-y: auto;
+        }
+
+        @media (max-width: 1024px) {
+          .grid {
+            grid-template-columns: 1fr;
+          }
+          .card {
+            grid-column: span 1 !important;
+          }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>MCP RAG 工具测试</h1>
-
-        <div id="tools-container">
-            <!-- 工具将在这里动态生成 -->
+  <main>
+    <div class="grid">
+      <!-- Hero Section -->
+      <article class="card hero">
+        <div class="hero-badge">MCP RAG</div>
+        <h1 class="hero-title">智能知识库工具集</h1>
+        <p class="hero-subtitle">
+          基于大语言模型的检索增强生成系统，提供文档处理、知识问答、统计分析等全方位功能
+        </p>
+        <div class="hero-meta">
+          <span class="meta-pill">🧠 AI 驱动</span>
+          <span class="meta-pill">📚 知识库</span>
+          <span class="meta-pill">🔍 智能检索</span>
+          <span class="meta-pill">📊 数据分析</span>
         </div>
+      </article>
+
+      <!-- 添加工具组 -->
+      <section class="card" style="grid-column: span 7;">
+        <h2 class="section-title">📥 添加内容</h2>
+        <p class="section-desc">向知识库添加新的文本或文档内容</p>
+        <div class="tool-grid">
+          <div class="tool-card" onclick="showTool('learn_text')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, var(--accent-blue), #4facfe);">📝</div>
+            <span class="tool-badge">文本</span>
+            <h3 class="tool-title">添加文本</h3>
+            <p class="tool-desc">手动输入文本内容添加到知识库</p>
+          </div>
+          <div class="tool-card" onclick="showTool('learn_document')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, var(--accent-purple), #9c6ade);">📄</div>
+            <span class="tool-badge">文档</span>
+            <h3 class="tool-title">处理文档</h3>
+            <p class="tool-desc">上传并处理文档文件</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 询问工具组 -->
+      <section class="card" style="grid-column: span 5;">
+        <h2 class="section-title">❓ 智能问答</h2>
+        <p class="section-desc">基于知识库进行智能问答和检索</p>
+        <div class="tool-grid">
+          <div class="tool-card" onclick="showTool('ask_rag')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #ff9a56, var(--accent-orange));">🤖</div>
+            <span class="tool-badge">问答</span>
+            <h3 class="tool-title">知识问答</h3>
+            <p class="tool-desc">向知识库提问获取答案</p>
+          </div>
+          <div class="tool-card" onclick="showTool('ask_rag_filtered')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">🔍</div>
+            <span class="tool-badge">过滤</span>
+            <h3 class="tool-title">条件查询</h3>
+            <p class="tool-desc">带过滤条件的智能检索</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 统计工具组 -->
+      <section class="card" style="grid-column: span 6;">
+        <h2 class="section-title">📊 数据统计</h2>
+        <p class="section-desc">查看知识库和系统的统计信息</p>
+        <div class="tool-grid">
+          <div class="tool-card" onclick="showTool('get_knowledge_base_stats')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">📈</div>
+            <span class="tool-badge">知识库</span>
+            <h3 class="tool-title">库统计</h3>
+            <p class="tool-desc">文档和处理方法统计</p>
+          </div>
+          <div class="tool-card" onclick="showTool('get_embedding_cache_stats')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">💾</div>
+            <span class="tool-badge">缓存</span>
+            <h3 class="tool-title">缓存统计</h3>
+            <p class="tool-desc">嵌入缓存性能统计</p>
+          </div>
+          <div class="tool-card" onclick="showTool('get_vector_database_stats')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">📊</div>
+            <span class="tool-badge">统计</span>
+            <h3 class="tool-title">库统计</h3>
+            <p class="tool-desc">向量数据库统计信息</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 向量库处理工具组 -->
+      <section class="card" style="grid-column: span 6;">
+        <h2 class="section-title">⚙️ 向量库管理</h2>
+        <p class="section-desc">优化和维护向量数据库性能</p>
+        <div class="tool-grid">
+          <div class="tool-card" onclick="showTool('clear_embedding_cache_tool')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">🗑️</div>
+            <span class="tool-badge">清理</span>
+            <h3 class="tool-title">清理缓存</h3>
+            <p class="tool-desc">清除嵌入缓存释放内存</p>
+          </div>
+          <div class="tool-card" onclick="showTool('optimize_vector_database')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">🚀</div>
+            <span class="tool-badge">优化</span>
+            <h3 class="tool-title">优化数据库</h3>
+            <p class="tool-desc">提升搜索性能</p>
+          </div>
+          <div class="tool-card" onclick="showTool('reindex_vector_database')">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #ff9a9e, #fecfef);">🔄</div>
+            <span class="tool-badge">重建</span>
+            <h3 class="tool-title">重建索引</h3>
+            <p class="tool-desc">重新索引向量数据库</p>
+          </div>
+        </div>
+      </section>
     </div>
+
+    <!-- 工具详情模态框 -->
+    <div id="tool-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <h3 id="modal-title" style="margin-bottom: 1rem;"></h3>
+        <p id="modal-desc" style="color: var(--text-secondary); margin-bottom: 1.5rem;"></p>
+        <div id="modal-params"></div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <button class="run-btn" id="modal-run-btn" style="flex: 1;">执行</button>
+          <button onclick="closeModal()" style="background: #6c757d; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer;">关闭</button>
+        </div>
+        <div class="loading" id="modal-loading">正在执行...</div>
+        <div class="status" id="modal-status"></div>
+        <div class="output-area" id="modal-output">
+          <div class="output-title">执行结果:</div>
+          <div class="output-content" id="modal-output-content"></div>
+        </div>
+      </div>
+    </div>
+  </main>
 
     <script>
         const tools = {{ tools_data|tojson }};
         const mutatingTools = {{ mutating_tools|tojson }};
 
-        function createToolSections() {
-            const container = document.getElementById('tools-container');
+        let currentTool = null;
 
-            tools.forEach(tool => {
-                const section = document.createElement('div');
-                section.className = 'tool-section';
+        function showTool(toolName) {
+          const tools = {{ tools_data|tojson }};
+          const tool = tools.find(t => t.name === toolName);
+          if (!tool) return;
 
-                const isMutating = mutatingTools.includes(tool.name);
+          currentTool = tool;
+          document.getElementById('modal-title').textContent = tool.name;
+          document.getElementById('modal-desc').textContent = tool.description;
 
-                let paramsHtml = '';
-                if (tool.parameters && tool.parameters.length > 0) {
-                    paramsHtml = tool.parameters.map(param => `
-                        <div class="param-group">
-                            <label class="param-label">${param.name} (${param.type}) ${param.required ? '*' : ''}</label>
-                            <input type="text" class="param-input" id="param-${tool.name}-${param.name}"
-                                   placeholder="${param.default || '输入参数值'}" value="${param.default || ''}">
-                        </div>
-                    `).join('');
-                }
+          const paramsContainer = document.getElementById('modal-params');
+          paramsContainer.innerHTML = '';
 
-                section.innerHTML = `
-                    <div class="tool-header">
-                        <div class="tool-name">${tool.name}</div>
-                        <button class="run-btn ${isMutating ? 'mutating' : ''}" onclick="runTool('${tool.name}')">
-                            执行
-                        </button>
-                    </div>
-                    <div class="tool-desc">${tool.description || '无描述'}</div>
-                    <div class="param-inputs">
-                        ${paramsHtml}
-                    </div>
-                    <div class="loading" id="loading-${tool.name}">
-                        <div class="spinner"></div>
-                        正在执行...
-                    </div>
-                    <div class="status" id="status-${tool.name}"></div>
-                    <div class="output-area" id="output-${tool.name}">
-                        <div class="output-header">执行结果:</div>
-                        <div class="output-content" id="output-content-${tool.name}"></div>
-                    </div>
-                `;
-
-                container.appendChild(section);
+          if (tool.parameters && tool.parameters.length > 0) {
+            tool.parameters.forEach(param => {
+              const paramDiv = document.createElement('div');
+              paramDiv.innerHTML = `
+                <label style="display: block; font-weight: bold; margin-bottom: 0.5rem;">
+                  ${param.name} (${param.type}) ${param.required ? '*' : ''}
+                </label>
+                <input type="text" class="param-input" id="modal-param-${param.name}"
+                       placeholder="${param.default || '输入参数值'}" value="${param.default || ''}">
+              `;
+              paramsContainer.appendChild(paramDiv);
             });
+          }
+
+          const runBtn = document.getElementById('modal-run-btn');
+          runBtn.className = tool.is_mutating ? 'run-btn mutating' : 'run-btn';
+
+          document.getElementById('tool-modal').style.display = 'flex';
+          document.getElementById('modal-loading').style.display = 'none';
+          document.getElementById('modal-status').style.display = 'none';
+          document.getElementById('modal-output').style.display = 'none';
         }
 
-        async function runTool(toolName) {
-            const loading = document.getElementById(`loading-${toolName}`);
-            const status = document.getElementById(`status-${toolName}`);
-            const outputArea = document.getElementById(`output-${toolName}`);
-            const outputContent = document.getElementById(`output-content-${toolName}`);
-
-            // 收集参数
-            const tool = tools.find(t => t.name === toolName);
-            const args = {};
-            if (tool.parameters) {
-                tool.parameters.forEach(param => {
-                    const input = document.getElementById(`param-${toolName}-${param.name}`);
-                    if (input && input.value.trim()) {
-                        args[param.name] = input.value.trim();
-                    }
-                });
-            }
-
-            // 显示加载状态
-            loading.style.display = 'block';
-            status.style.display = 'none';
-            outputArea.style.display = 'none';
-
-            try {
-                const response = await fetch('/run_tool', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        tool_name: toolName,
-                        args: args
-                    })
-                });
-
-                const result = await response.json();
-
-                loading.style.display = 'none';
-
-                if (result.success) {
-                    status.className = 'status success';
-                    status.textContent = '执行成功！';
-                    status.style.display = 'block';
-
-                    outputContent.textContent = result.output;
-                    outputArea.style.display = 'block';
-                } else {
-                    status.className = 'status error';
-                    status.textContent = `执行失败: ${result.error}`;
-                    status.style.display = 'block';
-                }
-            } catch (error) {
-                loading.style.display = 'none';
-                status.className = 'status error';
-                status.textContent = `网络错误: ${error.message}`;
-                status.style.display = 'block';
-            }
+        function closeModal() {
+          document.getElementById('tool-modal').style.display = 'none';
+          currentTool = null;
         }
 
-        // 初始化
-        createToolSections();
+        document.getElementById('modal-run-btn').addEventListener('click', async () => {
+          if (!currentTool) return;
+
+          const loading = document.getElementById('modal-loading');
+          const status = document.getElementById('modal-status');
+          const outputArea = document.getElementById('modal-output');
+          const outputContent = document.getElementById('modal-output-content');
+
+          // 收集参数
+          const args = {};
+          if (currentTool.parameters) {
+            currentTool.parameters.forEach(param => {
+              const input = document.getElementById(`modal-param-${param.name}`);
+              if (input && input.value.trim()) {
+                args[param.name] = input.value.trim();
+              }
+            });
+          }
+
+          // 显示加载状态
+          loading.style.display = 'block';
+          status.style.display = 'none';
+          outputArea.style.display = 'none';
+
+          try {
+            const response = await fetch('/run_tool', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                tool_name: currentTool.name,
+                args: args
+              })
+            });
+
+            const result = await response.json();
+
+            loading.style.display = 'none';
+
+            if (result.success) {
+              status.className = 'status success';
+              status.textContent = '执行成功！';
+              status.style.display = 'block';
+
+              outputContent.textContent = result.output;
+              outputArea.style.display = 'block';
+            } else {
+              status.className = 'status error';
+              status.textContent = `执行失败: ${result.error}`;
+              status.style.display = 'block';
+            }
+          } catch (error) {
+            loading.style.display = 'none';
+            status.className = 'status error';
+            status.textContent = `网络错误: ${error.message}`;
+            status.style.display = 'block';
+          }
+        });
+
+        // 点击模态框背景关闭
+        document.getElementById('tool-modal').addEventListener('click', (e) => {
+          if (e.target.id === 'tool-modal') {
+            closeModal();
+          }
+        });
     </script>
 </body>
 </html>
