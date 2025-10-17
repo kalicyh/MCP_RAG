@@ -54,6 +54,12 @@ TOOL_CHINESE = {
 
 app = Flask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+
+# 确保上传目录存在
+import os
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # HTML 模板
 HTML_TEMPLATE = """
@@ -507,13 +513,27 @@ HTML_TEMPLATE = """
           if (tool.parameters && tool.parameters.length > 0) {
             tool.parameters.forEach(param => {
               const paramDiv = document.createElement('div');
-              paramDiv.innerHTML = `
-                <label style="display: block; font-weight: bold; margin-bottom: 0.5rem;">
-                  ${param.name} (${param.type}) ${param.required ? '*' : ''}
-                </label>
-                <input type="text" class="param-input" id="modal-param-${param.name}"
-                       placeholder="${param.default || '输入参数值'}" value="${param.default || ''}">
-              `;
+              
+              // 特殊处理 learn_document 工具的文件上传
+              if (toolName === 'learn_document' && param.name === 'file_path') {
+                paramDiv.innerHTML = `
+                  <label style="display: block; font-weight: bold; margin-bottom: 0.5rem;">
+                    ${param.name} (文件) ${param.required ? '*' : ''}
+                  </label>
+                  <input type="file" id="modal-param-${param.name}" 
+                         accept=".pdf,.docx,.txt,.md,.html,.csv,.json,.xml,.pptx,.xlsx,.odt,.odp,.ods,.rtf,.png,.jpg,.jpeg,.tiff,.bmp,.eml,.msg"
+                         style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 0.9rem;">
+                  <small style="color: #666; font-size: 0.8rem;">支持的文件类型: PDF, Word, Excel, PowerPoint, 文本文件, 图片等</small>
+                `;
+              } else {
+                paramDiv.innerHTML = `
+                  <label style="display: block; font-weight: bold; margin-bottom: 0.5rem;">
+                    ${param.name} (${param.type}) ${param.required ? '*' : ''}
+                  </label>
+                  <input type="text" class="param-input" id="modal-param-${param.name}"
+                         placeholder="${param.default || '输入参数值'}" value="${param.default || ''}">
+                `;
+              }
               paramsContainer.appendChild(paramDiv);
             });
           }
@@ -540,33 +560,58 @@ HTML_TEMPLATE = """
           const outputArea = document.getElementById('modal-output');
           const outputContent = document.getElementById('modal-output-content');
 
-          // 收集参数
-          const args = {};
-          if (currentTool.parameters) {
-            currentTool.parameters.forEach(param => {
-              const input = document.getElementById(`modal-param-${param.name}`);
-              if (input && input.value.trim()) {
-                args[param.name] = input.value.trim();
-              }
-            });
-          }
-
           // 显示加载状态
           loading.style.display = 'block';
           status.style.display = 'none';
           outputArea.style.display = 'none';
 
           try {
-            const response = await fetch('/run_tool', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                tool_name: currentTool.name,
-                args: args
-              })
-            });
+            let response;
+            
+            // 检查是否是文件上传工具
+            if (currentTool.name === 'learn_document') {
+              const formData = new FormData();
+              formData.append('tool_name', currentTool.name);
+              
+              // 获取文件输入
+              const fileInput = document.getElementById('modal-param-file_path');
+              if (fileInput && fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+              } else {
+                loading.style.display = 'none';
+                status.className = 'status error';
+                status.textContent = '请选择要上传的文件';
+                status.style.display = 'block';
+                return;
+              }
+              
+              response = await fetch('/run_tool', {
+                method: 'POST',
+                body: formData
+              });
+            } else {
+              // 收集参数
+              const args = {};
+              if (currentTool.parameters) {
+                currentTool.parameters.forEach(param => {
+                  const input = document.getElementById(`modal-param-${param.name}`);
+                  if (input && input.value.trim()) {
+                    args[param.name] = input.value.trim();
+                  }
+                });
+              }
+
+              response = await fetch('/run_tool', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  tool_name: currentTool.name,
+                  args: args
+                })
+              });
+            }
 
             const result = await response.json();
 
@@ -717,6 +762,25 @@ def get_tool_info():
 
     return tools_data
 
+@app.route('/upload_file', methods=['POST'])
+def upload_file():
+    """处理文件上传"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': '没有文件部分'})
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': '没有选择文件'})
+    
+    if file:
+        # 保存文件到上传目录
+        filename = file.filename
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        return jsonify({'success': True, 'file_path': file_path})
+    
+    return jsonify({'success': False, 'error': '文件上传失败'})
+
 @app.route('/')
 def index():
     tools_data = get_tool_info()
@@ -729,6 +793,21 @@ def run_tool():
     data = request.get_json()
     tool_name = data.get('tool_name')
     args_dict = data.get('args', {})
+    
+    # 处理文件上传
+    if tool_name == 'learn_document' and 'file' in request.files:
+        file = request.files['file']
+        if file.filename != '':
+            # 保存上传的文件
+            filename = file.filename
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            args_dict['file_path'] = file_path
+    else:
+        # 处理普通参数
+        for key, value in request.form.items():
+            if key != 'tool_name' and value.strip():
+                args_dict[key] = value.strip()
 
     allowed_tools = set(TOOL_CHINESE.keys())
     if not tool_name or tool_name not in allowed_tools:
