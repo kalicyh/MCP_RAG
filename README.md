@@ -63,12 +63,40 @@ OPENAI_API_BASE=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_TEMPERATURE=0.7
 
-# Ollama 配置（可选）
-OLLAMA_MODEL=llama3.2
-
 # 嵌入提供商：OPENAI 或 HF
 EMBEDDING_PROVIDER=OPENAI
 OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+```
+
+#### mcp客户端配置（豆包为例）
+
+```json
+{
+    "mcpServers": {
+        "rag": {
+            "command": "uv",
+            "args": [
+                "run",
+                "mcp-rag",
+                "serve"
+            ],
+            "env": {
+                "PYTHONUNBUFFERED": "1",
+                "MODEL_TYPE": "OPENAI",
+
+                "OPENAI_API_KEY": "key",
+                "OPENAI_API_BASE": "https://ark.cn-beijing.volces.com/api/v3",
+                "OPENAI_MODEL": "doubao-1-5-pro-32k-250115",
+                "OPENAI_TEMPERATURE": "0",
+
+                "EMBEDDING_PROVIDER": "OPENAI",
+                "OPENAI_EMBEDDING_MODEL": "doubao-embedding-text-240715",
+
+                "COLLECTION_NAME": "default_collection"
+            }
+        }
+    }
+}
 ```
 
 ## 可用工具
