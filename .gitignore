@@ -65,12 +65,6 @@ venv.bak/
 /converted_docs/
 /embedding_cache/
 
-# Server MCP organized data directories (generated content)
-/mcp_server_organized/embedding_cache/
-/mcp_server_organized/data/documents/
-/mcp_server_organized/data/vector_store/
-/mcp_server_organized/data/vector_store/*/
-
 # ChromaDB database files
 *.sqlite3
 *.db
@@ -86,7 +80,5 @@ venv.bak/
 
 # OS specific
 .DS_Store
-Thumbs.db
-bulk_ingest_GUI/data/*
 data/*
 mcp_server_organized_cloud/data/*
