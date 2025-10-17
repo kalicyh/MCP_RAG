@@ -13,6 +13,10 @@ def main(argv=None):
     serve_p.add_argument("--host", default=None, help="主机地址（如果使用 Web 服务）")
     serve_p.add_argument("--port", default=None, help="端口（如果使用 Web 服务）")
 
+    web_p = sub.add_parser("web", help="启动 Web 测试界面")
+    web_p.add_argument("--host", default="127.0.0.1", help="Web 服务器主机地址")
+    web_p.add_argument("--port", type=int, default=5000, help="Web 服务器端口")
+
     args = parser.parse_args(argv)
     if args.cmd == "serve":
         try:
@@ -49,6 +53,22 @@ def main(argv=None):
             except Exception as e:
                 print(f"启动 stdio 服务器失败: {e}")
                 return 3
+    elif args.cmd == "web":
+        try:
+            import mcp_rag.web as web
+        except Exception as e:
+            print(f"无法导入 web 模块: {e}")
+            return 2
+
+        host = args.host
+        port = args.port
+        print(f"Starting MCP RAG Web interface on {host}:{port}...")
+        print(f"Open your browser and visit: http://{host}:{port}")
+        try:
+            web.app.run(host=host, port=port, debug=False)
+        except Exception as e:
+            print(f"启动 Web 服务器失败: {e}")
+            return 3
     else:
         parser.print_help()
 
