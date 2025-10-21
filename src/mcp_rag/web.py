@@ -797,16 +797,6 @@ HTML_TEMPLATE = """
             statusDiv.style.display = 'none';
           }, 3000);
         }
-              statusDiv.className = 'status error';
-              statusDiv.textContent = `❌ 保存失败: ${result.error}`;
-              statusDiv.style.display = 'block';
-            }
-          } catch (error) {
-            statusDiv.className = 'status error';
-            statusDiv.textContent = `❌ 网络错误: ${error.message}`;
-            statusDiv.style.display = 'block';
-          }
-        }
 
         async function checkEnvVars() {
           const statusDiv = document.getElementById('env-status');
