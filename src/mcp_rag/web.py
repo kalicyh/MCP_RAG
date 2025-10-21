@@ -9,6 +9,14 @@ import inspect
 import os
 from flask import Flask, render_template_string, request, jsonify, session
 import json
+from dotenv import load_dotenv, dotenv_values
+from pathlib import Path
+
+# 加载项目根目录的 .env（如果存在），并将当前值缓存
+ROOT = Path(__file__).resolve().parents[1]
+DOTENV_PATH = ROOT / '.env'
+load_dotenv(DOTENV_PATH)
+_env_cache = dotenv_values(DOTENV_PATH) if DOTENV_PATH.exists() else {}
 
 # 导入 server 以初始化 mcp
 try:
@@ -398,29 +406,42 @@ HTML_TEMPLATE = """
                      placeholder="输入您的 OpenAI API Key" 
                      value="{{ env_vars.get('OPENAI_API_KEY', '') }}">
             </div>
-            <div>
-              <label style="display: block; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary);">
-                OPENAI_API_BASE
-              </label>
-              <input type="text" id="openai-api-base" class="param-input" 
-                     placeholder="例如: https://api.openai.com/v1" 
-                     value="{{ env_vars.get('OPENAI_API_BASE', '') }}">
-              <small style="color: #666; font-size: 0.85rem;">可选，使用代理或其他兼容API时填写</small>
+            <!-- 高级配置折叠触发器（默认收起，保留 API Key 可见） -->
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <button id="advanced-toggle" onclick="toggleAdvanced()" style="background:#f0f0f0; border:1px solid #ddd; padding:0.5rem 0.8rem; border-radius:8px; cursor:pointer;">
+                显示高级设置
+              </button>
+              <small style="color:#666;">（除 API Key 外的配置放在高级设置里）</small>
+            </div>
+          </div>
+          
+          <!-- 高级设置：默认收起 -->
+          <div id="advanced-settings" style="display: none; margin-top: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+              <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary);">
+                  OPENAI_API_BASE
+                </label>
+                <input type="text" id="openai-api-base" class="param-input" 
+                       placeholder="例如: https://ark.cn-beijing.volces.com/api/v3" 
+                       value="{{ env_vars.get('OPENAI_API_BASE', 'https://ark.cn-beijing.volces.com/api/v3') }}">
+                <small style="color: #666; font-size: 0.85rem;">可选，使用代理或兼容API时填写</small>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 模型配置 -->
-        <div style="margin-bottom: 1.5rem;">
-          <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent-purple);">🤖 模型配置</h3>
+        <!-- 模型配置（放入高级设置） -->
+        <div id="model-config-advanced" style="display: none; margin-bottom: 1.5rem;">
+          <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent-purple);">🤖 模型配置（高级）</h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
             <div>
               <label style="display: block; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary);">
                 OPENAI_MODEL
               </label>
               <input type="text" id="openai-model" class="param-input" 
-                     placeholder="例如: gpt-4o-mini" 
-                     value="{{ env_vars.get('OPENAI_MODEL', 'gpt-4o-mini') }}">
+                     placeholder="例如: doubao-1-5-pro-32k-250115" 
+                     value="{{ env_vars.get('OPENAI_MODEL', 'doubao-1-5-pro-32k-250115') }}">
               <small style="color: #666; font-size: 0.85rem;">聊天模型，用于回答问题</small>
             </div>
             <div>
@@ -428,8 +449,8 @@ HTML_TEMPLATE = """
                 OPENAI_EMBEDDING_MODEL
               </label>
               <input type="text" id="openai-embedding-model" class="param-input" 
-                     placeholder="例如: text-embedding-3-large" 
-                     value="{{ env_vars.get('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-large') }}">
+                     placeholder="例如: doubao-embedding-text-240715" 
+                     value="{{ env_vars.get('OPENAI_EMBEDDING_MODEL', 'doubao-embedding-text-240715') }}">
               <small style="color: #666; font-size: 0.85rem;">嵌入模型，用于文档向量化</small>
             </div>
             <div>
@@ -439,7 +460,7 @@ HTML_TEMPLATE = """
               <input type="number" id="openai-temperature" class="param-input" 
                      placeholder="0-2" min="0" max="2" step="0.1"
                      value="{{ env_vars.get('OPENAI_TEMPERATURE', '0') }}">
-              <small style="color: #666; font-size: 0.85rem;">温度参数(0-2)，控制回答的随机性</small>
+              <small style="color: #666; font-size: 0.85rem;">温度参数(0-2)，控制回答的随机性。允许 0</small>
             </div>
           </div>
         </div>
@@ -739,11 +760,11 @@ HTML_TEMPLATE = """
             return;
           }
 
-          // 验证温度值
+          // 验证温度值（允许 0）
           const tempValue = parseFloat(temperature);
-          if (temperature && (isNaN(tempValue) || tempValue <= 0 || tempValue >= 2)) {
+          if (temperature && (isNaN(tempValue) || tempValue < 0 || tempValue > 2)) {
             statusDiv.className = 'status error';
-            statusDiv.textContent = '❌ OPENAI_TEMPERATURE 必须在 0-2 之间';
+            statusDiv.textContent = '❌ OPENAI_TEMPERATURE 必须在 0-2 之间（包含 0 和 2）';
             statusDiv.style.display = 'block';
             return;
           }
@@ -785,9 +806,13 @@ HTML_TEMPLATE = """
         }
 
         function resetToDefaults() {
-          document.getElementById('openai-model').value = 'gpt-4o-mini';
-          document.getElementById('openai-embedding-model').value = 'text-embedding-3-large';
-          document.getElementById('openai-temperature').value = '0';
+          // 恢复为豆包（doubao）默认值
+          const modelEl = document.getElementById('openai-model');
+          if (modelEl) modelEl.value = 'doubao-1-5-pro-32k-250115';
+          const embedEl = document.getElementById('openai-embedding-model');
+          if (embedEl) embedEl.value = 'doubao-embedding-text-240715';
+          const tempEl = document.getElementById('openai-temperature');
+          if (tempEl) tempEl.value = '0';
           
           const statusDiv = document.getElementById('env-status');
           statusDiv.className = 'status success';
@@ -796,6 +821,17 @@ HTML_TEMPLATE = """
           setTimeout(() => {
             statusDiv.style.display = 'none';
           }, 3000);
+        }
+
+        function toggleAdvanced() {
+          const adv = document.getElementById('advanced-settings');
+          const modelAdv = document.getElementById('model-config-advanced');
+          const btn = document.getElementById('advanced-toggle');
+          if (!adv || !btn) return;
+          const shown = adv.style.display === 'block';
+          adv.style.display = shown ? 'none' : 'block';
+          if (modelAdv) modelAdv.style.display = shown ? 'none' : 'block';
+          btn.textContent = shown ? '显示高级设置' : '隐藏高级设置';
         }
 
         async function checkEnvVars() {
@@ -969,9 +1005,9 @@ def index():
     # 获取当前环境变量
     env_vars = {
         'OPENAI_API_KEY': '***已设置***' if os.getenv('OPENAI_API_KEY') else '',
-        'OPENAI_API_BASE': os.getenv('OPENAI_API_BASE', ''),
-        'OPENAI_MODEL': os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
-        'OPENAI_EMBEDDING_MODEL': os.getenv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-large'),
+        'OPENAI_API_BASE': os.getenv('OPENAI_API_BASE', 'https://ark.cn-beijing.volces.com/api/v3'),
+        'OPENAI_MODEL': os.getenv('OPENAI_MODEL', 'doubao-1-5-pro-32k-250115'),
+        'OPENAI_EMBEDDING_MODEL': os.getenv('OPENAI_EMBEDDING_MODEL', 'doubao-embedding-text-240715'),
         'OPENAI_TEMPERATURE': os.getenv('OPENAI_TEMPERATURE', '0')
     }
     return render_template_string(HTML_TEMPLATE,
@@ -981,19 +1017,19 @@ def index():
 
 @app.route('/save_env', methods=['POST'])
 def save_env():
-    """保存环境变量到session和系统环境"""
+    """保存环境变量到session和系统环境，并写回到项目根目录的 .env 文件"""
     try:
         data = request.get_json()
         api_key = data.get('OPENAI_API_KEY', '').strip()
         api_base = data.get('OPENAI_API_BASE', '').strip()
         model = data.get('OPENAI_MODEL', '').strip()
         embedding_model = data.get('OPENAI_EMBEDDING_MODEL', '').strip()
-        temperature = data.get('OPENAI_TEMPERATURE', '').strip()
-        
+        temperature = str(data.get('OPENAI_TEMPERATURE', '')).strip()
+
         if not api_key:
             return jsonify({'success': False, 'error': 'OPENAI_API_KEY 不能为空'})
-        
-        # 验证温度值
+
+        # 验证温度值（允许 0）
         if temperature:
             try:
                 temp_val = float(temperature)
@@ -1001,8 +1037,8 @@ def save_env():
                     return jsonify({'success': False, 'error': 'OPENAI_TEMPERATURE 必须在 0-2 之间'})
             except ValueError:
                 return jsonify({'success': False, 'error': 'OPENAI_TEMPERATURE 必须是数字'})
-        
-        # 设置环境变量
+
+        # 设置环境变量（进程级）
         os.environ['OPENAI_API_KEY'] = api_key
         if api_base:
             os.environ['OPENAI_API_BASE'] = api_base
@@ -1012,8 +1048,27 @@ def save_env():
             os.environ['OPENAI_EMBEDDING_MODEL'] = embedding_model
         if temperature:
             os.environ['OPENAI_TEMPERATURE'] = temperature
-        
-        # 保存到session
+
+        # 写回到 .env，保留已有其他键
+        env_vals = dict(_env_cache) if _env_cache else {}
+        env_vals['OPENAI_API_KEY'] = api_key
+        if api_base:
+            env_vals['OPENAI_API_BASE'] = api_base
+        if model:
+            env_vals['OPENAI_MODEL'] = model
+        if embedding_model:
+            env_vals['OPENAI_EMBEDDING_MODEL'] = embedding_model
+        if temperature:
+            env_vals['OPENAI_TEMPERATURE'] = temperature
+
+        # 将 dict 写回 .env（覆盖或新建）
+        with open(DOTENV_PATH, 'w', encoding='utf-8') as f:
+            for k, v in env_vals.items():
+                f.write(f"{k}={v}\n")
+        # 更新缓存
+        _env_cache.update(env_vals)
+
+        # 保存到 session
         session['OPENAI_API_KEY'] = api_key
         if api_base:
             session['OPENAI_API_BASE'] = api_base
@@ -1023,15 +1078,15 @@ def save_env():
             session['OPENAI_EMBEDDING_MODEL'] = embedding_model
         if temperature:
             session['OPENAI_TEMPERATURE'] = temperature
-        
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': '环境变量已设置',
             'configured': {
                 'OPENAI_API_KEY': bool(api_key),
                 'OPENAI_API_BASE': bool(api_base),
-                'OPENAI_MODEL': model or 'gpt-4o-mini',
-                'OPENAI_EMBEDDING_MODEL': embedding_model or 'text-embedding-3-large',
+                'OPENAI_MODEL': model or 'doubao-1-5-pro-32k-250115',
+                'OPENAI_EMBEDDING_MODEL': embedding_model or 'doubao-embedding-text-240715',
                 'OPENAI_TEMPERATURE': temperature or '0'
             }
         })
@@ -1052,8 +1107,8 @@ def check_env():
         'configured': len(missing) == 0,
         'missing': missing,
         'has_api_base': bool(os.getenv('OPENAI_API_BASE')),
-        'model': os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
-        'embedding_model': os.getenv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-large'),
+        'model': os.getenv('OPENAI_MODEL', 'doubao-1-5-pro-32k-250115'),
+        'embedding_model': os.getenv('OPENAI_EMBEDDING_MODEL', 'doubao-embedding-text-240715'),
         'temperature': os.getenv('OPENAI_TEMPERATURE', '0')
     })
 
