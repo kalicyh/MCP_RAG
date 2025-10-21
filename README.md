@@ -54,18 +54,19 @@ Web 界面提供直观的 Bento 布局，支持以下工具分类：
 在项目根目录创建 `.env` 文件进行配置：
 
 ```env
-# 模型类型：OPENAI 或 OLLAMA
-MODEL_TYPE=OPENAI
-
 # OpenAI 配置
-OPENAI_API_KEY=your_api_key
+OPENAI_API_KEY=
 OPENAI_API_BASE=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
-OPENAI_TEMPERATURE=0.7
-
-# 嵌入提供商：OPENAI 或 HF
-EMBEDDING_PROVIDER=OPENAI
+OPENAI_TEMPERATURE=0
 OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+
+# 豆包 配置
+# OPENAI_API_KEY=
+# OPENAI_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+# OPENAI_MODEL=doubao-1-5-pro-32k-250115
+# OPENAI_TEMPERATURE=0
+# OPENAI_EMBEDDING_MODEL=doubao-embedding-text-240715
 ```
 
 #### mcp客户端配置（豆包为例）
@@ -82,17 +83,13 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-large
             ],
             "env": {
                 "PYTHONUNBUFFERED": "1",
-                "MODEL_TYPE": "OPENAI",
 
                 "OPENAI_API_KEY": "key",
                 "OPENAI_API_BASE": "https://ark.cn-beijing.volces.com/api/v3",
                 "OPENAI_MODEL": "doubao-1-5-pro-32k-250115",
                 "OPENAI_TEMPERATURE": "0",
 
-                "EMBEDDING_PROVIDER": "OPENAI",
                 "OPENAI_EMBEDDING_MODEL": "doubao-embedding-text-240715",
-
-                "COLLECTION_NAME": "default_collection"
             }
         }
     }
